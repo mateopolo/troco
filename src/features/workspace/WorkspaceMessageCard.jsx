@@ -6,6 +6,7 @@
 import React from 'react';
 import { FileText, Table, Paintbrush } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { formatDocumentName, isAlphanumericId } from '../../utils/workspaceHelpers';
 
 export default function WorkspaceMessageCard(props) {
   const { t } = useLanguage?.() || { t: (k) => k };
@@ -57,7 +58,8 @@ export default function WorkspaceMessageCard(props) {
       : isDocs
         ? (t('workspace.docs_card_title') || 'Troco Doc')
         : (t('workspace.sheets_card_title') || 'Troco Sheet');
-  const displayTitle = message?.workspaceTitle || safeTitle || message?.document?.title || defaultTitle;
+  const rawTitle = message?.workspaceTitle || safeTitle || message?.document?.title || defaultTitle;
+  const displayTitle = formatDocumentName(rawTitle || documentId, wType);
   const rawSnippet = String(message?.snippet || safeSnippet || message?.summary || message?.text || message?.content || message?.document?.content || (t('workspace.collab_snippet_fallback') || "Document collaboratif partagé dans l'espace de travail."));
   const truncatedSnippet = rawSnippet.slice(0, 100) + (rawSnippet.length > 100 ? '...' : '');
 
@@ -302,7 +304,11 @@ export default function WorkspaceMessageCard(props) {
                 marginTop: '1px',
               }}
             >
-              {message?.senderName ? `${t('workspace.by_author') || 'Par'} ${message.senderName}` : isMine ? (t('workspace.by_you') || 'Par Vous') : (t('workspace.collab_doc') || 'Document partagé')}
+              {message?.senderName && !isAlphanumericId(message.senderName)
+                ? `${t('workspace.by_author') || 'Par'} ${message.senderName}`
+                : isMine
+                  ? (t('workspace.by_you') || 'Par Vous')
+                  : (t('workspace.collab_doc') || 'Document partagé')}
             </div>
           </div>
 

@@ -353,10 +353,11 @@ function SharedDocumentModalContent({
           zIndex: 1000000,
           width: '100%',
           height: '100%',
-          backgroundColor: darkMode ? '#1C1816' : '#FAF7F2',
-          borderRadius: window.innerWidth < 768 ? '0px' : '24px',
-          border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-color, #E8DDD3)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
+          backgroundColor: 'var(--bg-global, #FAF7F2)',
+          color: 'var(--text-main)',
+          borderRadius: window.innerWidth < 768 ? '0px' : 'var(--border-radius-main, 24px)',
+          border: '1px solid var(--border-color, rgba(0,0,0,0.08))',
+          boxShadow: 'var(--shadow-modal, 0 25px 60px rgba(0,0,0,0.35))',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -364,9 +365,13 @@ function SharedDocumentModalContent({
       >
         {/* HEADER NOTES PARTAGÉES (MARKDOWN) */}
         <div
-          className={`p-4 sm:p-5 flex flex-col w-full border-b ${
-            darkMode ? 'bg-[#1C1816] border-white/10' : 'bg-[#FAF7F2] border-stone-200'
-          }`}
+          className="p-4 sm:p-5 flex flex-col w-full border-b"
+          style={{
+            backgroundColor: 'var(--bg-card, #FFFFFF)',
+            borderBottom: '1px solid var(--border-color, rgba(0,0,0,0.08))',
+            padding: '14px 20px',
+            flexShrink: 0,
+          }}
         >
           {/* LIGNE 1 : BOUTON FERMER À GAUCHE, TITRE AU CENTRE, STATUT DE SYNCHRONISATION À DROITE */}
           <div className="flex justify-between items-center w-full mb-3 gap-3">
@@ -374,21 +379,20 @@ function SharedDocumentModalContent({
             <button
               type="button"
               onClick={onClose}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs shrink-0 transition-all cursor-pointer shadow-sm ${
-                darkMode
-                  ? 'bg-white/10 hover:bg-white/15 text-[#FAF7F2]'
-                  : 'bg-stone-200/90 hover:bg-stone-300 text-[#3D3530]'
-              }`}
+              className="premium-button flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs shrink-0 transition-all cursor-pointer shadow-sm"
               style={{
-                border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-color, #E8DDD3)',
-                borderRadius: '12px',
-                padding: '6px 14px',
-                backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : '#EFE8DE',
-                color: darkMode ? '#FAF7F2' : '#3D3530',
+                border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--border-color, rgba(0,0,0,0.12))',
+                borderRadius: 'var(--border-radius-main, 12px)',
+                padding: '7px 14px',
+                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'var(--bg-subtle, #FAF8F5)',
+                color: 'var(--text-main)',
+                fontSize: '12px',
+                fontWeight: '700',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                transition: 'all 0.15s ease',
               }}
               title="Fermer la note"
             >
@@ -402,9 +406,9 @@ function SharedDocumentModalContent({
                 style={{
                   width: '32px',
                   height: '32px',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   backgroundColor: 'rgba(198,125,91,0.15)',
-                  color: '#C67D5B',
+                  color: 'var(--accent-primary, #C67D5B)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -427,7 +431,7 @@ function SharedDocumentModalContent({
                   fontSize: '16px',
                   fontWeight: '700',
                   textAlign: 'center',
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  color: 'var(--text-main)',
                   fontFamily: 'inherit',
                 }}
               />
@@ -447,11 +451,25 @@ function SharedDocumentModalContent({
             <button
               type="button"
               onClick={() => setPreviewMode(!previewMode)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
-                previewMode
-                  ? 'bg-[#C67D5B] text-white'
-                  : (darkMode ? 'bg-white/10 text-[#FAF7F2] hover:bg-white/15' : 'bg-stone-200/90 text-[#3D3530] hover:bg-stone-300')
-              }`}
+              className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+              style={{
+                padding: '7px 14px',
+                borderRadius: 'var(--border-radius-main, 12px)',
+                border: previewMode
+                  ? '1px solid var(--accent-primary, #C67D5B)'
+                  : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--border-color, rgba(0,0,0,0.12))'),
+                backgroundColor: previewMode
+                  ? 'rgba(198,125,91,0.18)'
+                  : (darkMode ? 'rgba(255,255,255,0.06)' : 'var(--bg-subtle, #FAF8F5)'),
+                color: previewMode ? 'var(--accent-primary, #C67D5B)' : 'var(--text-main)',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+              }}
             >
               {previewMode ? <Edit3 size={14} /> : <Eye size={14} />}
               <span>{previewMode ? 'Éditer' : 'Aperçu'}</span>
@@ -460,9 +478,21 @@ function SharedDocumentModalContent({
             <button
               type="button"
               onClick={handleExportMarkdown}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
-                darkMode ? 'bg-white/10 text-[#FAF7F2] hover:bg-white/15' : 'bg-stone-200/90 text-[#3D3530] hover:bg-stone-300'
-              }`}
+              className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+              style={{
+                padding: '7px 14px',
+                borderRadius: 'var(--border-radius-main, 12px)',
+                border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--border-color, rgba(0,0,0,0.12))',
+                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'var(--bg-subtle, #FAF8F5)',
+                color: 'var(--text-main)',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+              }}
               title="Exporter au format Markdown (.md)"
             >
               <Download size={14} />
@@ -472,9 +502,21 @@ function SharedDocumentModalContent({
             <button
               type="button"
               onClick={handleExportPrint}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
-                darkMode ? 'bg-white/10 text-[#FAF7F2] hover:bg-white/15' : 'bg-stone-200/90 text-[#3D3530] hover:bg-stone-300'
-              }`}
+              className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+              style={{
+                padding: '7px 14px',
+                borderRadius: 'var(--border-radius-main, 12px)',
+                border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--border-color, rgba(0,0,0,0.12))',
+                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'var(--bg-subtle, #FAF8F5)',
+                color: 'var(--text-main)',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+              }}
               title="Imprimer / Exporter PDF"
             >
               <Printer size={14} />
@@ -487,9 +529,19 @@ function SharedDocumentModalContent({
               disabled={isSendingToChat}
               className="premium-button flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
               style={{
-                background: 'linear-gradient(135deg, #C67D5B 0%, #B86B49 100%)',
-                boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
+                padding: '7px 16px',
+                borderRadius: 'var(--border-radius-main, 12px)',
+                border: 'none',
+                background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, var(--accent-primary-hover, #A8644A) 100%)',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: '800',
+                boxShadow: '0 4px 14px rgba(198,125,91,0.35)',
                 cursor: isSendingToChat ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
               }}
             >
               <Share2 size={14} />
@@ -499,9 +551,7 @@ function SharedDocumentModalContent({
 
           {/* LIGNE 3 : STATUTS ET BARRE DE FORMATAGE */}
           <div
-            className={`flex items-center gap-3 overflow-x-auto no-scrollbar w-full py-2 border-y ${
-              darkMode ? 'border-white/10' : 'border-stone-200'
-            }`}
+            className="flex items-center gap-3 overflow-x-auto no-scrollbar w-full py-2 border-y"
             style={{
               display: 'flex',
               flexDirection: 'row',
@@ -512,15 +562,15 @@ function SharedDocumentModalContent({
               overflowY: 'hidden',
               width: '100%',
               padding: '6px 0',
-              borderTop: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E8DDD3',
-              borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E8DDD3',
+              borderTop: '1px solid var(--border-color, rgba(0,0,0,0.08))',
+              borderBottom: '1px solid var(--border-color, rgba(0,0,0,0.08))',
               boxSizing: 'border-box',
               whiteSpace: 'nowrap',
             }}
           >
             {/* COMPTEUR DE MOTS */}
             <div className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap" style={{ flexShrink: 0 }}>
-              <span style={{ color: darkMode ? '#8E857E' : '#A89E95' }}>
+              <span style={{ color: "var(--text-secondary)" }}>
                 {wordCount} mots ({charCount} caractères)
               </span>
             </div>
@@ -530,14 +580,14 @@ function SharedDocumentModalContent({
               <>
                 <div
                   className="w-[1px] h-4 shrink-0"
-                  style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5', flexShrink: 0 }}
+                  style={{ backgroundColor: 'var(--border-color, rgba(0,0,0,0.12))', flexShrink: 0 }}
                 />
                 <div className="flex items-center gap-1 shrink-0" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                   <button
                     type="button"
                     onClick={() => insertFormatting('# ')}
-                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
+                    className="premium-button p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)', flexShrink: 0 }}
                     title="Titre 1"
                   >
                     <Heading1 size={16} />
@@ -545,8 +595,8 @@ function SharedDocumentModalContent({
                   <button
                     type="button"
                     onClick={() => insertFormatting('## ')}
-                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
+                    className="premium-button p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)', flexShrink: 0 }}
                     title="Titre 2"
                   >
                     <Heading2 size={16} />
@@ -554,21 +604,21 @@ function SharedDocumentModalContent({
                   <button
                     type="button"
                     onClick={() => insertFormatting('### ')}
-                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
+                    className="premium-button p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)', flexShrink: 0 }}
                     title="Titre 3"
                   >
                     <Heading3 size={16} />
                   </button>
                   <div
                     className="w-[1px] h-4 shrink-0 mx-0.5"
-                    style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5', flexShrink: 0 }}
+                    style={{ backgroundColor: 'var(--border-color, rgba(0,0,0,0.12))', flexShrink: 0 }}
                   />
                   <button
                     type="button"
                     onClick={() => insertFormatting('**', '**')}
-                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
+                    className="premium-button p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)', flexShrink: 0 }}
                     title="Gras"
                   >
                     <Bold size={16} />
@@ -576,15 +626,15 @@ function SharedDocumentModalContent({
                   <button
                     type="button"
                     onClick={() => insertFormatting('*', '*')}
-                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
+                    className="premium-button p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)', flexShrink: 0 }}
                     title="Italique"
                   >
                     <Italic size={16} />
                   </button>
                   <div
                     className="w-[1px] h-4 shrink-0 mx-0.5"
-                    style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5', flexShrink: 0 }}
+                    style={{ backgroundColor: 'var(--border-color, rgba(0,0,0,0.12))', flexShrink: 0 }}
                   />
                   <button
                     type="button"
@@ -598,8 +648,8 @@ function SharedDocumentModalContent({
                   <button
                     type="button"
                     onClick={() => insertFormatting('- ')}
-                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
+                    className="premium-button p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)', flexShrink: 0 }}
                     title="Liste à puces"
                   >
                     <List size={16} />
@@ -607,8 +657,8 @@ function SharedDocumentModalContent({
                   <button
                     type="button"
                     onClick={() => insertFormatting('> ')}
-                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
+                    className="premium-button p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)', flexShrink: 0 }}
                     title="Citation"
                   >
                     <Quote size={16} />
@@ -616,8 +666,8 @@ function SharedDocumentModalContent({
                   <button
                     type="button"
                     onClick={() => insertFormatting('```javascript\n', '\n```')}
-                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
+                    className="premium-button p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)', flexShrink: 0 }}
                     title="Bloc de code"
                   >
                     <Code size={16} />
@@ -628,91 +678,116 @@ function SharedDocumentModalContent({
           </div>
         </div>
 
-        {/* ZONE DE CONTENU / ÉDITEUR */}
-        <div className="flex-1 min-h-[300px] flex flex-col relative" style={{ flex: 1, display: 'flex', minHeight: '300px', position: 'relative' }}>
-          {previewMode ? (
-            <div
-              className="flex-1 p-4 sm:p-6 overflow-y-auto text-[15px] leading-relaxed font-sans"
-              style={{
-                flex: 1,
-                padding: '20px 24px',
-                overflowY: 'auto',
-                fontSize: '15px',
-                lineHeight: 1.7,
-                color: darkMode ? '#FAF7F2' : '#3D3530',
-                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-              }}
-            >
-              {String(content || '').split('\n').map((line, idx) => {
-                const safeLine = String(line || '');
-                if (safeLine.startsWith('# ')) {
-                  return <h1 key={idx} style={{ color: '#C67D5B', margin: '16px 0 8px', fontSize: '26px' }}>{safeLine.replace('# ', '')}</h1>;
-                }
-                if (safeLine.startsWith('## ')) {
-                  return <h2 key={idx} style={{ color: darkMode ? '#FAF7F2' : '#2D2520', margin: '14px 0 6px', fontSize: '20px' }}>{safeLine.replace('## ', '')}</h2>;
-                }
-                if (safeLine.startsWith('### ')) {
-                  return <h3 key={idx} style={{ color: darkMode ? '#E5DCD3' : '#4D423A', margin: '12px 0 4px', fontSize: '16px' }}>{safeLine.replace('### ', '')}</h3>;
-                }
-                if (safeLine.startsWith('> ')) {
-                  return (
-                    <blockquote
-                      key={idx}
-                      style={{
-                        borderLeft: '4px solid #C67D5B',
-                        paddingLeft: '14px',
-                        margin: '8px 0',
-                        color: darkMode ? '#B8ABA0' : '#6B5E54',
-                        fontStyle: 'italic',
-                      }}
-                    >
-                      {safeLine.replace('> ', '')}
-                    </blockquote>
-                  );
-                }
-                if (safeLine.startsWith('- [x] ') || safeLine.startsWith('- [ ] ')) {
-                  const isChecked = safeLine.startsWith('- [x] ');
-                  const taskText = safeLine.replace(/- \[[ x]\] /, '');
-                  return (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0' }}>
-                      <input type="checkbox" checked={isChecked} readOnly style={{ accentColor: '#C67D5B' }} />
-                      <span style={{ textDecoration: isChecked ? 'line-through' : 'none', opacity: isChecked ? 0.6 : 1 }}>{taskText}</span>
-                    </div>
-                  );
-                }
-                if (safeLine.startsWith('- ')) {
-                  return <li key={idx} style={{ marginLeft: '20px', margin: '3px 0' }}>{safeLine.replace('- ', '')}</li>;
-                }
-                if (!safeLine.trim()) return <div key={idx} style={{ height: '8px' }} />;
-                return <p key={idx} style={{ margin: '4px 0' }}>{safeLine}</p>;
-              })}
-            </div>
-          ) : (
-            <textarea
-              ref={textareaRef}
-              value={content || ''}
-              onChange={handleContentChange}
-              placeholder="Rédigez vos notes partagées ici en Markdown..."
-              className="flex-1 w-full h-full p-4 sm:p-6 bg-transparent border-0 outline-none resize-none text-[15px] leading-relaxed font-sans box-border"
-              style={{
-                flex: 1,
-                width: '100%',
-                height: '100%',
-                padding: '20px 24px',
-                backgroundColor: 'transparent',
-                color: darkMode ? '#FAF7F2' : '#3D3530',
-                border: 'none',
-                outline: 'none',
-                resize: 'none',
-                fontSize: '15px',
-                lineHeight: 1.7,
-                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-                boxSizing: 'border-box',
-              }}
-            />
-          )}
+        {/* ZONE DE CONTENU / ÉDITEUR : CENTRÉ (max-width 720px, margin auto) */}
+        <div
+          className="flex-1 overflow-y-auto w-full flex flex-col items-center"
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            width: '100%',
+            overflowY: 'auto',
+            backgroundColor: 'var(--bg-global, #FAF7F2)',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '720px',
+              width: '100%',
+              margin: '0 auto',
+              padding: '28px 20px',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box',
+            }}
+          >
+            {previewMode ? (
+              <div
+                className="w-full text-[15px] leading-relaxed font-sans"
+                style={{
+                  width: '100%',
+                  flex: 1,
+                  fontSize: '15px',
+                  lineHeight: 1.75,
+                  color: 'var(--text-main)',
+                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                  boxSizing: 'border-box',
+                }}
+              >
+                {String(content || '').split('\n').map((line, idx) => {
+                  const safeLine = String(line || '');
+                  if (safeLine.startsWith('# ')) {
+                    return <h1 key={idx} style={{ color: 'var(--accent-primary, #C67D5B)', margin: '16px 0 8px', fontSize: '26px' }}>{safeLine.replace('# ', '')}</h1>;
+                  }
+                  if (safeLine.startsWith('## ')) {
+                    return <h2 key={idx} style={{ color: 'var(--text-main)', margin: '14px 0 6px', fontSize: '20px' }}>{safeLine.replace('## ', '')}</h2>;
+                  }
+                  if (safeLine.startsWith('### ')) {
+                    return <h3 key={idx} style={{ color: 'var(--text-secondary)', margin: '12px 0 4px', fontSize: '16px' }}>{safeLine.replace('### ', '')}</h3>;
+                  }
+                  if (safeLine.startsWith('> ')) {
+                    return (
+                      <blockquote
+                        key={idx}
+                        style={{
+                          borderLeft: '4px solid var(--accent-primary, #C67D5B)',
+                          paddingLeft: '14px',
+                          margin: '8px 0',
+                          color: 'var(--text-secondary)',
+                          fontStyle: 'italic',
+                        }}
+                      >
+                        {safeLine.replace('> ', '')}
+                      </blockquote>
+                    );
+                  }
+                  if (safeLine.startsWith('- [x] ') || safeLine.startsWith('- [ ] ')) {
+                    const isChecked = safeLine.startsWith('- [x] ');
+                    const taskText = safeLine.replace(/- \[ x\] /, '');
+                    return (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0' }}>
+                        <input type="checkbox" checked={isChecked} readOnly style={{ accentColor: 'var(--accent-primary, #C67D5B)' }} />
+                        <span style={{ textDecoration: isChecked ? 'line-through' : 'none', opacity: isChecked ? 0.6 : 1 }}>{taskText}</span>
+                      </div>
+                    );
+                  }
+                  if (safeLine.startsWith('- ')) {
+                    return <li key={idx} style={{ marginLeft: '20px', margin: '3px 0' }}>{safeLine.replace('- ', '')}</li>;
+                  }
+                  if (!safeLine.trim()) return <div key={idx} style={{ height: '8px' }} />;
+                  return <p key={idx} style={{ margin: '4px 0' }}>{safeLine}</p>;
+                })}
+              </div>
+            ) : (
+              <textarea
+                ref={textareaRef}
+                value={content || ''}
+                onChange={handleContentChange}
+                placeholder="Rédigez vos notes partagées ici en Markdown..."
+                className="w-full flex-1 bg-transparent border-0 outline-none resize-none text-[15px] leading-relaxed font-sans"
+                style={{
+                  width: '100%',
+                  flex: 1,
+                  minHeight: '400px',
+                  backgroundColor: 'transparent',
+                  color: 'var(--text-main)',
+                  border: 'none',
+                  outline: 'none',
+                  resize: 'none',
+                  fontSize: '15px',
+                  lineHeight: 1.75,
+                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                  boxSizing: 'border-box',
+                  padding: 0,
+                }}
+              />
+            )}
+          </div>
 
-          {/* TOAST NOTIFICATION SUCCÈS PARTAGE */}
+        {/* TOAST NOTIFICATION SUCCÈS PARTAGE */}
           {sendSuccessToast && (
             <div
               style={{

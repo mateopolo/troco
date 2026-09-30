@@ -9,12 +9,14 @@ import {
   Play, RotateCcw, Sparkles, Image as ImageIcon,
   RemoveFormatting, Undo, Redo,
   Download, Printer, Share2, Baseline, Highlighter,
-  StickyNote
+  StickyNote, ChevronDown
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, onSnapshot, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { useLanguage } from '../contexts/LanguageContext';
+import { formatDocumentName, isAlphanumericId } from '../utils/workspaceHelpers';
+import EditorMenuBar from './office/EditorMenuBar';
 
 // Squelette local sécurisé par défaut garantissant zéro crash
 const defaultDoc = {
@@ -242,15 +244,27 @@ function CloudOfficeSuiteModalContent({
   const content = documentData?.content ?? defaultContent ?? (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : defaultDoc.content)) ?? '';
 
   const [activeTab, setActiveTab] = useState(initialTab || 'docs'); // 'docs' | 'sheets' | 'slides' | 'notes' | 'history'
-  const [docTitle, setDocTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Spécifications & Notes - ${projectTitle}` : defaultDoc.title));
+  const [docTitle, setDocTitle] = useState(() => {
+    const raw = effectiveDoc?.title || effectiveDoc?.name || (projectTitle && !isAlphanumericId(projectTitle) ? `Spécifications & Notes - ${projectTitle}` : null);
+    return formatDocumentName(raw || effectiveDocId, 'docs');
+  });
   const [docContent, setDocContent] = useState(() => content);
   const [initialContent, setInitialContent] = useState(() => content);
   const initialContentRef = useRef(content);
-  const [sheetTitle, setSheetTitle] = useState(() => effectiveDoc?.sheetTitle || (projectTitle ? `Budget & Planning - ${projectTitle}` : 'Budget & Planning'));
+  const [sheetTitle, setSheetTitle] = useState(() => {
+    const raw = effectiveDoc?.sheetTitle || (projectTitle && !isAlphanumericId(projectTitle) ? `Budget & Planning - ${projectTitle}` : null);
+    return formatDocumentName(raw || effectiveDocId, 'sheets');
+  });
   const [sheetData, setSheetData] = useState(() => (effectiveDoc?.gridData || effectiveDoc?.sheetData || effectiveDoc?.cells || DEFAULT_SHEET_DATA || {}));
-  const [slidesTitle, setSlidesTitle] = useState(() => effectiveDoc?.slidesTitle || (projectTitle ? `Présentation - ${projectTitle}` : 'Présentation'));
+  const [slidesTitle, setSlidesTitle] = useState(() => {
+    const raw = effectiveDoc?.slidesTitle || (projectTitle && !isAlphanumericId(projectTitle) ? `Présentation - ${projectTitle}` : null);
+    return formatDocumentName(raw || effectiveDocId, 'slides');
+  });
   const [slides, setSlides] = useState(() => (Array.isArray(effectiveDoc?.slides) ? effectiveDoc.slides : DEFAULT_SLIDES));
-  const [notesTitle, setNotesTitle] = useState(() => effectiveDoc?.notesTitle || (projectTitle ? `Notes - ${projectTitle}` : 'Notes Rapides'));
+  const [notesTitle, setNotesTitle] = useState(() => {
+    const raw = effectiveDoc?.notesTitle || (projectTitle && !isAlphanumericId(projectTitle) ? `Notes - ${projectTitle}` : null);
+    return formatDocumentName(raw || effectiveDocId, 'notes');
+  });
   const [notesContent, setNotesContent] = useState(() => effectiveDoc?.notesContent || effectiveDoc?.note || '');
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isPresenting, setIsPresenting] = useState(false);
@@ -263,6 +277,7 @@ function CloudOfficeSuiteModalContent({
   const editorRef = useRef(null);
   const slideImageInputRef = useRef(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+
 
   // Dimensions dynamiques Troco Sheets
   const [numRows, setNumRows] = useState(14);
@@ -422,7 +437,7 @@ function CloudOfficeSuiteModalContent({
         try {
           if (snapshot?.exists?.()) {
             const data = snapshot.data() || {};
-            if (data?.title) setDocTitle(data?.title || defaultDoc.title);
+            if (data?.title) setDocTitle(formatDocumentName(data?.title || defaultDoc.title, 'docs'));
             if (data?.content !== undefined && data?.lastEditor !== (currentUser?.name || currentUser?.displayName || currentUser?.id)) {
               const remoteContent = data?.content != null ? String(data.content) : defaultDoc.content;
               setDocContent(remoteContent);
@@ -1072,20 +1087,22 @@ function CloudOfficeSuiteModalContent({
     setIsSendingToChat(true);
 
     try {
-      const authorName = currentUser?.name || currentUser?.displayName || 'Moi';
+      const authorName = (currentUser?.name && !isAlphanumericId(currentUser.name))
+        ? currentUser.name
+        : ((currentUser?.displayName && !isAlphanumericId(currentUser.displayName)) ? currentUser.displayName : 'Moi');
       const authorUid = currentUser?.uid || currentUser?.id || 'me';
       let title = docTitle;
       let snippet = 'Document partagé';
       let icon = '📄';
 
       if (activeTab === 'docs') {
-        title = docTitle || 'Document sans titre';
+        title = formatDocumentName(docTitle || effectiveDocId, 'docs');
         snippet = docContent
           ? (docContent.replace(/<[^>]*>/g, ' ').replace(/[#*`_~\[\]()]/g, '').replace(/\s+/g, ' ').trim().slice(0, 150) + (docContent.length > 150 ? '...' : ''))
           : 'Document vide';
         icon = '📝';
       } else if (activeTab === 'sheets') {
-        title = sheetTitle || 'Feuille de calcul sans titre';
+        title = formatDocumentName(sheetTitle || effectiveDocId, 'sheets');
         snippet = Object.entries(sheetData || {})
           .filter(([_, v]) => v)
           .map(([k, v]) => `${k}: ${v}`)
@@ -1093,11 +1110,11 @@ function CloudOfficeSuiteModalContent({
           .join(' | ') || 'Feuille de calcul';
         icon = '📊';
       } else if (activeTab === 'slides') {
-        title = slidesTitle || 'Présentation sans titre';
+        title = formatDocumentName(slidesTitle || effectiveDocId, 'slides');
         snippet = (slides || []).map((s, idx) => `D${idx + 1}: ${s?.title || 'Diapo'}`).slice(0, 4).join(' • ') || 'Présentation';
         icon = '📽️';
       } else if (activeTab === 'notes') {
-        title = notesTitle || 'Note sans titre';
+        title = formatDocumentName(notesTitle || effectiveDocId, 'notes');
         snippet = notesContent
           ? (notesContent.replace(/<[^>]*>/g, ' ').replace(/[#*`_~\[\]()]/g, '').replace(/\s+/g, ' ').trim().slice(0, 150) + (notesContent.length > 150 ? '...' : ''))
           : 'Note vide';
@@ -1714,18 +1731,73 @@ function CloudOfficeSuiteModalContent({
               )}
             </div>
 
-            {/* BARRE DE MENUS BUREAU (FILE, EDIT, VIEW, INSERT, FORMAT, TOOLS) */}
-            <div
-              className="hidden lg:flex items-center gap-3 text-xs font-semibold px-2 shrink-0 select-none"
-              style={{ color: darkMode ? '#A8998C' : '#6B705C' }}
-            >
-              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_file') || 'Fichier'}</span>
-              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_edit') || 'Édition'}</span>
-              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_view') || 'Affichage'}</span>
-              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_insert') || 'Insertion'}</span>
-              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_format') || 'Format'}</span>
-              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_tools') || 'Outils'}</span>
-            </div>
+            {/* BARRE DE MENUS BUREAU MODERNE (FICHIER, ÉDITION, AFFICHAGE, INSERTION, FORMAT, OUTILS) */}
+            <EditorMenuBar
+              activeTab={activeTab}
+              darkMode={darkMode}
+              onAction={(actionId) => {
+                if (actionId === 'export-primary') {
+                  if (activeTab === 'notes') {
+                    const blob = new Blob([notesContent || ''], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${(notesTitle || 'Note').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } else if (activeTab === 'sheets') {
+                    handleDownloadCSV();
+                  } else if (activeTab === 'slides') {
+                    handleDownloadPPTX();
+                  } else {
+                    handleDownloadPDF();
+                  }
+                } else if (actionId === 'export-docx') {
+                  handleDownloadDOCX();
+                } else if (actionId === 'export-xlsx') {
+                  handleDownloadXLSX();
+                } else if (actionId === 'print') {
+                  handleDownloadPDF();
+                } else if (actionId === 'share-chat') {
+                  handleShareToChat();
+                } else if (actionId === 'undo') {
+                  formatText('undo');
+                } else if (actionId === 'redo') {
+                  formatText('redo');
+                } else if (actionId === 'select-all') {
+                  formatText('selectAll');
+                } else if (actionId === 'clear') {
+                  if (activeTab === 'docs') setDocContent('');
+                  else if (activeTab === 'notes') setNotesContent('');
+                } else if (actionId === 'format-bold') {
+                  formatText('bold');
+                } else if (actionId === 'format-italic') {
+                  formatText('italic');
+                } else if (actionId === 'format-underline') {
+                  formatText('underline');
+                } else if (actionId === 'format-strike') {
+                  formatText('strikeThrough');
+                } else if (actionId === 'format-h1') {
+                  formatText('formatBlock', '<h1>');
+                } else if (actionId === 'format-h2') {
+                  formatText('formatBlock', '<h2>');
+                } else if (actionId === 'format-clear') {
+                  formatText('removeFormat');
+                } else if (actionId === 'insert-separator') {
+                  formatText('insertHorizontalRule');
+                } else if (actionId === 'insert-image') {
+                  if (slideImageInputRef.current) slideImageInputRef.current.click();
+                } else if (actionId === 'version-history') {
+                  setActiveTab('history');
+                } else if (actionId === 'fullscreen') {
+                  if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen?.().catch(() => {});
+                  } else {
+                    document.exitFullscreen?.().catch(() => {});
+                  }
+                }
+              }}
+            />
 
             {/* Exports, Impression & Outils : CONTENEUR STRICTEMENT SÉCURISÉ NE DÉBORDANT PAS À DROITE */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 overflow-x-auto no-scrollbar max-w-full justify-end">
@@ -2733,10 +2805,10 @@ function CloudOfficeSuiteModalContent({
             </div>
           )}
 
-          {/* 4. TROCO NOTES : MINIMALISTE STYLE APPLE NOTES, CENTRÉ PLEIN ÉCRAN */}
+          {/* 4. TROCO NOTES : MINIMALISTE STYLE APPLE NOTES, CENTRÉ PLEIN ÉCRAN (max-width 720px, margin auto) */}
           {activeTab === 'notes' && (
             <div
-              className="flex-1 overflow-y-auto bg-stone-50 dark:bg-[#12100F] p-4 md:p-10 flex flex-col items-center justify-start w-full cursor-text"
+              className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center justify-start w-full cursor-text"
               style={{
                 flex: 1,
                 display: 'flex',
@@ -2744,7 +2816,7 @@ function CloudOfficeSuiteModalContent({
                 alignItems: 'center',
                 justifyContent: 'flex-start',
                 overflowY: 'auto',
-                backgroundColor: darkMode ? '#12100F' : '#F8F6F0',
+                backgroundColor: 'var(--bg-global, #FAF7F2)',
                 padding: '32px 16px',
                 cursor: 'text',
                 boxSizing: 'border-box',
@@ -2752,21 +2824,33 @@ function CloudOfficeSuiteModalContent({
               }}
             >
               <div
-                className="w-full max-w-3xl mx-auto bg-white dark:bg-[#1A1715] text-stone-900 dark:text-stone-100 rounded-3xl shadow-xl border border-stone-200 dark:border-white/10 p-6 md:p-10 flex flex-col gap-4 min-h-[480px] shrink-0 transition-shadow"
+                className="w-full mx-auto rounded-3xl shadow-xl p-6 md:p-10 flex flex-col gap-4 min-h-[480px] shrink-0 transition-shadow border"
                 style={{
                   boxSizing: 'border-box',
                   width: '100%',
-                  maxWidth: '48rem',
+                  maxWidth: '720px',
+                  margin: '0 auto',
                   minHeight: '480px',
-                  borderRadius: '24px',
-                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
+                  borderRadius: 'var(--border-radius-main, 24px)',
+                  backgroundColor: 'var(--bg-card, #FFFFFF)',
+                  borderColor: 'var(--border-color, rgba(0,0,0,0.08))',
+                  color: 'var(--text-main)',
+                  boxShadow: 'var(--shadow-modal, 0 10px 30px rgba(0, 0, 0, 0.08))',
                 }}
               >
-                <div className="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-white/10">
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <div
+                  className="flex items-center justify-between pb-3 border-b"
+                  style={{
+                    borderBottomColor: 'var(--border-color, rgba(0,0,0,0.08))',
+                  }}
+                >
+                  <span
+                    className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                    style={{ color: 'var(--accent-primary, #C67D5B)' }}
+                  >
                     <StickyNote size={14} /> Note Rapide
                   </span>
-                  <span className="text-xs text-stone-400">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                     {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </span>
                 </div>
@@ -2778,10 +2862,11 @@ function CloudOfficeSuiteModalContent({
                     saveNotesToFirestore(val, notesTitle);
                   }}
                   placeholder="Notez ici vos pensées, listes de tâches, liens utiles ou idées en vrac..."
-                  className="w-full flex-1 min-h-[360px] bg-transparent border-0 outline-none resize-none text-stone-800 dark:text-stone-100 font-sans text-base leading-relaxed"
+                  className="w-full flex-1 min-h-[360px] bg-transparent border-0 outline-none resize-none font-sans text-base leading-relaxed"
                   style={{
+                    color: 'var(--text-main)',
                     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                    lineHeight: '1.7',
+                    lineHeight: '1.75',
                   }}
                 />
               </div>
