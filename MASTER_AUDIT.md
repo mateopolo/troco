@@ -43,13 +43,28 @@
 
 ---
 
-## ⏭️ PROCHAINE ACTION RECOMMANDÉE (Niveau 3, Impact max)
+## 📅 HISTORIQUE DES SESSIONS
 
-**[MOY-01] — Remplacement de `localStorage` synchrone dans les listeners par IndexedDB**
-- **Pourquoi :** Des sérialisations massives `JSON.stringify` synchrones sur `localStorage` dans les listeners temps réel Firestore bloquent le thread principal JS lors de mutations fréquentes. La migration vers le stockage asynchrone non-bloquant `IndexedDB` (via `idb` ou le service de cache local) garantit la réactivité 60 FPS sur mobile.
-- **Fichier(s) :** `src/services/outboxService.js`, `src/utils/storage.js`, `src/App.js`
-- **Estimation :** 3 heures
-- **Effort/Impact :** ⭐⭐⭐⭐ (Élimination des blocages d'UI et Core Web Vitals INP optimisés)
+### Session du 2026-10-06 / 2026-10-07 — Consolidation Majeure (Étapes 1 à 5)
+- **Objectif :** Unification des services redondants, découpage d'App.js, élimination des crashs mémoire Safari iOS et ratissage i18n total.
+- **Actions menées :**
+  1. *Étape 1 :* Unification de `audioService.js` (Web Audio API + HTML5 Audio) et `pricingService.js` (conversions de devises et Troco Plus) avec re-exports rétrocompatibles.
+  2. *Étape 2 :* Découpage d'`App.js` (-778 lignes, 0 import orphelin) via la création de `ModalOrchestrator.jsx`, `useDealActions.js` et `useUserReporting.js`.
+  3. *Étape 3 :* Optimisations performances iOS (suppression des `backdrop-filter` empilés pour stopper les OOM Jetsam), virtualisation CSS `.feed-card-virtualized`, détection matérielle `.low-end-device` et allègement GPU du header.
+  4. *Étape 4 :* Ratissage final i18n : 41 nouvelles clés créées et alignées sur les 7 langues (698 clés uniques, 100.0% de couverture dans FR, EN, ES, IT, DE, JA, ZH) et création de `docs/I18N-AUDIT.md`.
+  5. *Étape 5 :* Audit de vérité de 60 tâches avec preuves formelles, validation 136/136 tests Vitest et 55/55 règles Firestore, et roadmap des 7 prochains jours.
+- **Commit de référence :** `400a997` (`i18n: final sweep of hardcoded French strings and multilingual coverage audit`).
+- **Rapport complet :** [docs/SESSION-REPORT-2026-10-06.md](file:///c:/Users/mateo/Desktop/TROCO/docs/SESSION-REPORT-2026-10-06.md).
+
+---
+
+## ⏭️ PROCHAINE ACTION RECOMMANDÉE (Impact max & Quick Win)
+
+**[CLEANUP-03] / [QW-15] — Nettoyage des 3 faux soldes résiduels dans `getListingDetail`**
+- **Pourquoi :** 3 soldes factices hardcodés `wallet: { euros: ..., tokens: ... }` subsistent encore dans `getListingDetail` (`src/App.js:5349, 5370, 5389`), ce qui fausse les données de portefeuille lors de la consultation des fiches d'auteurs tiers. Cette tâche rapide (15 min) assainira définitivement le module d'annonces.
+- **Fichier(s) :** `src/App.js`
+- **Estimation :** 15-30 minutes
+- **Effort/Impact :** ⭐⭐⭐⭐⭐ (Intégrité des données financières et conformité utilisateur)
 
 ---
 
@@ -234,9 +249,9 @@
 **Estimation** : 15min  
 **Impact** : Supprime les injections de solde fictif `wallet: { euros: ..., tokens: ... }` dans `getListingDetail`.
 
-### [x] [CLEANUP-07] — Réparation de la corruption UTF-8 (mojibake) dans translationsSecondary.js
-**Preuve** : `src/data/translationsSecondary.js` restauré en UTF-8 strict sans BOM. Validation Node : 0 occurrence de double encodage `\u00C3[\u0080-\u00BF]` (965 résolues). Emojis (`👑`, `🪙`, `⭐`) et caractères japonais/chinois (`サブスク`, `订阅`) 100% fonctionnels et validés.
-**Statut** : ✅ FAIT — Élimination intégrale du mojibake sur les 6 langues secondaires (EN, ES, IT, DE, JA, ZH) et affichage parfait des accents et symboles dans la modale Troco Plus et l'UI.
+### [x] [CLEANUP-07] — Bilan final de session & Réparation UTF-8 validée (7 langues)
+**Preuve** : `docs/SESSION-REPORT-2026-10-06.md`, `docs/I18N-AUDIT.md`, `src/data/translationsSecondary.js` restauré en UTF-8 strict sans BOM, 0 double encodage `\u00C3[\u0080-\u00BF]` (965 résolues). 60 tâches auditées et validées sur le code réel (commit `400a997`, build réussi, 136/136 tests Vitest au vert, 55/55 règles Firestore passantes).
+**Statut** : ✅ FAIT — Bilan complet des étapes 1 à 5 consigné dans le rapport de session, audit de vérité validé et dictionnaires multilingues 100% exempts de corruption d'encodage.
 
 ### [x] [CLEANUP-09] — Réparation du bouton "Show original" (Voir l'original) dans ChatView
 **Preuve** : `src/components/ChatView.jsx:102-111, 1703-1707, 1904-1913, 2580-2610`
@@ -635,6 +650,82 @@ Ce document constitue **LE tableau de bord unique et absolu** de Troco.
 4. Mettre à jour les compteurs du tableau de bord.
 5. Actualiser la section "Prochaine action recommandée".
 6. Consigner les modifications dans un commit clair.
+
+---
+
+## 🗓️ ROADMAP DES 7 PROCHAINS JOURS (2026-10-07 À 2026-10-13)
+
+Cette feuille de route priorise les **15 tâches restantes** du MASTER_AUDIT en équilibrant impact utilisateur, complexité et maîtrise du risque technique (1 à 2 tâches par jour) :
+
+### Jour 1 (2026-10-07) : Assainissement Financier & Purge Démo Finale
+- **Tâche 1 :** `[CLEANUP-03] / [QW-15]` — Suppression des 3 faux soldes hardcodés dans `getListingDetail` (`src/App.js:5349, 5370, 5389`).
+  - *Complexité :* Facile (30 min)
+  - *Dépendances :* Aucune
+  - *Fichiers :* `src/App.js`
+- **Tâche 2 :** `[QW-18]` — Purge finale des personas démo (`Sofia M.`, `Marc L.`, `Karim B.`) et routage 100% sur les profils réels Firestore.
+  - *Complexité :* Facile (45 min)
+  - *Dépendances :* Aucune
+  - *Fichiers :* `src/App.js`, `src/features/feed/FeedSection.jsx`
+
+### Jour 2 (2026-10-08) : Allègement d'App.js (Feed & Chronomètre d'Appel)
+- **Tâche 1 :** `[MOY-02]` — Extraction du feed d'annonces hors d'`App.js` vers le hook dédié `src/hooks/useListingsFeed.js`.
+  - *Complexité :* Moyen (3h)
+  - *Dépendances :* `src/services/firestoreService.js`
+  - *Fichiers :* `src/App.js`, `src/hooks/useListingsFeed.js`, `src/routes/FeedRoute.jsx`
+- **Tâche 2 :** `[MOY-03]` — Extraction du chronomètre d'appel WebRTC vers le hook `src/hooks/useCallTimer.js`.
+  - *Complexité :* Facile / Moyen (1h30)
+  - *Dépendances :* `useWebRTC.js`
+  - *Fichiers :* `src/App.js`, `src/hooks/useCallTimer.js`, `src/features/call/WebRTCCallOverlay.jsx`
+
+### Jour 3 (2026-10-09) : Découplage Notifications & Cache IndexedDB
+- **Tâche 1 :** `[MOY-01]` — Remplacement de `localStorage` synchrone dans les listeners Firestore par le cache asynchrone `IndexedDB` (`idb`).
+  - *Complexité :* Moyen (3h)
+  - *Dépendances :* `idb`
+  - *Fichiers :* `src/services/outboxService.js`, `src/utils/storage.js`, `src/App.js`
+- **Tâche 2 :** `[MOY-04]` — Extraction des notifications transactionnelles vers le hook `src/hooks/useTransactionNotifications.js`.
+  - *Complexité :* Moyen (2h)
+  - *Dépendances :* `audioService.js`
+  - *Fichiers :* `src/App.js`, `src/hooks/useTransactionNotifications.js`
+
+### Jour 4 (2026-10-10) : Rétention & Protocole de Troc Pur
+- **Tâche 1 :** `[MOY-05]` — Widget de réengagement "Mes deals en cours" en tête du Feed Explorer.
+  - *Complexité :* Moyen (3h)
+  - *Dépendances :* `useWalletStore`, `useChatStore`
+  - *Fichiers :* `src/features/feed/ActiveDealsWidget.jsx`, `src/routes/FeedRoute.jsx`
+- **Tâche 2 :** `[MOY-07]` — Double validation bilatérale pour le troc pur de compétences/matériel sans monnaie.
+  - *Complexité :* Moyen (3h)
+  - *Dépendances :* `firestore.rules`, `Cloud Functions`
+  - *Fichiers :* `src/hooks/useDealActions.js`, `functions/src/deals/validateSwap.ts`
+
+### Jour 5 (2026-10-11) : Exports Bureautiques & Sécurité App Check
+- **Tâche 1 :** `[MOY-06]` — Exportation native des documents Troco Office Suite (.pdf, .docx, .xlsx via `jspdf`, `xlsx`).
+  - *Complexité :* Moyen (3h)
+  - *Dépendances :* `src/components/CloudOfficeSuiteModal.jsx`
+  - *Fichiers :* `src/components/TrocoDocs.jsx`, `src/components/TrocoSheets.jsx`, `src/components/TrocoSlides.jsx`
+- **Tâche 2 :** `[DIF-04]` — Déploiement et enforcement de Firebase App Check en production (Play Integrity & reCAPTCHA v3).
+  - *Complexité :* Difficile (1 jour)
+  - *Dépendances :* Console Firebase, Clés d'attestation
+  - *Fichiers :* `src/services/firebase.js`, `functions/src/index.ts`
+
+### Jour 6 (2026-10-12) : Intégration Fintech Réelle (Stripe Connect & KYC)
+- **Tâche 1 :** `[DIF-01]` — Intégration PSP réelle Stripe Connect Express (création de compte connecté, séquestre escrow, transferts réels).
+  - *Complexité :* Difficile (1 à 2 jours)
+  - *Dépendances :* Stripe Dashboard, Secret Keys, Webhooks
+  - *Fichiers :* `functions/src/payments/stripeConnect.ts`, `src/services/paymentService.js`
+- **Tâche 2 :** `[DIF-02]` — Intégration d'un provider KYC automatisé certifié (Stripe Identity).
+  - *Complexité :* Difficile (1 jour)
+  - *Dépendances :* Stripe Identity API
+  - *Fichiers :* `functions/src/kyc/verifyIdentity.ts`, `src/features/profile/KycModal.jsx`
+
+### Jour 7 (2026-10-13) : Conformité Fiscale DAC7 & Tests E2E Playwright
+- **Tâche 1 :** `[DIF-03]` — Module de reporting fiscal européen automatisé (Directive DAC7 pour les plateformes d'échange).
+  - *Complexité :* Difficile (1 jour)
+  - *Dépendances :* `functions/src/compliance/dac7Report.ts`
+  - *Fichiers :* `functions/src/admin/dac7Export.ts`, `src/features/admin/AdminDashboard.jsx`
+- **Tâche 2 :** `[DIF-05]` — Suite de tests End-to-End Playwright couvrant les 5 flux critiques (Auth -> Feed -> Deal -> Escrow -> Message).
+  - *Complexité :* Difficile (1 jour)
+  - *Dépendances :* `@playwright/test`
+  - *Fichiers :* `e2e/auth.spec.js`, `e2e/deal-escrow.spec.js`, `e2e/chat.spec.js`
 
 ---
 
