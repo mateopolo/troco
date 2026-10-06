@@ -871,3 +871,27 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
 4. **Vérification de Non-Régression :**
    - 0 modification sur le code applicatif (`src/`, `functions/`, `public/`, `tests/` intouchés).
    - Compilation de production validée avec succès via `npm run build` (Exit Code 0).
+
+---
+
+## 🔄 7. UNIFICATION DES SERVICES EN DOUBLE (CLEANUP-05 — 2026-10-06)
+
+1. **Fichiers fusionnés & Sources uniques de vérité :**
+   - `src/utils/audioService.js` (sons bancaires, Apple Pay, fanfare de bienvenue) fusionné dans `src/services/audioService.js` (effets Web Audio pop, swoosh, chimes de succès, ringtone).
+   - `src/utils/pricingEngine.js` (matrice pays PPP, calculs d'abonnements Troco Plus, clés i18n de bénéfices) fusionné dans `src/services/pricingService.js` (conversion multi-devises, taux de change EUR, détection géolocalisée de devise et pays).
+2. **Fonctions et constantes centralisées :**
+   - **`src/services/audioService.js` (Singleton `AudioService` unifié + exports nommés + export par défaut) :**
+     - Synthèse Web Audio API native : `playPop()`, `playSwoosh()`, `playSuccessChime()`, `startRingtone()`, `stopRingtone()`.
+     - Effets sonores et célébrations : `playApplePaySound()`, `playBetclicBalanceSound()`, `playWelcomeGiftFanfare()`, `playSwooshSound()`.
+     - Déverrouillage AudioContext résilient (`unlockAudio()`) avec fallback synthétique Web Audio en cas d'indisponibilité ou d'échec de lecture des fichiers audio distants.
+   - **`src/services/pricingService.js` (Moteur tarifaire et monétaire unifié + exports nommés + export par défaut) :**
+     - Constantes & Matrices : `DEFAULT_EXCHANGE_RATES_TO_EUR`, `CURRENCY_SYMBOLS`, `REGIONAL_PPP_MATRIX`, `BASE_PRICES_EUR`, `PPP_COUNTRY_MATRIX`, `TROCO_PLUS_BENEFIT_KEYS`.
+     - Fonctions de conversion & calcul : `detectUserCountry()`, `detectGeoCurrency()`, `convertCurrency()`, `formatCurrencyAmount()`, `formatPrice()`, `calculatePppPrice()`, `getRegionalSubscriptionPlan()`, `getLocalizedTrocoPlusPlans()`.
+3. **Fichiers de re-export transparents créés pour rétrocompatibilité :**
+   - `src/utils/audioService.js` : re-exporte `*` et le default export depuis `../services/audioService`. Aucun import consommateur (ex: `AppHeader`, `BalanceDisplay`, `useWalletStore`, `AnimatedBalances`) n'est cassé.
+   - `src/utils/pricingEngine.js` : re-exporte `*` et le default export depuis `../services/pricingService`. Rétrocompatibilité totale pour les composants consommateurs (ex: `PaymentModal.jsx`).
+4. **Validation et tests passés :**
+   - Tests unitaires Jest : `src/services/audioService.test.js` (3/3 passés) et `src/services/pricingService.test.js` (4/4 passés). Total 7/7 passés.
+   - Tests Vitest : 8 suites de tests unitaires exécutées (`npx vitest run tests/unit`), 50/50 passés.
+   - Validation du build : `npm run build` exécuté avec succès (Exit Code 0).
+

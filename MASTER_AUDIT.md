@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 9.0/10 | **Progression :** 54 / 75 tâches validées avec preuves formelles (72.0%)
+> **Score global :** 9.0/10 | **Progression :** 55 / 75 tâches validées avec preuves formelles (73.3%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 29 | 1 | 96.7% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 30 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 16 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 8 | 2 | 80.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
-| **TOTAL** | **54** | **21** | **72.0%** |
+| **TOTAL** | **55** | **20** | **73.3%** |
 
 
 ### Score par axe vs cible Licorne
@@ -164,6 +164,10 @@
 ### [x] [CLEANUP-04] — Ménage documentaire complet & consolidation de référence
 **Preuve** : Déplacement de 25 fichiers et sous-dossiers redondants vers `docs/archived-2026-10-06/`, création de `docs/TESTING.md`, modernisation de `README.md`, consolidation de l'Annexe de sécurité/DevOps dans `MASTER_AUDIT.md`.
 **Statut** : ✅ FAIT — Assainissement documentaire de la racine et de `docs/`, éradication des 10 doublons stricts (GLOBAL_ARCHITECTURE_AUDIT, PERFORMANCE_AUDIT, etc.), préservation intégrale de l'historique et des preuves formelles dans les archives.
+
+### [x] [CLEANUP-05] — Unification des services en double (audioService, pricingService)
+**Preuve** : `src/services/audioService.js:1-196`, `src/utils/audioService.js:1-6`, `src/services/pricingService.js:1-260`, `src/utils/pricingEngine.js:1-6`, `src/services/audioService.test.js:1-35`, `src/services/pricingService.test.js:1-55`
+**Statut** : ✅ FAIT — Centralisation de la logique audio dans `src/services/audioService.js` (Web Audio API synthétique pop/swoosh/chime/ringtone + sons HTML5 / Web Audio bancaires et fanfares) et de la logique tarifaire dans `src/services/pricingService.js` (taux de change EUR, parité de pouvoir d'achat PPP, matrices géographiques, plans d'abonnement Troco Plus et calculs de conversion). Remplacement de `src/utils/audioService.js` et `src/utils/pricingEngine.js` par des re-exports transparents pour une rétrocompatibilité à 100%. Validation par `npm run build` (Exit code 0), tests Jest (7/7 passés) et Vitest (50/50 passés).
 
 ### [ ] [I18N-06] — Ratissage final i18n + Modularisation Légale & Conformité Multilingue (7 langues)
 **Preuve** : Chaînes FR résiduelles non traduites dans `src/App.js:5538-5576` (écran banni), `src/App.js:4931-4975` (menu mobile actions annonces), `src/App.js:4339` et `src/features/feed/FeedSection.jsx:533, 604`.  

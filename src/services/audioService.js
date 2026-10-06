@@ -1,13 +1,14 @@
 import logger from '../utils/logger';
 import { registerAudioContext } from '../utils/audioUnlocker';
+
 /**
  * audioService.js
- * Moteur de Sound Design & Micro-Audio UI à 0ms de latence basé sur l'API Web Audio
+ * Source Unique de Vérité — Moteur Audio & Sound Design UI (Web Audio API)
  * 
- * - Synthèse sonore temps réel sans dépendance externe ni fichier réseau
- * - Profils sonores Apple-grade : Pop, Swoosh, Success-Chime
- * - Contrôle de volume maître (par défaut 20% / 0.20)
- * - Gestion automatique de la politique d'autoplay navigateur (resume on user gesture)
+ * - Synthèse sonore temps réel à 0ms de latence, zéro dépendance réseau
+ * - Profils sonores complets : Pop, Swoosh, Success-Chime, Sonnerie WebRTC, Apple Pay, Betclic, Fanfare
+ * - Contrôle de volume maître (par défaut 20% / 0.20) et état muet persistant (localStorage)
+ * - Gestion automatique de la politique d'autoplay navigateur via audioUnlocker
  */
 
 class AudioService {
@@ -16,6 +17,7 @@ class AudioService {
     this.masterGain = null;
     this.volume = 0.20; // 20% par défaut pour un feedback discret
     this.isEnabled = true;
+    this.ringtoneInterval = null;
 
     if (typeof window !== 'undefined') {
       try {
@@ -95,7 +97,6 @@ class AudioService {
       const gain = ctx.createGain();
 
       osc.type = 'sine';
-      // Descente de fréquence rapide type bulle / pop
       osc.frequency.setValueAtTime(640, now);
       osc.frequency.exponentialRampToValueAtTime(160, now + 0.05);
 
@@ -103,7 +104,7 @@ class AudioService {
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
 
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.masterGain || ctx.destination);
 
       osc.start(now);
       osc.stop(now + 0.05);
@@ -127,7 +128,6 @@ class AudioService {
       const gain = ctx.createGain();
 
       osc.type = 'sine';
-      // Montée puis descente douce
       osc.frequency.setValueAtTime(140, now);
       osc.frequency.exponentialRampToValueAtTime(520, now + 0.07);
       osc.frequency.exponentialRampToValueAtTime(260, now + 0.14);
@@ -137,7 +137,7 @@ class AudioService {
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
 
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.masterGain || ctx.destination);
 
       osc.start(now);
       osc.stop(now + 0.14);
@@ -173,7 +173,7 @@ class AudioService {
         gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.35);
 
         osc.connect(gain);
-        gain.connect(this.masterGain);
+        gain.connect(this.masterGain || ctx.destination);
 
         osc.start(startTime);
         osc.stop(startTime + 0.35);
@@ -236,13 +236,150 @@ class AudioService {
       this.ringtoneInterval = null;
     }
   }
+
+  /**
+   * Son 5 : Double carillon cristallin style Apple Pay / iOS
+   */
+  playApplePaySound() {
+    if (!this.isEnabled) return;
+    const ctx = this.initContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(1046.50, now); // C6
+      gain1.gain.setValueAtTime(0.45, now);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      osc1.connect(gain1);
+      gain1.connect(this.masterGain || ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.35);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(2093.00, now + 0.07); // C7
+      gain2.gain.setValueAtTime(0.55, now + 0.07);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+      osc2.connect(gain2);
+      gain2.connect(this.masterGain || ctx.destination);
+      osc2.start(now + 0.07);
+      osc2.stop(now + 0.5);
+    } catch (e) {
+      logger.warn('[AudioService] Apple Pay sound error:', e);
+    }
+  }
+
+  /**
+   * Son 6 : Son d'incrément ou décrément de solde (style Betclic)
+   */
+  playBetclicBalanceSound(isIncrease = false) {
+    if (!this.isEnabled) return;
+    const ctx = this.initContext();
+    if (!ctx) return;
+
+    try {
+      const freqs = isIncrease
+        ? [523.25, 659.25, 783.99, 1046.50]
+        : [1046.50, 880.00, 698.46, 523.25];
+
+      freqs.forEach((freq, idx) => {
+        const startTime = ctx.currentTime + (idx * 0.065);
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0.22, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12);
+        osc.connect(gain);
+        gain.connect(this.masterGain || ctx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + 0.12);
+      });
+    } catch (e) {
+      logger.warn('[AudioService] Betclic balance sound error:', e);
+    }
+  }
+
+  /**
+   * Son 7 : Fanfare de célébration cadeau de bienvenue
+   */
+  playWelcomeGiftFanfare() {
+    if (!this.isEnabled) return;
+    const ctx = this.initContext();
+    if (!ctx) return;
+
+    try {
+      const notes = [
+        { f: 523.25, t: 0.00, d: 0.15 },  // C5
+        { f: 659.25, t: 0.12, d: 0.15 },  // E5
+        { f: 783.99, t: 0.24, d: 0.18 },  // G5
+        { f: 1046.50, t: 0.38, d: 0.45 }, // C6
+        { f: 1318.51, t: 0.55, d: 0.60 }, // E6
+      ];
+
+      notes.forEach(({ f, t, d }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(f, ctx.currentTime + t);
+        gain.gain.setValueAtTime(0.28, ctx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d);
+        osc.connect(gain);
+        gain.connect(this.masterGain || ctx.destination);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + d);
+      });
+    } catch (e) {
+      logger.warn('[AudioService] Welcome fanfare error:', e);
+    }
+  }
+
+  /**
+   * Son 8 : Son swoosh aérien discret pour l'envoi de jetons / messages (expéditeur)
+   */
+  playSwooshSound() {
+    if (!this.isEnabled) return;
+    const ctx = this.initContext();
+    if (!ctx) return;
+
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.05);
+      osc.frequency.exponentialRampToValueAtTime(260, now + 0.18);
+      gain.gain.setValueAtTime(0.01, now);
+      gain.gain.linearRampToValueAtTime(0.12, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.connect(gain);
+      gain.connect(this.masterGain || ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } catch (e) {
+      logger.warn('[AudioService] Swoosh sound error:', e);
+    }
+  }
 }
 
+// Instance singleton principale
 export const audioService = new AudioService();
+
+// Exportations individuelles directes
 export const playPop = () => audioService.playPop();
 export const playSwoosh = () => audioService.playSwoosh();
 export const playSuccessChime = () => audioService.playSuccessChime();
 export const startRingtone = () => audioService.startRingtone();
 export const stopRingtone = () => audioService.stopRingtone();
+export const playApplePaySound = () => audioService.playApplePaySound();
+export const playBetclicBalanceSound = (isIncrease = false) => audioService.playBetclicBalanceSound(isIncrease);
+export const playWelcomeGiftFanfare = () => audioService.playWelcomeGiftFanfare();
+export const playSwooshSound = () => audioService.playSwooshSound();
 
+export { AudioService };
 export default audioService;
