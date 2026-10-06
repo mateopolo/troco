@@ -915,3 +915,34 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
    - `npm run build` : Compilation de production terminée avec succès (Exit Code 0).
    - `npx vitest run` : 15/15 suites de tests passées, 136/136 tests verts (Exit Code 0).
 
+---
+
+## ⚡ 9. OPTIMISATIONS PERF & iOS SAFARI (ÉTAPE 3 — 2026-10-06)
+
+1. **Neutralisation des `backdrop-filter` empilés (Anti-Jetsam iOS) :**
+   - **Problématique :** L'accumulation de calques `backdrop-filter: blur(...)` sur les cartes d'annonces, modales et contrôles du feed saturait la mémoire GPU d'iOS Safari et déclenchait des crashs système immédiats Jetsam OOM (Out Of Memory).
+   - **Corrections apportées :**
+     - Remplacement de 7 occurrences de `backdropFilter` empilées dans `src/components/ListingDetailModal.jsx` (contrôles carrousel, pastilles photos/vidéos, badges d'état) et `src/routes/FeedRoute.jsx` (barres de filtres et sélecteurs de format) par un fond semi-opaque optimisé `rgba(26, 22, 19, 0.92)` et bordure discrète `1px solid rgba(255, 255, 255, 0.08)`.
+     - Conservation exclusive des effets de flou sur les surfaces maîtresses isolées : `AppHeader.jsx`, `AppBottomNav.jsx`, `UniversalModal.jsx` et `modalBackdrop.js`.
+     - Documentation explicite dans le code : `// [PERF-IOS] backdrop-filter retiré pour éviter les crashes Jetsam sur Safari iOS`.
+
+2. **Virtualisation CSS native du feed Explorer (`src/routes/FeedRoute.jsx` & `src/index.css`) :**
+   - Application de la classe `.feed-card-virtualized` sur chaque conteneur de carte dans la grille d'annonces.
+   - Règle CSS moderne : `content-visibility: auto; contain-intrinsic-size: 0 420px;` permettant au moteur de rendu d'omettre la mise en page des éléments hors viewport tout en préservant le calcul d'ascenseur et la compatibilité Framer Motion.
+
+3. **Optimisation des re-renders du feed (`src/components/FeedCardItem.jsx`) :**
+   - Refonte du comparateur personnalisé `areFeedCardPropsEqual` pour `React.memo`.
+   - Isolation du survol : la comparaison `wasHovered !== isHovered` cible strictement la carte survolée et celle quittée, éliminant le re-render massif des 50+ autres annonces de la liste à chaque mouvement de curseur.
+
+4. **Allègement du Header sticky (`src/components/layout/AppHeader.jsx`) :**
+   - Réduction de la saturation et du rayon de flou de `blur(24px) saturate(190%)` à `blur(12px) saturate(140%)` sur les états statique et scrolled. Rendu visuel haut de gamme préservé et soulagement drastique du compositeur iOS.
+
+5. **Détection automatique des appareils d'entrée de gamme (`src/utils/deviceDetection.js`) :**
+   - Création de `isLowEndDevice()` évaluant `navigator.hardwareConcurrency <= 2`, `navigator.deviceMemory <= 2` et override `localStorage.getItem('troco_force_low_end')`.
+   - Application conditionnelle de la classe CSS `.low-end-device` au niveau du conteneur racine dans `src/App.js`.
+   - Neutralisation automatique des transitions et animations lourdes (`animation-duration: 0.01ms !important`, `transition-duration: 0.01ms !important`) pour garantir 60 FPS constants sur appareils d'entrée de gamme.
+
+6. **Validation et résultats des tests :**
+   - `npm run build` : Compilation de production 100% réussie (Exit Code 0, 793.41 kB gzip).
+   - `npx vitest run` : 15/15 fichiers de tests passés, 136/136 tests unitaires et d'intégration validés sans régression.
+

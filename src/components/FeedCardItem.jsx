@@ -617,31 +617,31 @@ function FeedCardItem({
 const areFeedCardPropsEqual = (previous, next) => {
   const previousItem = previous.item;
   const nextItem = next.item;
+
+  if (previousItem?.id !== nextItem?.id) return false;
+  if (previousItem?.status !== nextItem?.status) return false;
+  if (previousItem?.isBoosted !== nextItem?.isBoosted) return false;
+  if (previousItem?.urgent !== nextItem?.urgent) return false;
+  if (previous.isFavorite !== next.isFavorite) return false;
+  if (previous.currentLang !== next.currentLang) return false;
+  if (previous.langRevision !== next.langRevision) return false;
+  if (previous.darkMode !== next.darkMode) return false;
+  if (previous.isAdmin !== next.isAdmin) return false;
+  if (previous.isGodModeActive !== next.isGodModeActive) return false;
+
   const previousUpdatedAt = previousItem?.updatedAt?.toMillis?.() || previousItem?.updatedAt;
   const nextUpdatedAt = nextItem?.updatedAt?.toMillis?.() || nextItem?.updatedAt;
+  if (previousUpdatedAt !== nextUpdatedAt) return false;
 
-  return previousItem?.id === nextItem?.id &&
-    previousItem?.isBoosted === nextItem?.isBoosted &&
-    previousUpdatedAt === nextUpdatedAt &&
-    previous.currentLang === next.currentLang &&
-    previous.langRevision === next.langRevision &&
-    previous.showingOriginalListings?.[previousItem?.id] === next.showingOriginalListings?.[nextItem?.id] &&
-    previous.darkMode === next.darkMode &&
-    previous.hoveredCardId === next.hoveredCardId &&
-    previous.hoverSlideIndex === next.hoverSlideIndex &&
-    previous.handleOpenListing === next.handleOpenListing &&
-    previous.setHoveredCardId === next.setHoveredCardId &&
-    previous.toggleOriginalListing === next.toggleOriginalListing &&
-    previous.handleStartDiscussion === next.handleStartDiscussion &&
-    previous.onAdminDeleteListing === next.onAdminDeleteListing &&
-    previous.onAdminDelete === next.onAdminDelete &&
-    previous.onAdminToggleHideListing === next.onAdminToggleHideListing &&
-    previous.onAdminToggleHide === next.onAdminToggleHide &&
-    previous.onAdminEditListing === next.onAdminEditListing &&
-    previous.onOpenMobileActions === next.onOpenMobileActions &&
-    previous.onMobileActionClick === next.onMobileActionClick &&
-    previous.onAuthorProfileClick === next.onAuthorProfileClick &&
-    previous.onViewUserProfile === next.onViewUserProfile;
+  if (previous.showingOriginalListings?.[previousItem?.id] !== next.showingOriginalListings?.[nextItem?.id]) return false;
+
+  // [PERF-FEED-01] Re-render uniquement si le survol cible ou quitte cette carte précise
+  const wasHovered = previous.hoveredCardId === previousItem?.id;
+  const isHovered = next.hoveredCardId === nextItem?.id;
+  if (wasHovered !== isHovered) return false;
+  if (isHovered && previous.hoverSlideIndex !== next.hoverSlideIndex) return false;
+
+  return true;
 };
 
 export default React.memo(FeedCardItem, areFeedCardPropsEqual);

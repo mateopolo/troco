@@ -2391,3 +2391,19 @@ body.dark-mode :focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* ==========================================================================
+   PERF & OPTIMISATIONS iOS (ÉTAPE 3)
+   ========================================================================== */
+
+/* [PERF-FEED-01] Virtualisation native du feed Explorer via content-visibility */
+.feed-card-virtualized {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 420px;
+}
+
+/* [PERF-DEVICE-01] Désactivation automatique des animations sur appareils d'entrée de gamme */
+.low-end-device * {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}

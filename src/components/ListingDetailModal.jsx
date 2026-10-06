@@ -221,12 +221,11 @@ export default function ListingDetailModal({
                 style={{
                   position: 'absolute', top: '50%', left: '12px',
                   transform: 'translateY(-50%)',
-                  border: 'none',
                   width: '38px', height: '38px',
                   borderRadius: '50%',
-                  backgroundColor: 'rgba(61,53,48,0.4)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
+                  // [PERF-IOS] backdrop-filter retiré pour éviter les crashes Jetsam sur Safari iOS
+                  backgroundColor: 'rgba(26, 22, 19, 0.92)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', zIndex: 10,
                   transition: 'all 0.2s ease',
@@ -242,12 +241,11 @@ export default function ListingDetailModal({
                 style={{
                   position: 'absolute', top: '50%', right: '12px',
                   transform: 'translateY(-50%)',
-                  border: 'none',
                   width: '38px', height: '38px',
                   borderRadius: '50%',
-                  backgroundColor: 'rgba(61,53,48,0.4)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
+                  // [PERF-IOS] backdrop-filter retiré pour éviter les crashes Jetsam sur Safari iOS
+                  backgroundColor: 'rgba(26, 22, 19, 0.92)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', zIndex: 10,
                   transition: 'all 0.2s ease',
@@ -262,7 +260,7 @@ export default function ListingDetailModal({
 
           {/* PUCES INDICATRICES */}
           {detailMediaTab === 'image' && (listing.gallery?.length || 0) > 1 && (
-            <div style={{ position: 'absolute', bottom: '14px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 10, backgroundColor: 'rgba(61,53,48,0.6)', padding: '6px 12px', borderRadius: '999px', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+            <div style={{ position: 'absolute', bottom: '14px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 10, backgroundColor: 'rgba(26, 22, 19, 0.92)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '6px 12px', borderRadius: '999px' }}>
               {listing.gallery.map((_, idx) => (
                 <div
                   key={idx}
@@ -292,11 +290,11 @@ export default function ListingDetailModal({
           {/* COMMUTATEUR MÉDIA BASCULE VIDÉO / GALERIE */}
           <div style={{ position: 'absolute', bottom: '14px', left: '14px', display: 'flex', gap: '8px', zIndex: 10 }}>
             {listing.video && (
-              <button onClick={() => setDetailMediaTab('video')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'video' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <button onClick={() => setDetailMediaTab('video')} style={{ border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'video' ? '#C67D5B' : 'rgba(26, 22, 19, 0.92)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <Video size={13} /> {t('demoVideo')}
               </button>
             )}
-            <button onClick={() => setDetailMediaTab('image')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'image' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <button onClick={() => setDetailMediaTab('image')} style={{ border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'image' ? '#C67D5B' : 'rgba(26, 22, 19, 0.92)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <Camera size={13} /> Photos ({listing.gallery?.length || 1})
             </button>
           </div>

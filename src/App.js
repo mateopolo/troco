@@ -55,7 +55,7 @@ import {
 
 import { useGlobalContent } from './features/admin/useGlobalContent';
 import { notificationService } from './services/notificationService';
-import { isIosOrTouchDevice } from './utils/deviceDetection';
+import { isIosOrTouchDevice, isLowEndDevice } from './utils/deviceDetection';
 import { useAdminGuard } from './hooks/useAdminGuard';
 import adminService from './services/adminService';
 import { useUsersPublic } from './hooks/useUsersPublic';
@@ -68,7 +68,7 @@ import { useRateLimit } from './hooks/useRateLimit';
 import { useSafeTimeout } from './hooks/useSafeTimeout';
 import { useFirestoreHealth } from './hooks/useFirestoreHealth';
 import * as storage from './utils/storage';
-export { isIosOrTouchDevice };
+export { isIosOrTouchDevice, isLowEndDevice };
 
 
 const Footer = React.lazy(() => import('./components/Footer'));
@@ -100,6 +100,7 @@ export default function App() {
 
   const [isMobileDevice, setIsMobileDevice] = useState(() => isIosOrTouchDevice());
   const isMobile = isMobileDevice; // Rétrocompatibilité totale pour les composants enfants
+  const isLowEnd = useMemo(() => isLowEndDevice(), []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -2523,7 +2524,9 @@ export default function App() {
   return (
     <LanguageContext.Provider value={langContextValue}>
       <ConfirmProvider>
-        <div style={{
+        <div
+          className={isLowEnd ? 'low-end-device' : undefined}
+          style={{
           backgroundColor: 'var(--bg-global)',
           color: 'var(--text-main)',
           minHeight: '100vh',

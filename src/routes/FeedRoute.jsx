@@ -148,7 +148,7 @@ export default function FeedRoute({
 
           {/* Ligne Recherche + Filtre Rayon + Bascule Vue Liste / Carte */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '10px 14px', boxShadow: 'var(--shadow-card)' }}>
+            <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card)', /* [PERF-IOS] */ border: '1px solid var(--border-color)', borderRadius: '16px', padding: '10px 14px', boxShadow: 'var(--shadow-card)' }}>
               <Search size={18} color="var(--accent-primary)" style={{ marginRight: '10px' }} />
               <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent', color: 'var(--text-main)' }} />
             </div>
@@ -157,8 +157,7 @@ export default function FeedRoute({
               className="premium-button"
               style={{
                 backgroundColor: isInfiniteRadius || radiusKm >= 100 ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
+                /* [PERF-IOS] */
                 border: isInfiniteRadius || radiusKm >= 100 ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
                 borderRadius: '16px',
                 padding: '10px 14px',
@@ -312,8 +311,7 @@ export default function FeedRoute({
               padding: '4px',
               borderRadius: '16px',
               backgroundColor: 'var(--bg-card)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
+              /* [PERF-IOS] */
               border: '1px solid var(--border-color)',
               boxShadow: 'var(--shadow-card)',
               boxSizing: 'border-box',
@@ -513,7 +511,7 @@ export default function FeedRoute({
                   };
 
                   return (
-                    <React.Fragment key={item.id ?? `feed-item-${index}`}>
+                    <div key={item.id ?? `feed-item-${index}`} className="feed-card-virtualized">
                       <FeedCardItem
                         item={item}
                         darkMode={darkMode}
@@ -588,7 +586,7 @@ export default function FeedRoute({
                           }}
                         />
                       )}
-                    </React.Fragment>
+                    </div>
                   );
                 })}
               </motion.div>

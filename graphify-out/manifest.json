@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1791322542.4397726,
-    "seen": 1791322866.0849102,
-    "ast_hash": "cd5bf9711aadc7f2e061eaee8155f03c",
+    "mtime": 1791323355.298068,
+    "seen": 1791323591.8335948,
+    "ast_hash": "0cc5a5fed506296b5f567556805e858e",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "src/components/FeedCardItem.jsx": {
-    "mtime": 1790692565.9570992,
-    "seen": 1790692953.4763894,
-    "ast_hash": "dc1f2fece641d0fa43b3a1e06ca821f0",
+    "mtime": 1791323166.7085662,
+    "seen": 1791323591.83984,
+    "ast_hash": "f474e9648e2a3ee9afcfeb007be1edae",
     "semantic_hash": ""
   },
   "src/components/FeedView.jsx": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "src/components/ListingDetailModal.jsx": {
-    "mtime": 1790779467.7454455,
-    "seen": 1790780460.347737,
-    "ast_hash": "ac1e25b8ac003406cfb47827b8affb4d",
+    "mtime": 1791323120.0588894,
+    "seen": 1791323591.8420465,
+    "ast_hash": "c3311523478b4d6fa38a788c2b123ead",
     "semantic_hash": ""
   },
   "src/components/ListingDetails.jsx": {
@@ -1254,9 +1254,9 @@
     "semantic_hash": ""
   },
   "src/components/layout/AppHeader.jsx": {
-    "mtime": 1790719062.648501,
-    "seen": 1790737066.2584443,
-    "ast_hash": "5f7b67c54c67a5c8ec29688c05758b84",
+    "mtime": 1791323281.269455,
+    "seen": 1791323591.8674002,
+    "ast_hash": "c156b388ff3d858954c94986ca290762",
     "semantic_hash": ""
   },
   "src/components/layout/GeometricBackground.jsx": {
@@ -1974,10 +1974,10 @@
     "semantic_hash": "d0fc23abd96a86450a5c0544b7ee1407"
   },
   "src/utils/deviceDetection.js": {
-    "mtime": 1788438992.2135315,
-    "seen": 1790594464.238432,
-    "ast_hash": "dab65fbc64d5a0f6cfba6dfd9d859c5b",
-    "semantic_hash": "dab65fbc64d5a0f6cfba6dfd9d859c5b"
+    "mtime": 1791323297.2177856,
+    "seen": 1791323591.9047687,
+    "ast_hash": "7ee0a8a4e8a74f917f0ac911a03a414b",
+    "semantic_hash": ""
   },
   "src/utils/displayName.js": {
     "mtime": 1789740245.3294632,
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791322777.4830117,
-    "seen": 1791322866.1683378,
-    "ast_hash": "acc5dac4c5591332122f73ee50c248db",
+    "mtime": 1791323518.470588,
+    "seen": 1791323591.9163806,
+    "ast_hash": "aa29653bd7e3b4e16bebc96b8b56a1bd",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1791322832.35175,
-    "seen": 1791322866.1687582,
-    "ast_hash": "480274e4b1e15afdb8f6774c0134d763",
+    "mtime": 1791323562.7244601,
+    "seen": 1791323591.916797,
+    "ast_hash": "18a1b55eb9dbd6eea76440a542d84646",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2754,9 +2754,9 @@
     "semantic_hash": ""
   },
   "src/routes/FeedRoute.jsx": {
-    "mtime": 1790737290.7208762,
-    "seen": 1790737405.8831942,
-    "ast_hash": "e176825964be1019db59096730222de5",
+    "mtime": 1791323240.3781404,
+    "seen": 1791323591.8964841,
+    "ast_hash": "6eb57a2202f1eba531de65b56856abfe",
     "semantic_hash": ""
   },
   "src/routes/ChatRoute.jsx": {

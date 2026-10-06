@@ -113,8 +113,9 @@ export const AppHeader = React.memo(({
       style={{
         display: isHiddenOnMobileChat ? 'none' : 'block',
         backgroundColor: darkMode ? 'rgba(26, 22, 19, 0.52)' : 'rgba(250, 247, 242, 0.52)',
-        backdropFilter: isScrolled ? 'blur(24px) saturate(190%)' : 'blur(16px) saturate(180%)',
-        WebkitBackdropFilter: isScrolled ? 'blur(24px) saturate(190%)' : 'blur(16px) saturate(180%)',
+        // [PERF-HEADER-01] Blur réduit pour soulager le GPU sur iOS Safari
+        backdropFilter: isScrolled ? 'blur(12px) saturate(140%)' : 'blur(10px) saturate(130%)',
+        WebkitBackdropFilter: isScrolled ? 'blur(12px) saturate(140%)' : 'blur(10px) saturate(130%)',
         borderBottom: darkMode ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.06)',
         padding: isScrolled ? '9px 16px' : '12px 16px',
         position: 'sticky',
