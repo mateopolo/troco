@@ -18,6 +18,7 @@ export default function FeedInteractions({
   handleBoostListing,
   handleTogglePauseListing,
   handleDeleteListing,
+  t = (k, def) => def || k,
 }) {
   return (
     <>
@@ -130,7 +131,7 @@ export default function FeedInteractions({
                     {mobileListingActionTarget.title}
                   </div>
                   <div style={{ fontSize: '12px', color: '#C67D5B', fontWeight: '700' }}>
-                    {mobileListingActionTarget.compensation} • {mobileListingActionTarget.status === 'paused' ? 'En pause' : 'Active'}
+                    {mobileListingActionTarget.compensation} • {mobileListingActionTarget.status === 'paused' ? t('statusPaused', 'En pause') : t('statusActive', 'Active')}
                   </div>
                 </div>
               </div>
@@ -159,7 +160,7 @@ export default function FeedInteractions({
                 }}
               >
                 <span style={{ fontSize: '18px' }}>✏️</span>
-                <span>Modifier l'annonce</span>
+                <span>{t('actionEditListing', "Modifier l'annonce")}</span>
               </button>
 
               <button
@@ -177,7 +178,7 @@ export default function FeedInteractions({
                 }}
               >
                 <span style={{ fontSize: '18px' }}>🔥</span>
-                <span>Booster l'annonce (Top visibilité)</span>
+                <span>{t('actionBoostListing', "Booster l'annonce")}</span>
               </button>
 
               <button
@@ -195,7 +196,7 @@ export default function FeedInteractions({
                 }}
               >
                 <span style={{ fontSize: '18px' }}>{mobileListingActionTarget.status === 'paused' ? '▶️' : '⏸️'}</span>
-                <span>{mobileListingActionTarget.status === 'paused' ? 'Réactiver l\'annonce' : 'Mettre en pause'}</span>
+                <span>{mobileListingActionTarget.status === 'paused' ? t('actionResumeListing', "Réactiver l'annonce") : t('actionPauseListing', 'Mettre en pause')}</span>
               </button>
 
               <button
@@ -212,7 +213,7 @@ export default function FeedInteractions({
                 }}
               >
                 <span style={{ fontSize: '18px' }}>🗑️</span>
-                <span>Supprimer définitivement l'annonce</span>
+                <span>{t('actionDeleteListing', "Supprimer l'annonce")}</span>
               </button>
             </div>
           </div>

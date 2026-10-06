@@ -530,7 +530,7 @@ export default function AppModalsOrchestrator({
 
       {/* MODALE DU PROFIL PUBLIC COMPLET */}
       {selectedPublicUser && (
-        <Suspense fallback={<SkeletonModalFallback title="Chargement du profil..." />}>
+        <Suspense fallback={<SkeletonModalFallback title={t('loadingProfile', 'Chargement du profil...')} />}>
           <PublicProfileModal
             isOpen={Boolean(selectedPublicUser)}
             onClose={() => setSelectedPublicUser(null)}
@@ -547,7 +547,7 @@ export default function AppModalsOrchestrator({
 
       {/* MODALE DE SIGNALEMENT COMMUNAUTAIRE */}
       {isReportModalOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Chargement du formulaire de signalement..." />}>
+        <Suspense fallback={<SkeletonModalFallback title={t('loadingReportForm', 'Chargement du formulaire de signalement...')} />}>
           <ReportModal
             isOpen={isReportModalOpen}
             onClose={() => {
@@ -564,7 +564,7 @@ export default function AppModalsOrchestrator({
 
       {/* MODALE DE PROPOSITION DE DEAL & CONTRE-OFFRE */}
       {isCounterOfferOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Chargement de la négociation de deal..." />}>
+        <Suspense fallback={<SkeletonModalFallback title={t('loadingDealNegotiation', 'Chargement de la négociation de deal...')} />}>
           <CounterOfferModal
             isOpen={isCounterOfferOpen}
             onClose={() => {
@@ -827,10 +827,10 @@ export default function AppModalsOrchestrator({
               <ShieldAlert size={36} />
             </div>
             <h2 style={{ fontSize: '24px', fontWeight: '900', margin: '0 0 10px', color: '#EF4444', letterSpacing: '-0.02em' }}>
-              Compte Suspendu
+              {t('accountSuspendedTitle', 'Votre compte a été suspendu')}
             </h2>
             <p style={{ fontSize: '14px', color: '#D4C5B5', lineHeight: 1.55, margin: '0 0 20px' }}>
-              {bannedReason || "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté."}
+              {bannedReason || t('accountSuspendedDefaultReason', "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté.")}
             </p>
             <div
               style={{
@@ -843,7 +843,7 @@ export default function AppModalsOrchestrator({
                 lineHeight: 1.4,
               }}
             >
-              Pour toute réclamation, contactez la modération officielle à <strong>support@troco.fr</strong> avec votre identifiant.
+              {t('accountSuspendedContact', 'Pour toute réclamation, contactez la modération officielle à support@troco.fr avec votre identifiant.')}
             </div>
             <button
               type="button"
@@ -865,7 +865,7 @@ export default function AppModalsOrchestrator({
                 cursor: 'pointer',
               }}
             >
-              Fermer la session & Revenir à l'accueil
+              {t('accountSuspendedLogout', 'Se déconnecter')}
             </button>
           </div>
         </div>

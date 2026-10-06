@@ -204,13 +204,13 @@ export default function ListingDetailModal({
           {/* BOUTON FERMER */}
           <button
             onClick={handleClose}
-            aria-label="Fermer les détails de l'annonce"
+            aria-label={t('closeListingDetailsAria', "Fermer les détails de l'annonce")}
             style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(250,247,242,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 12px rgba(61,53,48,0.15)', color: '#3D3530' }}
           >
             <X size={18} />
           </button>
 
-          {listing.isBoosted && <span className="sponsored-badge" style={{ position: 'absolute', top: '14px', left: '14px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(245,158,11,0.45)', zIndex: 10 }}>🔥 Sponsorisé</span>}
+          {listing.isBoosted && <span className="sponsored-badge" style={{ position: 'absolute', top: '14px', left: '14px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(245,158,11,0.45)', zIndex: 10 }}>🔥 {t('sponsoredBadge', 'Sponsorisé')}</span>}
 
           {/* FLÈCHES DE NAVIGATION LATÉRALE */}
           {detailMediaTab === 'image' && (listing.gallery?.length || 0) > 1 && (
@@ -528,7 +528,7 @@ export default function ListingDetailModal({
                   boxShadow: '0 6px 16px rgba(239,68,68,0.25)'
                 }}
               >
-                <Trash2 size={16} /> Supprimer cette annonce (Action Administrateur)
+                <Trash2 size={16} /> {t('actionAdminDeleteListing', "Supprimer cette annonce (Action Administrateur)")}
               </button>
             </div>
           )}

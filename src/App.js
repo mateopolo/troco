@@ -659,6 +659,7 @@ export default function App() {
     setPostDraft,
     defaultPostDraft,
     getListingDetail: (l) => (getListingDetailRef.current ? getListingDetailRef.current(l) : l),
+    t,
   });
 
   // ---- GESTION DU CADRE JURIDIQUE & RGPD (BLOC 6) ----
@@ -1766,7 +1767,9 @@ export default function App() {
 
     try {
       await adminService.toggleHideListingAsAdmin(targetId, newHidden);
-      setSaveMessage(newHidden ? `🚫 Annonce #${listing.id} masquée du feed public` : `👁️ Annonce #${listing.id} visible`);
+      const hiddenMsg = (t('adminListingHidden') || '🚫 Annonce #{id} masquée du feed public').replace('{id}', listing.id);
+      const visibleMsg = (t('adminListingVisible') || '👁️ Annonce #{id} visible').replace('{id}', listing.id);
+      setSaveMessage(newHidden ? hiddenMsg : visibleMsg);
       safeTimeout(() => setSaveMessage(''), 4000);
     } catch (err) {
       logger.warn('[Admin] toggle hide error via Cloud Function:', err);
@@ -2936,6 +2939,7 @@ export default function App() {
             handleBoostListing={handleBoostListing}
             handleTogglePauseListing={handleTogglePauseListing}
             handleDeleteListing={handleDeleteListing}
+            t={t}
           />
 
           {/* ORCHESTRATEUR GLOBAL DE TOUTES LES MODALES & OVERLAYS APPLICATIFS */}

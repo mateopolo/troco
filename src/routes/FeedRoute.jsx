@@ -422,8 +422,8 @@ export default function FeedRoute({
             <div style={{ width: '100%', padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
               <EmptyState
                 icon={<Search size={30} strokeWidth={2.2} />}
-                title="Aucune annonce ne correspond à ta recherche"
-                description="Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco."
+                title={t('noListingsFoundTitle', 'Aucune annonce ne correspond à ta recherche')}
+                description={t('noListingsFoundDesc', "Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco.")}
                 action={(
                   <button
                     type="button"
@@ -624,11 +624,11 @@ export default function FeedRoute({
                     {isLoadingMoreListings ? (
                       <>
                         <div style={{ width: '16px', height: '16px', border: '2px solid #C67D5B', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                        <span>Chargement des annonces...</span>
+                        <span>{t('loadingMoreListings', 'Chargement des annonces...')}</span>
                       </>
                     ) : (
                       <>
-                        <span>Charger plus d'annonces</span>
+                        <span>{t('loadMoreListings', "Charger plus d'annonces")}</span>
                         <ChevronRight size={16} />
                       </>
                     )}

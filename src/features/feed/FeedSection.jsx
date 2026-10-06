@@ -526,11 +526,11 @@ export function FeedSection({
                 {isLoadingMore ? (
                   <>
                     <div style={{ width: '16px', height: '16px', border: '2px solid #C67D5B', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span>Chargement des annonces...</span>
+                    <span>{typeof t === 'function' ? t('loadingMoreListings') : 'Chargement des annonces...'}</span>
                   </>
                 ) : (
                   <>
-                    <span>Charger plus d'annonces</span>
+                    <span>{typeof t === 'function' ? t('loadMoreListings') : "Charger plus d'annonces"}</span>
                     <ChevronRight size={16} />
                   </>
                 )}
@@ -542,27 +542,27 @@ export function FeedSection({
     </div>
 
       {/* BANNIÈRE LATÉRALE DROITE (DESKTOP) */}
-      <aside className="desktop-ad-banner" aria-label="Monétisation & Boost Troco">
+      <aside className="desktop-ad-banner" aria-label={typeof t === 'function' ? t('desktopAdBannerAria') : 'Monétisation & Boost Troco'}>
         <div className="ad-card" style={{ border: darkMode ? '1px solid rgba(245,158,11,0.3)' : '1px solid #FDE68A' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#B45309', backgroundColor: '#FEF3C7', padding: '3px 7px', borderRadius: '6px' }}>
               🔥 Troco Boost
             </span>
-            <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Visibilité</span>
+            <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>{typeof t === 'function' ? t('visibilityBadge') : 'Visibilité'}</span>
           </div>
           <img
             src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80"
-            alt="Booster annonce"
+            alt={typeof t === 'function' ? t('boostAdAlt') : 'Booster annonce'}
             style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
           />
           <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
-            Passez en tête du Feed !
+            {typeof t === 'function' ? t('boostHeadline') : 'Passez en tête du Feed !'}
           </div>
           <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '6px' }}>
-            Multipliez par 5 vos contacts en plaçant vos annonces en tête d'affiche.
+            {typeof t === 'function' ? t('boostSubtitle') : "Multipliez par 5 vos contacts en plaçant vos annonces en tête d'affiche."}
           </div>
           <div style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#FBBF24' : '#D97706', marginBottom: '8px' }}>
-            À partir de 2,99€ / 7 jours
+            {typeof t === 'function' ? t('boostPricing') : 'À partir de 2,99€ / 7 jours'}
           </div>
           <button
             type="button"
@@ -573,7 +573,7 @@ export function FeedSection({
                 setIsBoostModalOpen(true);
               } else {
                 setActiveTab('profile');
-                alert("💡 Créez ou sélectionnez l'une de vos annonces depuis votre profil pour activer le Boost !");
+                alert(typeof t === 'function' ? t('boostAlertSelectAd') : "💡 Créez ou sélectionnez l'une de vos annonces depuis votre profil pour activer le Boost !");
               }
             }}
             className="premium-button"
@@ -594,7 +594,7 @@ export function FeedSection({
               boxShadow: '0 4px 12px rgba(217,119,6,0.25)'
             }}
           >
-            <Flame size={13} /> Booster mon annonce
+            <Flame size={13} /> {typeof t === 'function' ? t('boostMyListingBtn') : 'Booster mon annonce'}
           </button>
         </div>
 

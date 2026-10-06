@@ -36,6 +36,7 @@ export const useDealActions = ({
   setPostDraft = () => {},
   defaultPostDraft = {},
   getListingDetail = (l) => l,
+  t = (k, def) => def || k,
 } = {}) => {
   // Rétribution en jetons & structure transparente de frais lors d'un appel visio
   const handleTransferCallTokens = useCallback(async ({ tokens, insurance, duration }) => {
@@ -44,7 +45,7 @@ export const useDealActions = ({
     const currentUid = profile?.uid || auth.currentUser?.uid;
 
     if (!currentUid) {
-      alert('Veuillez vous connecter pour transférer des jetons.');
+      alert(typeof t === 'function' ? t('loginToTransferTokens', 'Veuillez vous connecter pour transférer des jetons.') : 'Veuillez vous connecter pour transférer des jetons.');
       return;
     }
 
@@ -231,7 +232,7 @@ export const useDealActions = ({
       if (boostedListingId && typeof setListings === 'function') {
         setListings(prev => prev.map(item => (item.id === boostedListingId || item.firestoreId === boostedListingId) ? { ...item, isBoosted: true } : item));
         if (typeof setBoostMessage === 'function') {
-          setBoostMessage('Annonce boostée avec succès pendant 7 jours !');
+          setBoostMessage(typeof t === 'function' ? t('boostSuccessToast', 'Annonce boostée avec succès pendant 7 jours !') : 'Annonce boostée avec succès pendant 7 jours !');
         }
       }
     } else if (txData.mode === 'edit-listing' || txData.mode === 'publish-options') {

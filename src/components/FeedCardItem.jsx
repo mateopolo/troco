@@ -402,7 +402,7 @@ function FeedCardItem({
             zIndex: 4,
             letterSpacing: '0.05em'
           }}>
-            URGENT
+            {t('urgentBadge', 'URGENT')}
           </span>
         )}
 
@@ -428,13 +428,13 @@ function FeedCardItem({
             textTransform: 'uppercase'
           }}>
             <Sparkles size={11} color="var(--accent-primary)" />
-            <span>Exemple</span>
+            <span>{t('exampleBadge', 'Exemple')}</span>
           </span>
         )}
 
         {item.isBoosted && (
           <span style={{ position: 'absolute', top: '12px', left: (item.urgent || item.isDemo) ? 'auto' : '12px', right: (item.urgent || item.isDemo) ? '12px' : 'auto', backgroundColor: 'var(--accent-primary)', color: '#FFF', fontSize: '10px', fontWeight: '900', padding: '4px 8px', borderRadius: '8px', zIndex: 4, letterSpacing: '0.05em' }}>
-            TOP VISIBILITÉ
+            {t('topVisibilityBadge', 'TOP VISIBILITÉ')}
           </span>
         )}
 
@@ -575,7 +575,7 @@ function FeedCardItem({
                 }}
               />
             </div>
-            {item.author || 'Membre Troco'}
+            {item.author || (typeof t === 'function' ? t('defaultAuthor') : 'Membre Troco')}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {(!profile?.name || item.author !== profile.name) ? (
@@ -600,9 +600,9 @@ function FeedCardItem({
                       alignItems: 'center',
                       gap: '4px'
                     }}
-                    title="Gérer ou supprimer cette annonce"
+                    title={typeof t === 'function' ? t('manageListingTooltip') : "Gérer ou supprimer cette annonce"}
                   >
-                    ⚙️ Gérer
+                    ⚙️ {typeof t === 'function' ? t('manageListingBtn') : 'Gérer'}
                   </button>
                 )}
               </div>

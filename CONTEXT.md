@@ -946,3 +946,57 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
    - `npm run build` : Compilation de production 100% réussie (Exit Code 0, 793.41 kB gzip).
    - `npx vitest run` : 15/15 fichiers de tests passés, 136/136 tests unitaires et d'intégration validés sans régression.
 
+---
+
+## 🌐 10. RATISSAGE FINAL i18n & AUDIT MULTILINGUE (ÉTAPE 4 — 2026-10-06)
+
+1. **Objectifs & Périmètre :**
+   - Élimination intégrale des chaînes françaises résiduelles codées en dur dans les composants critiques et récemment extraits.
+   - Synchronisation stricte et symétrique des dictionnaires de traduction sur les 7 langues officielles : Français (FR), Anglais (EN), Espagnol (ES), Italien (IT), Allemand (DE), Japonais (JA), Chinois simplifié (ZH).
+   - Création de la documentation de référence permanente dans `docs/I18N-AUDIT.md`.
+
+2. **Composants et Fichiers Modifiés :**
+   - `src/components/AppModalsOrchestrator.jsx` :
+     - Écran de compte banni/suspendu 100% internationalisé avec `t(...)` (`accountSuspendedTitle`, `accountSuspendedReason`, `accountSuspendedDefaultReason`, `accountSuspendedContact`, `accountSuspendedLogout`).
+     - Squelettes de chargement dynamiques (`loadingProfile`, `loadingReportForm`, `loadingDealNegotiation`).
+   - `src/components/FeedInteractions.jsx` :
+     - Réception de la prop `t` avec fallback dynamique sécurisé.
+     - Actions du menu mobile d'annonces traduites (`actionEditListing`, `actionBoostListing`, `actionPauseListing`, `actionResumeListing`, `actionDeleteListing`, `actionAdminHideListing`, `actionAdminDeleteListing`, `statusPaused`, `statusActive`).
+   - `src/App.js` :
+     - Transmission explicite de `t` à `FeedInteractions` et `useDealActions`.
+     - Toasts de modération administrateur traduits (`adminListingHidden`, `adminListingVisible`).
+   - `src/routes/FeedRoute.jsx` & `src/features/feed/FeedSection.jsx` :
+     - Titre et description de l'état vide (`noListingsFoundTitle`, `noListingsFoundDesc`).
+     - Boutons et textes de pagination (`loadingMoreListings`, `loadMoreListings`).
+     - Bannière latérale de boost desktop et badges (`boostHeadline`, `boostSubtitle`, `boostPricing`, `boostAlertSelectAd`, `boostMyListingBtn`, `visibilityBadge`, `desktopAdBannerAria`, `boostAdAlt`).
+   - `src/components/FeedCardItem.jsx` :
+     - Badges d'image de l'annonce (`urgentBadge`, `exampleBadge`, `topVisibilityBadge`).
+     - Auteur de repli sécurisé (`defaultAuthor`).
+     - Bouton et tooltip de gestion d'annonce mobile (`manageListingBtn`, `manageListingTooltip`).
+   - `src/components/ListingDetailModal.jsx` :
+     - Badge sponsorisé (`sponsoredBadge`) et label d'accessibilité de fermeture (`closeListingDetailsAria`).
+   - `src/hooks/useDealActions.js` :
+     - Intégration du helper `t` pour les alertes de connexion (`loginToTransferTokens`) et toast de boost (`boostSuccessToast`).
+   - Dictionnaires i18n synchronisés :
+     - `src/locales/translations.js` : 41 nouvelles clés ajoutées dans chacune des 7 langues (698 clés uniques par langue).
+     - `src/data/translationsData.js` : Dictionnaire FR synchronisé.
+     - `src/data/translationsSecondary.js` : Dictionnaires EN, ES, IT, DE, JA, ZH synchronisés.
+
+3. **Métriques & Couverture :**
+   - **Nouvelles clés ajoutées :** 41 clés.
+   - **Total de clés par langue dans `src/locales/translations.js` :** 698 clés.
+   - **Taux de couverture par langue :**
+     - FR : 100.0% (698 / 698)
+     - EN : 100.0% (698 / 698)
+     - ES : 100.0% (698 / 698)
+     - IT : 100.0% (698 / 698)
+     - DE : 100.0% (698 / 698)
+     - JA : 100.0% (698 / 698)
+     - ZH : 100.0% (698 / 698)
+
+4. **Résultats des Tests & Validation :**
+   - Résolution multilingue validée en direct : bascule FR / EN / ES / JA / ZH sans mélange de langue ni régression.
+   - `npx vitest run` : 15/15 fichiers de tests passés, 136/136 tests validés avec succès (Exit Code 0).
+   - `npm run build` : Compilation de production terminée avec succès (Exit Code 0).
+
+
