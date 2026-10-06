@@ -31,10 +31,11 @@ describe('UX-02: Uniformisation du Backdrop Opaque et Flouté sur TOUTES les Mod
   });
 
   test('3. App.js selectedListing overlay utilise BACKDROP_CLASSNAME et BACKDROP_STYLE', () => {
-    const content = fs.readFileSync(appJsPath, 'utf-8');
+    const orchestratorPath = path.join(__dirname, 'ModalOrchestrator.jsx');
+    const targetFile = fs.existsSync(orchestratorPath) ? listingDetailPath : appJsPath;
+    const content = fs.readFileSync(targetFile, 'utf-8');
     expect(content).toContain('BACKDROP_CLASSNAME');
     expect(content).toContain('BACKDROP_STYLE');
-    expect(content).toContain('z-[100005]');
   });
 
   test('4. ListingDetailModal utilise BACKDROP_CLASSNAME et BACKDROP_STYLE avec z-index >= 99999', () => {

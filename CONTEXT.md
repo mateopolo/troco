@@ -895,3 +895,23 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
    - Tests Vitest : 8 suites de tests unitaires exécutées (`npx vitest run tests/unit`), 50/50 passés.
    - Validation du build : `npm run build` exécuté avec succès (Exit Code 0).
 
+---
+
+## ✂️ 8. DÉCOUPAGE D'App.js & MODULARISATION DES LOGIQUES MÉTIER (CLEANUP-06 — 2026-10-06)
+
+1. **Fichiers créés :**
+   - `src/components/ModalOrchestrator.jsx` : Orchestrateur centralisé unifiant le store réactif `ui` (`useAppModals`), encapsulant la modale de détail d'annonce (`ListingDetailModal.jsx`) et déléguant l'ensemble des modales et overlays applicatifs à `AppModalsOrchestrator.jsx`.
+   - `src/hooks/useDealActions.js` : Hook métier dédié aux deals, transactions et rétributions financières (`handleTransferCallTokens`, `handlePaymentSuccess`), avec gestion atomique des soldes, transferts de jetons, assurance visio, souscriptions Troco Plus, feedback sonore et toasts de célébration.
+   - `src/hooks/useUserReporting.js` : Hook dédié à la gestion des signalements utilisateurs et annonces (`isReportModalOpen`, `reportTarget`, `handleOpenReportModal`, `handleCloseReportModal`, `handleSubmitReport`).
+2. **Métriques d'allègement d'App.js :**
+   - **Taille initiale :** ~3840 lignes.
+   - **Taille finale :** 3062 lignes.
+   - **Lignes retirées d'App.js :** 778 lignes de code inline (dont 435 lignes de modale de détail, 140 lignes de configuration de modales et ~200 lignes de handlers financiers et imports).
+3. **Allègement des imports orphelins :**
+   - Suppression de 11 icônes Lucide orphelines dans `App.js` (`MapPin`, `Video`, `Globe`, `X`, `Sparkles`, `Trash2`, `Camera`, `Tag`, `ChevronLeft`, `ChevronRight`, `ShieldAlert`).
+   - Suppression des imports Firestore et helpers non utilisés dans `App.js` (`getDoc`, `getDocs`, `runTransaction`, `increment`, `generateInvoiceRef`, `ensureLanguageLoaded`, `walletService`, `BACKDROP_CLASSNAME`, `BACKDROP_STYLE`, `MobileHeader`).
+   - 0 import inutilisé restant dans `App.js`.
+4. **Validation de non-régression :**
+   - `npm run build` : Compilation de production terminée avec succès (Exit Code 0).
+   - `npx vitest run` : 15/15 suites de tests passées, 136/136 tests verts (Exit Code 0).
+

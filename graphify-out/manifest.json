@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1790779755.306759,
-    "seen": 1790780460.3472285,
-    "ast_hash": "f9db1ca70188dcb6974e7df38df0d04d",
+    "mtime": 1791322542.4397726,
+    "seen": 1791322866.0849102,
+    "ast_hash": "cd5bf9711aadc7f2e061eaee8155f03c",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791320511.8261125,
-    "seen": 1791320580.6787977,
-    "ast_hash": "d252e74d33ca560fd1e0db5513e1332d",
+    "mtime": 1791322777.4830117,
+    "seen": 1791322866.1683378,
+    "ast_hash": "acc5dac4c5591332122f73ee50c248db",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1791320533.383,
-    "seen": 1791320580.6792133,
-    "ast_hash": "fa071c1ee74b994d6badf57d59cc79b5",
+    "mtime": 1791322832.35175,
+    "seen": 1791322866.1687582,
+    "ast_hash": "480274e4b1e15afdb8f6774c0134d763",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2520,9 +2520,9 @@
     "semantic_hash": ""
   },
   "src/components/Phase138ModalBackdropUniformityUX02.test.js": {
-    "mtime": 1790604830.7231283,
-    "seen": 1790606119.618636,
-    "ast_hash": "b4f5b109c50e644f1dc2b7b84500f497",
+    "mtime": 1791322720.039086,
+    "seen": 1791322866.104337,
+    "ast_hash": "f3c86276735eeda43a1f400ecc06c59c",
     "semantic_hash": ""
   },
   "src/components/ui/modalBackdrop.js": {
@@ -3105,6 +3105,24 @@
     "mtime": 1791319322.7426212,
     "seen": 1791320580.679681,
     "ast_hash": "f12efd813235508febe5459295fdfb49",
+    "semantic_hash": ""
+  },
+  "src/components/ModalOrchestrator.jsx": {
+    "mtime": 1791321359.6418226,
+    "seen": 1791322866.094026,
+    "ast_hash": "a87677c8a63a9bc67ccb03d88475a8ab",
+    "semantic_hash": ""
+  },
+  "src/hooks/useDealActions.js": {
+    "mtime": 1791321400.7346303,
+    "seen": 1791322866.1429315,
+    "ast_hash": "4f858afecdd7d7f4894d4bed6f73c887",
+    "semantic_hash": ""
+  },
+  "src/hooks/useUserReporting.js": {
+    "mtime": 1791322628.3892608,
+    "seen": 1791322866.1458235,
+    "ast_hash": "d7a2c6aa307ad3bb56ecafa2045adf83",
     "semantic_hash": ""
   }
 }
