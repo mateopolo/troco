@@ -855,3 +855,19 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
   4. **Backdrop et centrage uniformisés :**
      - Fond uniforme : bg-black/50 backdrop-blur-md (rgba(0, 0, 0, 0.5) + blur(12px)).
      - Suppression définitive du padding-bottom de compensation : la modale utilise désormais toute la hauteur utile de l'écran mobile (max-h-[calc(100dvh-64px)]) avec centrage parfait.
+
+---
+
+## 🧹 6. OPÉRATION D'ASSAINISSEMENT DOCUMENTAIRE (CLEANUP-04 — 2026-10-06)
+
+1. **Éradication des doublons & Cloisonnement d'archives :**
+   - Création de `docs/archived-2026-10-06/` et archivage de 25 fichiers et sous-dossiers historiques (anciens audits, post-mortems HOTFIX 01-05, procédures de tests manuelles et bibles obsolètes).
+   - Nettoyage strict de la racine : déplacement des clones redondants (`GLOBAL_ARCHITECTURE_AUDIT.md`, `PERFORMANCE_AUDIT*.md`, `PROJECT_CONTEXT.md`, `TROCO_PROJECT_HISTORY.md`), déjà préservés dans `docs/audits-archived/`.
+2. **Consolidation de la Source Unique de Vérité :**
+   - Intégration dans `MASTER_AUDIT.md` (Annexe de références) des configurations de production critiques : setup CORS Firebase Storage, commandes de monitoring et diagnostic temps réel, directives de sécurité Zero-Trust et quotas de Rate Limiting.
+3. **Harmonisation de la documentation d'ingénierie :**
+   - Création de `docs/TESTING.md` cartographiant 100% de la suite de tests (Vitest rules, unitaires, Playwright E2E, Cloud Functions).
+   - Modernisation de `README.md` avec un Guide Développeur standardisé (installation, commandes de dev, builds, tests et liens de référence).
+4. **Vérification de Non-Régression :**
+   - 0 modification sur le code applicatif (`src/`, `functions/`, `public/`, `tests/` intouchés).
+   - Compilation de production validée avec succès via `npm run build` (Exit Code 0).

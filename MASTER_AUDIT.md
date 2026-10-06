@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 9.0/10 | **Progression :** 53 / 74 tâches validées avec preuves formelles (71.6%)
+> **Score global :** 9.0/10 | **Progression :** 54 / 75 tâches validées avec preuves formelles (72.0%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 28 | 1 | 96.6% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 29 | 1 | 96.7% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 16 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 8 | 2 | 80.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
-| **TOTAL** | **53** | **21** | **71.6%** |
+| **TOTAL** | **54** | **21** | **72.0%** |
 
 
 ### Score par axe vs cible Licorne
@@ -160,6 +160,10 @@
 ### [x] [WP-FIX-04/05/06] — TrocoSlides dans le Workspace Premium, Refonte Overlay d'Appel WebRTC & Révision majeure de TrocoSlides (Inline Editing, 12 Thèmes, Transitions, Miniatures)
 **Preuve** : `src/components/chat/ChatInputBar.jsx:361-372`, `src/features/workspace/WorkspaceMessageCard.jsx:18-72`, `src/features/call/WebRTCCallOverlay.jsx:136-192`, `src/components/LiveCallSubtitles.jsx:132`, `src/components/CloudOfficeSuiteModal.jsx:110-180, 2555-2830`, `src/index.css:2351-2382`, `src/data/translationsData.js`, `src/data/translationsSecondary.js`, `src/locales/translations.js`, `src/components/Phase141TrocoSlidesWorkspace.test.js`, `src/features/call/Phase142CallOverlayCleanliness.test.js`, `src/components/Phase143TrocoSlidesOverhaul.test.js`
 **Statut** : ✅ FAIT — (1) WP-FIX-04 : Ajout de TrocoSlides comme 5e outil bureautique dans le menu Workspace Premium avec icône Presentation, clé i18n dans les 7 langues (FR, EN, ES, IT, DE, JA, ZH) et routage direct vers l'éditeur de présentations. Prise en charge des cartes messages de slides dans le chat. (2) WP-FIX-05 : Nettoyage complet de l'écran d'appel vidéo WebRTC — barre d'en-tête unique et compacte (avatar, nom de l'interlocuteur, statut dynamique « En appel • durée », bouton mute rapide), agrandissement de l'avatar central sans bordure blanche ni pulsation visible uniquement sans flux vidéo, suppression du nom dupliqué, et repositionnement des sous-titres en direct à bottom: 180px au-dessus des commandes d'action. (3) WP-FIX-06 : Refonte ergonomique de TrocoSlides — édition inline directe du titre et du sous-titre directement à l'intérieur du slide (suppression de l'en-tête redondant), extension de la palette à 12 thèmes graphiques complets (Terracotta, Sombre, Clair, Dégradé, Modern Blue, Sunset Orange, Mint Green, Dark Luxury, Pastel Pink, Corporate Grey, Forest, Ocean Deep), sélecteur de transitions visuelles (Fondu, Glissement, Zoom) avec keyframes CSS et support en mode plein écran, et affichage de véritables miniatures 16/9 dans la barre latérale avec aperçu du fond, titre, sous-titre et extrait de contenu. 0 erreur de build, 16/16 tests passants.
+
+### [x] [CLEANUP-04] — Ménage documentaire complet & consolidation de référence
+**Preuve** : Déplacement de 25 fichiers et sous-dossiers redondants vers `docs/archived-2026-10-06/`, création de `docs/TESTING.md`, modernisation de `README.md`, consolidation de l'Annexe de sécurité/DevOps dans `MASTER_AUDIT.md`.
+**Statut** : ✅ FAIT — Assainissement documentaire de la racine et de `docs/`, éradication des 10 doublons stricts (GLOBAL_ARCHITECTURE_AUDIT, PERFORMANCE_AUDIT, etc.), préservation intégrale de l'historique et des preuves formelles dans les archives.
 
 ### [ ] [I18N-06] — Ratissage final i18n + Modularisation Légale & Conformité Multilingue (7 langues)
 **Preuve** : Chaînes FR résiduelles non traduites dans `src/App.js:5538-5576` (écran banni), `src/App.js:4931-4975` (menu mobile actions annonces), `src/App.js:4339` et `src/features/feed/FeedSection.jsx:533, 604`.  
@@ -617,3 +621,66 @@ Ce document constitue **LE tableau de bord unique et absolu** de Troco.
 - **Faiblesses critiques :** Monolithe `App.js` de 5 295 lignes, absence de PSP réel connecté en production (mock provider actif), adresses email opérationnelles à provisionner.
 - **Prochain jalon stratégique :** Clôture intégrale des Quick Wins (Niveau 1) et branchement de Stripe Connect / Stripe Identity.
 - **Horizon Licorne :** 12 à 18 mois avec exécution rigoureuse de la roadmap.
+
+---
+
+## 📎 Annexe — Références consolidées (2026-10-06)
+
+### 1. Configuration CORS Firebase Storage (issu de `docs/CORS-SETUP.md`)
+Nécessaire pour autoriser les uploads depuis les déploiements Vercel, les domaines de production et le serveur local :
+```powershell
+# Authentification et sélection du projet Firebase
+gcloud auth login
+gcloud config set project troco-8a6eb
+
+# Application et vérification de cors.json sur le bucket de stockage
+gsutil cors set cors.json gs://troco-8a6eb.firebasestorage.app
+gsutil cors get gs://troco-8a6eb.firebasestorage.app
+
+# Alternative gcloud storage moderne
+gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=cors.json
+```
+*Délai de propagation : jusqu'à 2 minutes. Tester ensuite l'upload de notes vocales et fichiers audio (.mp3, .wav, .flac).*
+
+---
+
+### 2. Guide de Monitoring & Diagnostic en Production (issu de `docs/MONITORING.md`)
+- **Scanner d'intégrité en console F12 (Mobile / Desktop) :**
+  ```javascript
+  import('/src/utils/diagnostics/fullRegressionScan.js').then(m => m.fullDiagnostic());
+  ```
+  *Vérifie les doublons d'écouteurs Firestore (`window.__firestoreListeners`), l'intégrité des messages, les RTCPeerConnection et App Check.*
+- **Traçage WebRTC en mémoire vive :**
+  ```javascript
+  console.table(window.__webrtcTrace || []);
+  ```
+- **Détection proactive client via `useFirestoreHealth.js` :**
+  - Fenêtre glissante de 60s. Dès que 5 erreurs identiques (`permission-denied`, `RESOURCE_EXHAUSTED`) surviennent en 1 minute, transmission à Sentry (`captureFirestoreAlert`).
+- **Extraction des logs Cloud Functions (2 dernières heures) :**
+  ```bash
+  bash scripts/analyze-cloud-logs.sh
+  ```
+- **Health Check Uptime :**
+  Endpoint HTTP public : `https://<region>-<project>.cloudfunctions.net/health` (contrôle toutes les 5 min recommandé avec alerte après 2 échecs).
+
+---
+
+### 3. Directives de Sécurité Firestore Zero-Trust (issues de `README-RULES.md`)
+- **Deny-by-default absolu :** Verrouillage racine `match /{document=**} { allow read, write: if false; }`.
+- **Principe du Moindre Privilège :** Seul le propriétaire authentifié (`request.auth.uid == uid`) accède à ses données.
+- **Sécurité financière & antifraude :** Les champs critiques (`euroBalance`, `trocoTokens`, `dealsCompleted`, `kycVerified`, `isBanned`, `isShadowBanned`) sont **strictement inaccessibles en écriture côté client**. Seul l'Admin SDK Firebase via Cloud Functions peut les modifier.
+- **Autorité cryptographique :** Les droits d'administration reposent uniquement sur les Custom Claims signés (`request.auth.token.admin == true`). Aucun contrôle sur l'adresse email client.
+
+---
+
+### 4. Directives Firebase App Check & Rate Limiting (issues de `README-APPCHECK.md`)
+- **Attestation App Check :**
+  - Web Production : `ReCaptchaV3Provider` (`REACT_APP_RECAPTCHA_SITE_KEY`).
+  - Local / Tests : `REACT_APP_APPCHECK_DEBUG_TOKEN`.
+- **Quotas de Rate Limiting Backend (`rateLimitHelper.ts`) :**
+  - `send_message` : 30 requêtes / min
+  - `create_listing` : 5 requêtes / heure
+  - `initiate_payment` : 10 requêtes / 15 min
+  - `api_call` : 60 requêtes / min
+  - Purge horaire automatisée via `cleanupRateLimits`.
+- **Frontend :** Hook `useRateLimit()` avec notification discrète `<RateLimitToast />`.
