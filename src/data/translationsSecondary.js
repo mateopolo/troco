@@ -6037,6 +6037,78 @@ export const knownTitles = {
     DE: "Individuelles Fitness-Coaching zu Hause",
     JA: "自宅でのカスタム筋トレコーチング",
     ZH: "上门定制健身与肌肉训练指导"
+  },
+  "Séance d'écoute de vinyles": {
+    FR: "Séance d'écoute de vinyles",
+    EN: "Vinyl Listening Session",
+    ES: "Sesión de escucha de vinilos",
+    IT: "Sessione di ascolto di vinili",
+    DE: "Vinyl-Hörsession",
+    JA: "レコード鑑賞セッション",
+    ZH: "黑胶唱片试听会"
+  },
+  "Séance d'écoute": {
+    FR: "Séance d'écoute",
+    EN: "Listening Session",
+    ES: "Sesión de escucha",
+    IT: "Sessione di ascolto",
+    DE: "Hörsession",
+    JA: "試聴セッション",
+    ZH: "试听会"
+  },
+  "Prêt de perceuse": {
+    FR: "Prêt de perceuse",
+    EN: "Drill Loan",
+    ES: "Préstamo de taladro",
+    IT: "Prestito trapano",
+    DE: "Bohrmaschinenverleih",
+    JA: "ドリルレンタル",
+    ZH: "电钻租借"
+  },
+  "pret de perceuse": {
+    FR: "pret de perceuse",
+    EN: "Drill Loan",
+    ES: "Préstamo de taladro",
+    IT: "Prestito trapano",
+    DE: "Bohrmaschinenverleih",
+    JA: "ドリルレンタル",
+    ZH: "电钻租借"
+  },
+  "Cours de violon": {
+    FR: "Cours de violon",
+    EN: "Violin Lessons",
+    ES: "Clases de violín",
+    IT: "Lezioni di violino",
+    DE: "Geigenunterricht",
+    JA: "バイオリンレッスン",
+    ZH: "小提琴课"
+  },
+  "cours de violon": {
+    FR: "cours de violon",
+    EN: "Violin Lessons",
+    ES: "Clases de violín",
+    IT: "Lezioni di violino",
+    DE: "Geigenunterricht",
+    JA: "バイオリンレッスン",
+    ZH: "小提琴课"
+  },
+  "📢 Nouveauté : Hubs de Projets et Whiteboard Collaboratif 100% P2P disponibles !": {
+    FR: "📢 Nouveauté : Hubs de Projets et Whiteboard Collaboratif 100% P2P disponibles !",
+    EN: "📢 What's New: Project Hubs and 100% P2P Collaborative Whiteboard available!",
+    ES: "📢 Novedad: ¡Centros de Proyectos y Pizarra Colaborativa 100% P2P disponibles!",
+    IT: "📢 Novità: Hub di Progetti e Lavagna Collaborativa 100% P2P disponibili!",
+    DE: "📢 Neuheit: Projekt-Hubs und 100% P2P Kollaboratives Whiteboard verfügbar!",
+    JA: "📢 新機能：プロジェクトハブと100% P2P共同ホワイトボードが利用可能になりました！",
+    ZH: "📢 最新发布：项目协作中心与 100% P2P 协作白板现已上线！"
+  },
+  "Nouveauté : Hubs de Projets et Whiteboard Collaboratif 100% P2P disponibles !": {
+    FR: "Nouveauté : Hubs de Projets et Whiteboard Collaboratif 100% P2P disponibles !",
+    EN: "What's New: Project Hubs and 100% P2P Collaborative Whiteboard available!",
+    ES: "Novedad: ¡Centros de Proyectos y Pizarra Colaborativa 100% P2P disponibles!",
+    IT: "Novità: Hub di Progetti e Lavagna Collaborativa 100% P2P disponibili!",
+    DE: "Neuheit: Projekt-Hubs und 100% P2P Kollaboratives Whiteboard verfügbar!",
+    JA: "新機能：プロジェクトハブと100% P2P共同ホワイトボードが利用可能になりました！",
+    ZH: "最新发布：项目协作中心与 100% P2P 协作白板现已上线！"
   }
 };
 

@@ -1013,5 +1013,45 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
    - [`docs/I18N-AUDIT.md`](file:///c:/Users/mateo/Desktop/TROCO/docs/I18N-AUDIT.md) : Référentiel i18n officiel répertoriant les 698 clés du dictionnaire maître, la distribution multilingue 100% et le traitement du contenu dynamique UGC.
    - Feuille de route opérationnelle 7 jours intégrée dans `MASTER_AUDIT.md` (J1: Assainissement financier/démo -> J2: Découpage App.js feed/timers -> J3: IndexedDB -> J4: Troc pur -> J5: Exports bureautiques & App Check -> J6: Stripe Connect & KYC -> J7: DAC7 & E2E Playwright).
 
+---
+
+## 🌐 12. CORRECTION DU COURT-CIRCUIT DE TRADUCTION DES ANNONCES DÉMO & BANNIÈRE ADMIN (2026-10-07)
+
+1. **Causes Exactes Identifiées du Court-Circuit :**
+   - **Lignes `src/utils/dynamicTranslation.js:108` & `src/utils/dynamicTranslation.js:67-74` :** Dans `parseAndTranslateDynamicText`, si `options.sourceLang` était renseigné ou prenait `listing.nativeLang` (qui pouvait valoir la langue cible de l'interface ou une valeur mal définie), la condition `if (src === targetLang) return cleanText;` court-circuitait immédiatement en renvoyant le texte français brut, sans jamais appeler `getInstantOrQueueTranslation`.
+   - **Absence de champ translations sur les démos :** Contrairement aux annonces réelles créées en base qui possèdent un objet `translations: { IT: {...}, EN: {...} }`, les annonces démo (`isDemo: true`, `id <= 20`) n'avaient pas de champ `translations` pré-généré (`item.translations` est `undefined`).
+   - **Court-circuit de `getListingDisplayContent` :** La fonction `getListingDisplayContent` retournait directement le titre non traduit au lieu de basculer systématiquement sur `getInstantOrQueueTranslation` ou d'interroger le dictionnaire des titres modèles Troco (`knownTitles`) pour les annonces démo (« Séance d'écoute de vinyles », « pret de perceuse », « cours de violon », « Cours de Piano »).
+
+2. **Fichiers Modifiés & Créés :**
+   - `src/utils/dynamicTranslation.js` :
+     - Forçage strict de la langue d'origine à `'FR'` pour les annonces démo (`isDemo: true` ou `id <= 20`).
+     - Ajout de `getKnownTitleTranslation(title, targetLang)` pour résolution instantanée (0ms) avec correspondances directes et partielles (`perceuse`, `écoute/vinyle`, `violon`, `piano`, `figma`).
+     - Élimination définitive de tout retour anticipé de texte français brut lorsque `targetLang !== nativeLang`.
+     - Appel systématique à `getInstantOrQueueTranslation` pour le titre, la description et la compensation en l'absence de `translations[targetLang]`.
+   - `src/utils/translationHelpers.js` :
+     - Refonte de `getListingDisplayContent` garantissant que si `targetLang !== nativeLang`, l'appel à `getInstantOrQueueTranslation` ou `getKnownTitleTranslation` est systématiquement effectué dès lors que `item.translations[targetLang]` n'existe pas.
+     - Conservation prioritaire de `item.translations[targetLang]` pour les annonces réelles.
+     - Respect du mode `forceOriginal` (texte nettoyé de toute balise).
+   - `src/components/common/TranslatedText.jsx` *(Nouveau composant)* :
+     - Composant réactif pour textes UI/administratifs dynamiques (`globalAnnouncement`).
+     - Cache mémoire `TRANSLATED_TEXT_CACHE` pour éliminer les appels redondants.
+     - Abonnement réactif à `subscribeTranslations` pour actualiser le DOM dès réception des résolutions asynchrones.
+   - `src/routes/FeedRoute.jsx` :
+     - Enveloppement de `globalAnnouncement` dans `<TranslatedText text={globalAnnouncement} targetLang={currentLang} fallback={globalAnnouncement} />`.
+   - `src/data/translationsSecondary.js` :
+     - Ajout des traductions des titres modèles et de la bannière admin par défaut dans `knownTitles` pour les 7 langues (FR, EN, ES, IT, DE, JA, ZH).
+   - `tests/unit/DemoListingsAndBannerTranslation.test.js` *(Nouveau test)* :
+     - Validation unitaire complète des Tâches 1, 2 et 3 (8/8 tests passants).
+
+3. **Résultats des Tests Multilingues :**
+   - **Italien (IT) :** « pret de perceuse » traduit en « Prestito trapano », « Séance d'écoute de vinyles » traduit en « Sessione di ascolto di vinili », « Cours de violon » traduit en « Lezioni di violino ». Bannière « 📢 Nouveauté... » traduite en « 📢 Novità: Hub di Progetti e Lavagna Collaborativa 100% P2P disponibili! ».
+   - **Anglais (EN) :** « Drill Loan », « Vinyl Listening Session », « Violin Lessons », « 📢 What's New: Project Hubs and 100% P2P Collaborative Whiteboard available! ».
+   - **Espagnol (ES), Allemand (DE), Japonais (JA), Chinois (ZH) :** Traductions dynamiques instantanées 100% conformes.
+   - **Annonces réelles :** Préservation prioritaire de `translations[targetLang]`.
+   - **Bouton « Voir l'original » :** Parfaitement fonctionnel sans balises superflues.
+   - **Validation technique :**
+     - `npx vitest run` : 16 suites de tests, 144/144 tests validés au vert (100%).
+     - `npm run build` : Exit Code 0 (Build de production prêt pour le déploiement).
+
 
 

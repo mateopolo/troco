@@ -14,6 +14,7 @@ import FeedCardItem from '../components/FeedCardItem';
 import SponsoredFeedCard from '../components/SponsoredFeedCard';
 import PullToRefresh from '../components/ui/PullToRefresh';
 import { EmptyState } from '../components/ui/EmptyState';
+import TranslatedText from '../components/common/TranslatedText';
 import { pageTransitionVariants, pageTransitionConfig } from './pageTransitions';
 
 const MapSection = React.lazy(() => import('../features/map/MapSection'));
@@ -141,7 +142,13 @@ export default function FeedRoute({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sparkles size={16} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-                <span>{globalAnnouncement}</span>
+                <span>
+                  <TranslatedText
+                    text={globalAnnouncement}
+                    targetLang={currentLang}
+                    fallback={globalAnnouncement}
+                  />
+                </span>
               </div>
             </div>
           )}

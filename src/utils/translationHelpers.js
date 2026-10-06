@@ -3,6 +3,7 @@ import { knownTitles, knownMessageTranslations } from '../data/translationsData'
 import {
   extractLanguageTag,
   cleanLanguageTag,
+  getKnownTitleTranslation,
   parseAndTranslateDynamicText,
   parseAndTranslateListing,
 } from './dynamicTranslation';
@@ -10,6 +11,7 @@ import {
 export {
   extractLanguageTag,
   cleanLanguageTag,
+  getKnownTitleTranslation,
   parseAndTranslateDynamicText,
   parseAndTranslateListing,
 };
@@ -275,8 +277,94 @@ export const getReviewTranslation = (reviewText, targetLang, forceOriginal = fal
 /**
  * Traduction universelle d'une annonce (Titre, Description, Contrepartie).
  * Parse automatiquement les balises de langue (ex: [EN]), nettoie et traduit si nécessaire.
+ * 
+ * - Si forceOriginal est true : affiche le texte brut sans balise.
+ * - Si item.translations[targetLang] existe déjà (annonces réelles) : priorité absolue.
+ * - Si item.translations[targetLang] n'existe pas (annonces démo ou non encore traduites) :
+ *   passe systématiquement par getInstantOrQueueTranslation (ou knownTitles pour FCP 0ms).
  */
-export const getListingDisplayContent = (item, targetLang, forceOriginal = false) => {
+export const getListingDisplayContent = (item, targetLang = 'FR', forceOriginal = false) => {
   if (!item) return { title: '', description: '', compensation: '' };
-  return parseAndTranslateListing(item, targetLang, forceOriginal);
+
+  const target = (targetLang || 'FR').toUpperCase();
+  const rawTitle = item.title || '';
+  const rawDesc = item.description || '';
+  const rawComp = item.compensation || '';
+
+  // Mode "voir l'original" forcé
+  if (forceOriginal) {
+    return {
+      title: cleanLanguageTag(rawTitle),
+      description: cleanLanguageTag(rawDesc),
+      compensation: cleanLanguageTag(rawComp),
+    };
+  }
+
+  // 1. Si item.translations[targetLang] existe déjà (cas des annonces réelles)
+  if (item.translations && item.translations[target]) {
+    const tItem = item.translations[target];
+    return {
+      title: cleanLanguageTag(tItem.title || rawTitle),
+      description: cleanLanguageTag(tItem.description || rawDesc),
+      compensation: cleanLanguageTag(tItem.compensation || rawComp),
+    };
+  }
+
+  // 2. Détection d'annonce démo (isDemo: true, ID <= 20, ou annonces modèles)
+  const isDemo = Boolean(
+    item.isDemo === true ||
+    (typeof item.id === 'number' && item.id <= 20) ||
+    (typeof item.id === 'string' && /^(demo-|\d+$)/.test(item.id) && Number(item.id) <= 20)
+  );
+
+  const titleTag = extractLanguageTag(rawTitle);
+  const descTag = extractLanguageTag(rawDesc);
+  // Pour les annonces démo, la langue d'origine est toujours le français (FR)
+  const nativeLang = isDemo ? 'FR' : (titleTag || descTag || item.nativeLang || 'FR').toUpperCase();
+
+  // Si targetLang === nativeLang (et pas de démo requérant une traduction)
+  if (target === nativeLang && !titleTag && !descTag && !isDemo) {
+    return {
+      title: cleanLanguageTag(rawTitle),
+      description: cleanLanguageTag(rawDesc),
+      compensation: cleanLanguageTag(rawComp),
+    };
+  }
+
+  // 3. Traduction du titre : dictionnaire instantané knownTitles ou getInstantOrQueueTranslation
+  let translatedTitle = getKnownTitleTranslation(rawTitle, target);
+  if (!translatedTitle) {
+    const cleanTitle = cleanLanguageTag(rawTitle);
+    translatedTitle = getInstantOrQueueTranslation(
+      cleanTitle,
+      target,
+      isDemo ? 'FR' : (titleTag || nativeLang || 'auto')
+    );
+  }
+
+  // 4. Traduction de la description via getInstantOrQueueTranslation
+  const cleanDesc = cleanLanguageTag(rawDesc);
+  const translatedDesc = cleanDesc
+    ? getInstantOrQueueTranslation(
+        cleanDesc,
+        target,
+        isDemo ? 'FR' : (descTag || nativeLang || 'auto')
+      )
+    : '';
+
+  // 5. Traduction de la compensation via getInstantOrQueueTranslation
+  const cleanComp = cleanLanguageTag(rawComp);
+  const translatedComp = cleanComp
+    ? getInstantOrQueueTranslation(
+        cleanComp,
+        target,
+        isDemo ? 'FR' : (nativeLang || 'auto')
+      )
+    : '';
+
+  return {
+    title: cleanLanguageTag(translatedTitle || rawTitle),
+    description: cleanLanguageTag(translatedDesc || rawDesc),
+    compensation: cleanLanguageTag(translatedComp || rawComp),
+  };
 };
