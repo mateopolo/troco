@@ -1084,6 +1084,7 @@ export const translations = {
     "splashSubtitle": "L'économie circulaire commence ici",
     "splashLoading": "Initialisation...",
     "splashPressAnyKey": "Appuyez pour commencer",
+    "replaySplash": "Revoir l'animation d'accueil",
     "live.chat_title": "Chat Mondial",
     "live.live_badge": "EN DIRECT",
     "live.connected_count": "{count} en ligne",

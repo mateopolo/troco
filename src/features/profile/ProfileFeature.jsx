@@ -1387,6 +1387,34 @@ export default function ProfileFeature({
             </span>
             <ChevronRight size={16} color="var(--accent-primary)" />
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              try { sessionStorage.removeItem('troco_splash_seen'); } catch (_) {}
+              window.location.href = window.location.pathname + '?splash=1';
+            }}
+            className="premium-button"
+            style={{
+              border: '1px solid var(--border-color)',
+              borderRadius: '16px',
+              padding: '14px 16px',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              fontWeight: '700',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              📺 {t('replaySplash', "Revoir l'animation d'accueil")}
+            </span>
+            <ChevronRight size={16} color="var(--accent-primary)" />
+          </button>
         </div>
       </div>
     </div>

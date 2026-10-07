@@ -1311,4 +1311,39 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
 - Test suite globale Vitest : 20 fichiers de test, 218/218 tests réussis (100% vert).
 - `npm run build` : Exit Code 0, bundle de production vérifié.
 
+---
+
+### 18. Mode Diagnostic Splash Screen (`?splash=1`) & Bouton Replay Profil
+
+#### 18.1. Forçage de l'Animation d'Accueil par URL (`?splash=1`)
+- **Déclenchement déterministe :** Initialisation de l'état `showSplash` dans `src/App.js` configurée pour détecter `window.location.search.includes('splash=1')`.
+- **Purge de session :** Suppression immédiate de la clé `troco_splash_seen` dans `sessionStorage` lorsque le paramètre de test est présent, garantissant un cycle complet d'affichage et de réinitialisation.
+- **Rendu prioritaire absolu :** Déplacement du bloc de rendu conditionnel `<SplashScreen ... />` au tout début du `return` de `App.js`, avant toute vérification d'authentification (`if (!isAuthResolved || isLoadingSession)`). L'animation CRT s'exécute immédiatement sans être masquée ou retardée par les loaders Firebase.
+- **Indépendance d'authentification :** Retrait de la restriction `!isAuthenticated` pour permettre le diagnostic et la relecture quel que soit le statut de connexion de l'utilisateur.
+
+#### 18.2. Bouton "Revoir l'animation d'accueil" dans le Profil
+- Intégration d'un bouton d'action directe dans la section Paramètres de `src/routes/ProfileRoute.jsx` et `src/features/profile/ProfileFeature.jsx` :
+  - Style : `className="premium-button"`.
+  - Action : purge de `sessionStorage.getItem('troco_splash_seen')` et redirection vers `window.location.pathname + '?splash=1'`.
+- Clé de localisation dédiée : `t('replaySplash')` avec libellé par défaut sécurisé `"Revoir l'animation d'accueil"`.
+
+#### 18.3. Internationalisation Multilingue (7 Langues)
+- Synchronisation complète de la clé `replaySplash` dans :
+  - `src/locales/translations.js`
+  - `src/data/translationsData.js`
+  - `src/data/translationsSecondary.js`
+- Traductions officielles :
+  - **FR :** `"Revoir l'animation d'accueil"`
+  - **EN :** `"Replay splash animation"`
+  - **ES :** `"Ver animación de inicio"`
+  - **IT :** `"Rivedi animazione iniziale"`
+  - **DE :** `"Startanimation erneut ansehen"`
+  - **JA :** `"起動アニメーションを再表示"`
+  - **ZH :** `"重看启动动画"`
+
+#### 18.4. Validation & Non-Régression
+- `npx vitest run` : 20 suites de tests, 218/218 tests réussis (100% au vert).
+- `npm run build` : Exit Code 0, bundle de production validé.
+
+
 

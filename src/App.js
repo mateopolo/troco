@@ -347,12 +347,14 @@ export default function App() {
 
   // Écran d'accueil interactif immersif CRT + Dither (TÂCHE 5)
   const [showSplash, setShowSplash] = useState(() => {
-    try {
-      if (typeof window === 'undefined') return false;
-      return sessionStorage.getItem('troco_splash_seen') !== 'true';
-    } catch (_) {
-      return false;
+    if (typeof window === 'undefined') return false;
+    // Mode test forcé via URL : ?splash=1
+    if (window.location.search.includes('splash=1')) {
+      try { sessionStorage.removeItem('troco_splash_seen'); } catch (_) {}
+      return true;
     }
+    // Sinon, comportement normal : uniquement si pas encore vu dans la session
+    return sessionStorage.getItem('troco_splash_seen') !== 'true';
   });
 
   const handleSplashComplete = useCallback(() => {
@@ -2459,6 +2461,19 @@ export default function App() {
     }
   };
 
+  if (showSplash) {
+    return (
+      <SplashScreen
+        onComplete={() => {
+          try { sessionStorage.setItem('troco_splash_seen', 'true'); } catch (_) {}
+          setShowSplash(false);
+        }}
+        darkMode={darkMode}
+        t={t}
+      />
+    );
+  }
+
   if (!isAuthResolved || isLoadingSession || (isAuthenticated && isProfileLoading)) {
     return (
       <div style={{
@@ -3135,15 +3150,6 @@ export default function App() {
               currentLang={currentLang}
               t={t}
               profile={profile}
-            />
-          )}
-
-          {/* SPLASH SCREEN INTERACTIF CRT + 1-BIT DITHER (TÂCHE 5) */}
-          {showSplash && !isAuthenticated && (
-            <SplashScreen
-              onComplete={handleSplashComplete}
-              darkMode={darkMode}
-              t={t}
             />
           )}
         </div>

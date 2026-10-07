@@ -74,6 +74,19 @@ export default function ProfileRoute({
           formatCompensation={formatCompensation}
         />
       </Suspense>
+
+      <div style={{ padding: '0 20px 32px', display: 'flex', justifyContent: 'center' }}>
+        <button
+          type="button"
+          onClick={() => {
+            try { sessionStorage.removeItem('troco_splash_seen'); } catch (_) {}
+            window.location.href = window.location.pathname + '?splash=1';
+          }}
+          className="premium-button"
+        >
+          {t('replaySplash') || 'Revoir l\'animation d\'accueil'}
+        </button>
+      </div>
     </motion.div>
   );
 }
