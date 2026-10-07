@@ -74,7 +74,7 @@ export const useFeedListings = ({
           firestoreId: docSnap.id,
           ...docSnap.data(),
           status: docSnap.data().status || 'active',
-          isDemo: false,
+          isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
           _doc: docSnap,
         }));
 
@@ -99,7 +99,7 @@ export const useFeedListings = ({
                 firestoreId: docSnap.id,
                 ...docSnap.data(),
                 status: docSnap.data().status || 'active',
-                isDemo: false,
+                isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
                 _doc: docSnap,
               }));
               const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;

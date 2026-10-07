@@ -322,8 +322,8 @@ export const getListingDisplayContent = (item, targetLang = 'FR', forceOriginal 
   // Pour les annonces démo, la langue d'origine est toujours le français (FR)
   const nativeLang = isDemo ? 'FR' : (titleTag || descTag || item.nativeLang || 'FR').toUpperCase();
 
-  // Si targetLang === nativeLang (et pas de démo requérant une traduction)
-  if (target === nativeLang && !titleTag && !descTag && !isDemo) {
+  // Si targetLang === nativeLang (sans balise étrangère), texte natif direct
+  if (target === nativeLang && !titleTag && !descTag) {
     return {
       title: cleanLanguageTag(rawTitle),
       description: cleanLanguageTag(rawDesc),

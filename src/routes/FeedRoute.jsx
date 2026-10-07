@@ -509,68 +509,11 @@ export default function FeedRoute({
                 }}
               >
                 {(filteredListings || []).map((item, index) => {
-                  const authorProfile = item?.authorProfile || {
-                    name: item?.author || 'Membre Troco',
-                    avatar: item?.authorAvatar || item?.avatar || item?.authorPhotoURL || '',
-                    bio: item?.bio || '',
-                    location: item?.location || 'Paris',
-                    uid: item?.authorUid || null,
-                  };
-
-                  return (
-                    <div key={item.id ?? `feed-item-${index}`} className="feed-card-virtualized">
-                      <FeedCardItem
-                        item={item}
-                        darkMode={darkMode}
-                        hoveredCardId={hoveredCardId}
-                        setHoveredCardId={setHoveredCardId}
-                        hoverSlideIndex={hoverSlideIndex}
-                        handleOpenListing={handleOpenListing}
-                        getSuggestedMedia={getSuggestedMedia}
-                        getFallbackImage={getFallbackImage}
-                        formatCompensation={formatCompensation}
-                        getListingDisplayContent={getListingDisplayContent}
-                        currentLang={currentLang}
-                        langRevision={translationRevision}
-                        showingOriginalListings={showingOriginalListings}
-                        toggleOriginalListing={toggleOriginalListing}
-                        localizeLocation={localizeLocation}
-                        localizeTags={localizeTags}
-                        generateTags={generateTags}
-                        getAuthorAvatar={getAuthorAvatar}
-                        profile={profile}
-                        handleStartDiscussion={handleStartDiscussion}
-                        isAdmin={isAdmin}
-                        isGodModeActive={isGodModeActive}
-                        onAdminDeleteListing={handleAdminDeleteListing}
-                        onAdminToggleHideListing={handleAdminToggleHideListing}
-                        onAdminEditListing={handleAdminEditListing}
-                        onOpenMobileActions={setMobileListingActionTarget}
-                        t={t}
-                        onViewUserProfile={() => {
-                          const userObj = {
-                            id: item.authorUid || item.userId || `user_${item.author}`,
-                            uid: item.authorUid || item.userId || null,
-                            name: item.author || 'Membre Troco',
-                            username: item.author ? `@${item.author.toLowerCase().replace(/\s+/g, '')}` : '@membre',
-                            avatar: authorProfile.avatar,
-                            bio: authorProfile.bio,
-                            location: item.location || 'France',
-                            trocoTokens: item.trocoTokens || 12,
-                            euroBalance: item.euroBalance || 100,
-                            isTrocoPlus: item.isTrocoPlus || false,
-                            kycVerified: item.kycVerified || false,
-                            dealsCompleted: item.dealsCompleted || 0,
-                            authorProfile: authorProfile,
-                          };
-                          setSelectedPublicUser(userObj);
-                        }}
-                      />
-
-                      {/* INJECTION FLUIDE D'UNE CARTE SPONSORISÉE TOUTES LES 6 ANNONCES */}
-                      {(index + 1) % 6 === 0 && (
+                  if (item.isSponsored) {
+                    return (
+                      <div key={item.id ?? `feed-sponsored-${index}`} className="feed-card-virtualized">
                         <SponsoredFeedCard
-                          key={`sponsored-card-${index}`}
+                          index={index}
                           darkMode={darkMode}
                           currentLang={currentLang}
                           t={t}
@@ -583,17 +526,112 @@ export default function FeedRoute({
                             setIsCguViewerOpen(true);
                           }}
                           onClaimBonus={(amount) => {
+                            const bonusVal = typeof amount === 'number' ? amount : (amount?.amount || 2.0);
                             setProfile(prev => ({
                               ...prev,
-                              euroBalance: Number((prev.euroBalance + amount).toFixed(2))
+                              euroBalance: Number((prev.euroBalance + bonusVal).toFixed(2))
                             }));
                             playApplePaySound();
-                            setSaveMessage(`🎁 Bonus partenaire crédité : +${amount}€ sur votre solde !`);
+                            setSaveMessage(`🎁 Bonus partenaire crédité : +${bonusVal}€ sur votre solde !`);
                             safeTimeout(() => setSaveMessage(''), 6000);
                           }}
                         />
+                      </div>
+                    );
+                  }
+
+                  const authorProfile = item?.authorProfile || {
+                    name: item?.author || 'Membre Troco',
+                    avatar: item?.authorAvatar || item?.avatar || item?.authorPhotoURL || '',
+                    bio: item?.bio || '',
+                    location: item?.location || 'Paris',
+                    uid: item?.authorUid || null,
+                  };
+
+                  const shouldInjectSponsor = (index + 1) % 6 === 0;
+
+                  return (
+                    <React.Fragment key={item.id ?? `feed-item-${index}`}>
+                      <div className="feed-card-virtualized">
+                        <FeedCardItem
+                          item={item}
+                          darkMode={darkMode}
+                          hoveredCardId={hoveredCardId}
+                          setHoveredCardId={setHoveredCardId}
+                          hoverSlideIndex={hoverSlideIndex}
+                          handleOpenListing={handleOpenListing}
+                          getSuggestedMedia={getSuggestedMedia}
+                          getFallbackImage={getFallbackImage}
+                          formatCompensation={formatCompensation}
+                          getListingDisplayContent={getListingDisplayContent}
+                          currentLang={currentLang}
+                          langRevision={translationRevision}
+                          showingOriginalListings={showingOriginalListings}
+                          toggleOriginalListing={toggleOriginalListing}
+                          localizeLocation={localizeLocation}
+                          localizeTags={localizeTags}
+                          generateTags={generateTags}
+                          getAuthorAvatar={getAuthorAvatar}
+                          profile={profile}
+                          handleStartDiscussion={handleStartDiscussion}
+                          isAdmin={isAdmin}
+                          isGodModeActive={isGodModeActive}
+                          onAdminDeleteListing={handleAdminDeleteListing}
+                          onAdminToggleHideListing={handleAdminToggleHideListing}
+                          onAdminEditListing={handleAdminEditListing}
+                          onOpenMobileActions={setMobileListingActionTarget}
+                          t={t}
+                          onViewUserProfile={() => {
+                            const userObj = {
+                              id: item.authorUid || item.userId || `user_${item.author}`,
+                              uid: item.authorUid || item.userId || null,
+                              name: item.author || 'Membre Troco',
+                              username: item.author ? `@${item.author.toLowerCase().replace(/\s+/g, '')}` : '@membre',
+                              avatar: authorProfile.avatar,
+                              bio: authorProfile.bio,
+                              location: item.location || 'France',
+                              trocoTokens: item.trocoTokens || 12,
+                              euroBalance: item.euroBalance || 100,
+                              isTrocoPlus: item.isTrocoPlus || false,
+                              kycVerified: item.kycVerified || false,
+                              dealsCompleted: item.dealsCompleted || 0,
+                              authorProfile: authorProfile,
+                            };
+                            setSelectedPublicUser(userObj);
+                          }}
+                        />
+                      </div>
+
+                      {/* INJECTION D'UNE CELLULE SPONSORISÉE DÉDIÉE DANS LA GRILLE TOUTES LES 6 ANNONCES */}
+                      {shouldInjectSponsor && (
+                        <div key={`sponsored-slot-${index}`} className="feed-card-virtualized">
+                          <SponsoredFeedCard
+                            index={Math.floor(index / 6)}
+                            darkMode={darkMode}
+                            currentLang={currentLang}
+                            t={t}
+                            onOpenBoostModal={() => {
+                              const myListing = (listings || []).find(l => l.author === profile?.name) || (listings && listings[0]);
+                              setBoostingListing(myListing);
+                              setIsBoostModalOpen(true);
+                            }}
+                            onOpenBusinessOffer={() => {
+                              setIsCguViewerOpen(true);
+                            }}
+                            onClaimBonus={(amount) => {
+                              const bonusVal = typeof amount === 'number' ? amount : (amount?.amount || 2.0);
+                              setProfile(prev => ({
+                                ...prev,
+                                euroBalance: Number((prev.euroBalance + bonusVal).toFixed(2))
+                              }));
+                              playApplePaySound();
+                              setSaveMessage(`🎁 Bonus partenaire crédité : +${bonusVal}€ sur votre solde !`);
+                              safeTimeout(() => setSaveMessage(''), 6000);
+                            }}
+                          />
+                        </div>
                       )}
-                    </div>
+                    </React.Fragment>
                   );
                 })}
               </motion.div>

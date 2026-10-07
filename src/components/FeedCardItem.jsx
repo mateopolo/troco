@@ -7,6 +7,7 @@ import { safeVibrate } from '../utils/haptics';
 import { useLanguage } from '../contexts/LanguageContext';
 import { subscribeTranslations } from '../utils/translator';
 import { useUserPresence } from '../hooks/useUserPresence';
+import { getListingDisplayContent as helperGetListingDisplayContent } from '../utils/translationHelpers';
 
 function FeedCardItem({
   item,
@@ -52,6 +53,7 @@ function FeedCardItem({
 
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
+  const [localShowingOriginal, setLocalShowingOriginal] = useState(false);
   const [, setTransRevision] = useState(0);
 
   useEffect(() => {
@@ -70,9 +72,11 @@ function FeedCardItem({
 
   const media = typeof getSuggestedMedia === 'function' ? getSuggestedMedia(item?.title, item?.description || '', item?.image, item?.video) : {};
   const isHovered = hoveredCardId === item?.id;
-  const displayContent = typeof getListingDisplayContent === 'function'
-    ? getListingDisplayContent(item, currentLang, !!showingOriginalListings[item?.id])
-    : { title: item?.title || '', description: item?.description || '' };
+  const isOriginal = Boolean(showingOriginalListings?.[item?.id] || localShowingOriginal);
+  const resolveDisplayContent = typeof getListingDisplayContent === 'function'
+    ? getListingDisplayContent
+    : helperGetListingDisplayContent;
+  const displayContent = resolveDisplayContent(item, currentLang, isOriginal);
 
   const trimStart = Number(item.videoTrimStart || item.videoMetadata?.trimStart || 0);
   const trimEnd = Number(item.videoTrimEnd || item.videoMetadata?.trimEnd || 0);
@@ -439,7 +443,7 @@ function FeedCardItem({
         )}
 
         <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(26, 22, 19, 0.92)', border: '1px solid rgba(255, 255, 255, 0.08)', color: '#FFFFFF', fontSize: '11px', fontWeight: 'bold', padding: '5px 9px', borderRadius: '10px', zIndex: 4 }}>
-          {formatCompensation(item.compensation)}
+          {formatCompensation(displayContent.compensation || item.compensation)}
         </span>
       </div>
 
@@ -447,13 +451,28 @@ function FeedCardItem({
       <div style={{ padding: '16px 18px' }}>
         <div>
           <h3 className="font-editorial-heading" style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)', margin: '0 0 4px 0', lineHeight: 1.3, letterSpacing: '-0.015em', cursor: 'pointer' }}>
-            <TextEffect preset="fade-in-blur" speedReveal={1.1} speedSegment={0.3} once>
+            <TextEffect
+              key={`${currentLang}-${isOriginal ? 'orig' : 'trans'}-${displayContent.title}`}
+              preset="fade-in-blur"
+              speedReveal={1.1}
+              speedSegment={0.3}
+              once
+            >
               {displayContent.title}
             </TextEffect>
           </h3>
           {currentLang !== (item.nativeLang || 'FR') && (
             <button
-              onClick={(e) => toggleOriginalListing(item.id, e)}
+              type="button"
+              onClick={(e) => {
+                e?.stopPropagation?.();
+                setLocalShowingOriginal(prev => !prev);
+                if (typeof toggleOriginalListing === 'function') {
+                  try {
+                    toggleOriginalListing(item.id, e);
+                  } catch (_) {}
+                }
+              }}
               className="premium-button"
               style={{
                 border: 'none',
@@ -469,7 +488,7 @@ function FeedCardItem({
               }}
             >
               <Globe size={12} />
-              {showingOriginalListings[item.id] ? t('showTranslation') : t('showOriginal')}
+              {isOriginal ? (t('showTranslation', 'Voir la traduction') || 'Voir la traduction') : (t('showOriginal', "Voir l'original") || "Voir l'original")}
             </button>
           )}
         </div>

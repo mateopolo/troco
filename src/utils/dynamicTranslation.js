@@ -197,7 +197,7 @@ export function parseAndTranslateListing(listing, currentLang = 'FR', forceOrigi
   const detectedNativeLang = isDemo ? 'FR' : (titleTag || descTag || listing.nativeLang || 'FR').toUpperCase();
 
   // Si même langue cible que la langue native et pas d'autre demande : texte direct
-  if (targetLang === detectedNativeLang && !titleTag && !descTag && !isDemo) {
+  if (targetLang === detectedNativeLang && !titleTag && !descTag) {
     return {
       title: cleanLanguageTag(rawTitle),
       description: cleanLanguageTag(rawDesc),

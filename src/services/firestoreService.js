@@ -58,7 +58,7 @@ export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } =
       firestoreId: docSnap.id,
       ...docSnap.data(),
       status: docSnap.data().status || 'active',
-      isDemo: false,
+      isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
       _doc: docSnap,
     }));
 
@@ -81,7 +81,7 @@ export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } =
         firestoreId: docSnap.id,
         ...docSnap.data(),
         status: docSnap.data().status || 'active',
-        isDemo: false,
+        isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
         _doc: docSnap,
       }));
       return {
@@ -124,7 +124,7 @@ export const fetchListingsByGeohash = async ({ center, radiusKm = 20, pageSize =
           firestoreId: docSnap.id,
           ...docSnap.data(),
           status: docSnap.data().status || 'active',
-          isDemo: false,
+          isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
           _doc: docSnap,
         }));
       } catch (err) {
@@ -140,7 +140,7 @@ export const fetchListingsByGeohash = async ({ center, radiusKm = 20, pageSize =
           firestoreId: docSnap.id,
           ...docSnap.data(),
           status: docSnap.data().status || 'active',
-          isDemo: false,
+          isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
           _doc: docSnap,
         }));
       }
@@ -235,7 +235,7 @@ export const subscribeToListingsByGeohash = ({ center, radiusKm = 20, pageSize =
           firestoreId: d.id,
           ...d.data(),
           status: d.data().status || 'active',
-          isDemo: false,
+          isDemo: Boolean(d.data().isDemo ?? (typeof d.data().id === 'number' && d.data().id <= 20)),
           _doc: d,
         }));
         resultsByRange.set(index, items);
@@ -264,7 +264,7 @@ export const subscribeToListings = (onUpdate, onError, pageSize = 50) => {
         firestoreId: d.id,
         ...d.data(),
         status: d.data().status || 'active',
-        isDemo: false,
+        isDemo: Boolean(d.data().isDemo ?? (typeof d.data().id === 'number' && d.data().id <= 20)),
         _doc: d,
       }));
       onUpdate(items, snapshot.docs[snapshot.docs.length - 1] || null);

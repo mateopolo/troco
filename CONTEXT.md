@@ -1053,5 +1053,66 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
      - `npx vitest run` : 16 suites de tests, 144/144 tests validés au vert (100%).
      - `npm run build` : Exit Code 0 (Build de production prêt pour le déploiement).
 
+---
+
+## 🌐 13. CORRECTION DU PIPELINE DE TRADUCTION DU FEED & RÉINTÉGRATION DE L'ANNONCE SPONSORISÉE (2026-10-07)
+
+1. **Causes Exactes Identifiées du Court-Circuit & Différences avec ChatView / CommunityRoute :**
+   - **`src/components/FeedCardItem.jsx:450-452` (Gel visuel du composant `<TextEffect once>`) :**
+     Dans `FeedCardItem.jsx`, le titre de l'annonce était rendu via `<TextEffect per="word" as="h3" once preset="fade-in-blur">`. L'option `once` bloquait le composant sur sa chaîne textuelle initiale une fois animé au montage. Lorsque la traduction asynchrone arrivait via `subscribeTranslations`, les éléments internes de Framer Motion ne recalculaient pas le texte affiché. **Solution :** Ajout d'une clé réactive dynamique `key={`${currentLang}-${isOriginal ? 'orig' : 'trans'}-${displayContent.title}`}` sur `<TextEffect>`, forçant le re-render et la ré-animation instantanés lors de la mise à jour de la langue ou du basculement d'état original/traduit.
+   - **`src/components/ListingDetailModal.jsx:105-115` & `src/App.js:2946-2975` (Absence d'état local et d'abonnement réactif) :**
+     Le bouton « Voir la traduction » / « Voir l'original » appelait `toggleOriginalListing(listing.id, e)` qui modifiait un dictionnaire `showingOriginalListings` distant dans `App.js`. Cependant, `ListingDetailModal` n'avait aucun état local (`localShowOriginal`), n'était pas abonné à `subscribeTranslations`, et ne réagissait pas immédiatement aux changements. De plus, `getListingDisplayContent` n'était pas synchronisé avec les résolutions asynchrones. **Différences exactes par rapport à ChatView/CommunityRoute :**
+     1. *Différence 1 :* `ChatView` utilise un état local instantané `showingOriginal[msgId]` pour basculer à 60 FPS sans attendre la remontée de props parentes.
+     2. *Différence 2 :* `CommunityRoute` et `ChatView` s'abonnent à `subscribeTranslations` avec un `translationRevision` local pour forcer le re-render dès qu'une traduction asynchrone de `getInstantOrQueueTranslation` est mise en cache.
+     3. *Différence 3 :* `ListingDetailModal` utilisait un switch sans fallback robuste sur `detailDisplayContent.compensation` et ne passait pas l'état `isDetailShowingOriginal` aux bios d'auteur.
+   - **`src/routes/FeedRoute.jsx:570-596` (Isolation et imbrication erronée de l'annonce sponsorisée) :**
+     L'annonce sponsorisée (`SponsoredFeedCard`) était imbriquée directement *à l'intérieur* de la div `.feed-card-virtualized` de la 6e annonce normale (`index === 5`), générant deux cartes empilées dans une seule cellule de grille ou un décalage asymétrique de colonne avec espace vide résiduel.
+   - **`src/hooks/useFeedListings.js:77,102`, `src/services/firestoreService.js:61,84` & `src/App.js:1837` :**
+     Les écouteurs Firestore et requêtes de listings écrasaient `isDemo: false` de manière inconditionnelle (`...docSnap.data(), isDemo: false`), effaçant le drapeau `isDemo` sur les annonces démo stockées en base et empêchant leur identification dans le pipeline de traduction démo.
+
+2. **Fichiers Modifiés & Créés :**
+   - `src/components/ListingDetailModal.jsx` :
+     - Déplacement de tous les hooks React (`useState`, `useRef`, `useEffect`) au sommet du composant avant tout return conditionnel (conformité stricte aux Règles des Hooks React).
+     - Ajout de l'état local `localShowOriginal` synchronisé avec la prop parent `showingOriginalListings?.[listing?.id]`.
+     - Abonnement réactif à `subscribeTranslations` pour forcer le re-render dès réception d'une traduction asynchrone.
+     - Gestion du toggle immédiat dans `handleToggleOriginal` combinant bascule locale et appel à `toggleOriginalListing`.
+     - Intégration de `detailDisplayContent.compensation` et transmission de `isDetailShowingOriginal` à `getBioTranslation`.
+     - Ajout des fallbacks i18n traduits `t('showTranslation', 'Voir la traduction')` et `t('showOriginal', "Voir l'original")`.
+   - `src/components/FeedCardItem.jsx` :
+     - Intégration de l'état local `localShowingOriginal` garantissant un toggle réactif instantané sur la carte.
+     - Clé dynamique sur `<TextEffect key={`${currentLang}-${isOriginal ? 'orig' : 'trans'}-${displayContent.title}`}` garantissant le rafraîchissement visuel.
+     - Prise en compte de `displayContent.compensation || item.compensation`.
+     - Bouton toggle traduit et stylisé avec icône Globe.
+   - `src/components/SponsoredFeedCard.jsx` :
+     - Internationalisation intégrale des 4 annonces partenaires certifiés (Parkside / Leroy Merlin, Patagonia Worn Wear, Back Market, Decathlon Seconde Vie) dans les 7 langues (FR, EN, ES, IT, DE, JA, ZH) : badge, catégorie, titre, description, perk, ctaText, tag sponsorisé, badge partenaire certifié et état du bonus Troco.
+     - Abonnement réactif à `subscribeTranslations`.
+     - Style unifié `width: '100%'`, `height: '100%'` s'adaptant naturellement à la grille CSS responsive.
+   - `src/routes/FeedRoute.jsx` :
+     - Séparation stricte de l'annonce sponsorisée : `SponsoredFeedCard` possède désormais sa propre cellule indépendante `<div className="feed-card-virtualized">` dans le flux de la grille.
+     - Prise en charge native de `item.isSponsored` dans `filteredListings.map(...)`.
+   - `src/hooks/useFeedListings.js`, `src/services/firestoreService.js`, `src/App.js` :
+     - Remplacement de `isDemo: false` hardcodé par `isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20))` pour préserver l'intégrité du flag démo.
+   - `src/utils/translationHelpers.js` & `src/utils/dynamicTranslation.js` :
+     - Simplification et robustesse de la détection de la langue d'origine pour éviter tout blocage lorsque source === cible.
+   - `tests/unit/FeedListingTranslationAndSponsoredAd.test.js` *(Nouveau test)* :
+     - Suite complète de 6 tests d'intégration validant la traduction de FeedCardItem, le bouton toggle original, la modale ListingDetailModal et l'annonce sponsorisée dans les 7 langues (IT, EN, JA, ZH).
+
+3. **Résultats Multilingues :**
+   - **Italien (IT) :** Les cartes du feed affichent « Prestito trapano » (titre) et « Trapano a percussione Parkside in perfette condizioni... » (description). L'annonce sponsorisée Parkside affiche « FAI DA TE & ATTREZZATURA », « Trapano Parkside », « PARTNER CERTIFICATO », « Sponsorizzato », « Ottieni lo sconto » et « +5 Troco offerti al primo prestito ». Le bouton « Mostra originale » / « Mostra traduzione » dans la modale bascule de façon instantanée et fluide entre le texte italien traduit et le texte français original.
+   - **Anglais (EN) :** « Drill Loan », « Parkside hammer drill in excellent condition... ». Carte sponsorisée : « DIY & EQUIPMENT », « Parkside Drill », « CERTIFIED PARTNER », « Sponsored », « Claim discount ».
+   - **Japonais (JA) :** Traduction instantanée des annonces démo et réelles en kanji/kana (« 振動ドリルの貸出 »), carte sponsorisée « DIY・工具 », « Parkside振動ドリル ».
+   - **Chinois (ZH) :** Titres et descriptions traduits en caractères simplifiés (« 冲击钻出租 »), carte sponsorisée « 五金工具 », « 认证合作伙伴 ».
+   - **Bouton « Voir l'original » / « Voir la traduction » :** Réactivité 0ms dans le feed et dans le modal de détail.
+
+4. **Confirmation de la Réintégration de l'Annonce Sponsorisée :**
+   - L'annonce sponsorisée s'insère désormais comme une **cellule de grille standard** (`.feed-card-virtualized`), occupant exactement une colonne (aucun `gridColumn: span 2/3` parasite, aucun espace vide à droite).
+   - Sur mobile (1 colonne), elle prend toute la largeur de l'écran avec un espacement uniforme et le même style visuel que les autres annonces.
+   - Sur desktop (2, 3 ou 4 colonnes), elle s'intègre harmonieusement dans le flux virtuel sans casser le rythme de la grille.
+
+5. **Validation Technique & Non-Régression :**
+   - `npx vitest run` : 17 suites de tests, 150/150 tests validés avec succès (Exit Code 0).
+   - `npm run build` : Compilation de production 100% propre (Exit Code 0).
+
+
 
 

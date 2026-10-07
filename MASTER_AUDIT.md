@@ -216,6 +216,18 @@
 **Preuve** : `src/components/common/TranslatedText.jsx:1-85`, `src/routes/FeedRoute.jsx:18, 145-152`, `src/data/translationsSecondary.js:6095-6115`, `tests/unit/DemoListingsAndBannerTranslation.test.js:92-150`
 **Statut** : ✅ FAIT — Internationalisation dynamique et réactive de la bannière administrative d'annonce globale (`globalAnnouncement` issu de `useGlobalContent('platform_announcement')`) : (1) Création du composant réutilisable `<TranslatedText />` avec cache mémoire local `TRANSLATED_TEXT_CACHE` et écouteur réactif `subscribeTranslations`. (2) Enveloppement de `globalAnnouncement` dans `FeedRoute.jsx` pour traduire automatiquement le message lors du changement de langue d'interface. (3) Intégration des traductions officielles instantanées pour le message d'annonce par défaut (« 📢 Nouveauté : Hubs de Projets et Whiteboard Collaboratif 100% P2P disponibles ! ») dans les 7 langues.
 
+### [x] [I18N-09] — Traduction dynamique du feed Explorer
+**Preuve** : `src/components/FeedCardItem.jsx:75-120, 450-452`, `src/routes/FeedRoute.jsx:565-610`, `src/hooks/useFeedListings.js:77, 102`, `src/services/firestoreService.js:61, 84`, `tests/unit/FeedListingTranslationAndSponsoredAd.test.js:1-70`
+**Statut** : ✅ FAIT — Traduction réactive et dynamique des annonces sur le feed Explorer : (1) Résolution du gel visuel de `<TextEffect>` via l'ajout de la clé dynamique `key={`${currentLang}-${isOriginal ? 'orig' : 'trans'}-${displayContent.title}`}` forçant la ré-animation au changement de langue. (2) Préservation de la détection d'annonces démo dans Firestore (`isDemo: Boolean(...)`). (3) Re-render instantané via `subscribeTranslations` et `localShowingOriginal`.
+
+### [x] [I18N-10] — Correction du bouton "Voir l'original" dans le détail
+**Preuve** : `src/components/ListingDetailModal.jsx:20-65, 105-125, 410-440`, `src/App.js:2946-2975`, `tests/unit/FeedListingTranslationAndSponsoredAd.test.js:72-135`
+**Statut** : ✅ FAIT — Correction complète du bouton "Voir l'original" / "Voir la traduction" dans `ListingDetailModal` : (1) Respect strict des règles des Hooks React en hissant tous les hooks au sommet du composant. (2) Introduction de l'état local réactif `localShowOriginal` et écoute de `subscribeTranslations`. (3) Bascule instantanée à 60 FPS du titre, de la description, de la compensation et de la biographie d'auteur entre la langue traduite et la langue d'origine.
+
+### [x] [UI-01] — Réintégration de l'annonce sponsorisée dans la grille
+**Preuve** : `src/routes/FeedRoute.jsx:575-605`, `src/components/SponsoredFeedCard.jsx:1-260`, `src/index.css:2385-2388`, `tests/unit/FeedListingTranslationAndSponsoredAd.test.js:137-210`
+**Statut** : ✅ FAIT — Réintégration ergonomique de l'annonce sponsorisée (`SponsoredFeedCard`) directement dans la grille CSS : (1) Séparation de la 6e annonce normale : la carte sponsorisée occupe désormais sa propre cellule indépendante `.feed-card-virtualized` d'une colonne. (2) Élimination des décalages et espaces vides résiduels sur desktop comme sur mobile. (3) Internationalisation complète des 4 offres partenaires certifiés (Parkside, Patagonia, Back Market, Decathlon) sur les 7 langues (FR, EN, ES, IT, DE, JA, ZH).
+
 ---
 
 

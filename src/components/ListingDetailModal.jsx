@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   ChevronLeft,
@@ -20,6 +20,7 @@ import {
   getListingDisplayContent,
   getBioTranslation,
 } from '../utils/translationHelpers';
+import { subscribeTranslations } from '../utils/translator';
 import {
   localizeTags,
   localizeReview,
@@ -53,7 +54,15 @@ export default function ListingDetailModal({
   const listing = propListing || selectedListing;
   const [detailMediaTab, setDetailMediaTab] = useState('video');
   const [selectedDetailImageIndex, setSelectedDetailImageIndex] = useState(0);
+  const [localShowOriginal, setLocalShowOriginal] = useState(false);
+  const [, setTransTick] = useState(0);
   const modalTouchStartRef = useRef(null);
+
+  useEffect(() => {
+    return subscribeTranslations(() => {
+      setTransTick(t => t + 1);
+    });
+  }, []);
 
   if (!listing) return null;
 
@@ -102,7 +111,9 @@ export default function ListingDetailModal({
     setDetailMediaTab('image');
   };
 
-  const isDetailShowingOriginal = !!showingOriginalListings[listing.id];
+  const isDetailShowingOriginal = Boolean(
+    localShowOriginal || (listing?.id && showingOriginalListings?.[listing.id])
+  );
   const detailDisplayContent = getListingDisplayContent(listing, currentLang, isDetailShowingOriginal);
   const authorName = listing.authorProfile?.name || listing.author || 'Membre Troco';
   const authorUid = listing.authorProfile?.uid || listing.authorUid || null;
@@ -110,6 +121,16 @@ export default function ListingDetailModal({
     (profile?.name && authorName === profile.name) ||
     (authorUid && (authorUid === profile?.uid || authorUid === auth.currentUser?.uid))
   );
+
+  const handleToggleOriginal = (e) => {
+    e?.stopPropagation?.();
+    setLocalShowOriginal(prev => !prev);
+    if (typeof toggleOriginalListing === 'function') {
+      try {
+        toggleOriginalListing(listing.id, e);
+      } catch (_) {}
+    }
+  };
 
   return (
     <div
@@ -330,7 +351,8 @@ export default function ListingDetailModal({
               <h3 className="font-editorial-heading" style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{detailDisplayContent.title}</h3>
               {currentLang !== (listing.nativeLang || 'FR') && (
                 <button
-                  onClick={(e) => typeof toggleOriginalListing === 'function' && toggleOriginalListing(listing.id, e)}
+                  type="button"
+                  onClick={handleToggleOriginal}
                   className="premium-button"
                   style={{
                     border: 'none',
@@ -346,7 +368,7 @@ export default function ListingDetailModal({
                   }}
                 >
                   <Globe size={13} color="#C67D5B" />
-                  {isDetailShowingOriginal ? t('showTranslation') : t('showOriginal')}
+                  {isDetailShowingOriginal ? (t('showTranslation', 'Voir la traduction') || 'Voir la traduction') : (t('showOriginal', "Voir l'original") || "Voir l'original")}
                 </button>
               )}
             </div>
@@ -446,13 +468,15 @@ export default function ListingDetailModal({
 
           <div style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', marginBottom: '14px' }}>
             <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>{t('compensation')}</div>
-            <div style={{ fontSize: '13px', color: '#C67D5B', fontWeight: '700' }}>{typeof formatCompensation === 'function' ? formatCompensation(listing.compensation) : listing.compensation}</div>
+            <div style={{ fontSize: '13px', color: '#C67D5B', fontWeight: '700' }}>
+              {typeof formatCompensation === 'function' ? formatCompensation(detailDisplayContent.compensation || listing.compensation) : (detailDisplayContent.compensation || listing.compensation)}
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
             <img src={listing.authorProfile?.avatar || listing.avatar || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="%239CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'} alt={listing.authorProfile?.name || listing.author || 'Auteur'} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{listing.authorProfile?.name || listing.author || 'Membre Troco'}</div>
-              <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(listing.authorProfile?.bio || listing.bio || '', currentLang, !!showingOriginalListings[listing.id])}</div>
+              <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(listing.authorProfile?.bio || listing.bio || '', currentLang, isDetailShowingOriginal)}</div>
             </div>
           </div>
           <div style={{ marginBottom: '14px' }}>
