@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1791377980.3355536,
-    "seen": 1791379630.8673577,
-    "ast_hash": "05c0f3705d29d0a4e644cc433dbd34a0",
+    "mtime": 1791379975.448686,
+    "seen": 1791380298.229093,
+    "ast_hash": "cc75c16b256f8703b15ee84510c8dbe1",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -1434,15 +1434,15 @@
     "semantic_hash": "d6cbd99abea778cd447820a111d1b50c"
   },
   "src/data/translationsData.js": {
-    "mtime": 1791378995.182962,
-    "seen": 1791379630.923648,
-    "ast_hash": "8cc927af43f8d210a8498869cfd7e9b1",
+    "mtime": 1791379923.8036096,
+    "seen": 1791380298.28803,
+    "ast_hash": "c6bf81fdc1c5ad94969dec1c3ab43fc4",
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1791379154.928934,
-    "seen": 1791379630.9236507,
-    "ast_hash": "866da4272d3bc090b64689f3d213d2ac",
+    "mtime": 1791379923.841941,
+    "seen": 1791380298.288033,
+    "ast_hash": "06279b919e6ffd066901c27cbff21c8a",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -1608,9 +1608,9 @@
     "semantic_hash": "13264a4b85deea61c5a1efa095076a52"
   },
   "src/features/profile/ProfileFeature.jsx": {
-    "mtime": 1790694485.7972803,
-    "seen": 1790694663.3508549,
-    "ast_hash": "ecf2f87ea1391de6b45813fe2d68528a",
+    "mtime": 1791380052.16183,
+    "seen": 1791380298.2959938,
+    "ast_hash": "04101cba0b45046e8c86ed03b74b0d1b",
     "semantic_hash": ""
   },
   "src/features/profile/index.js": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": "2c8beff856537a1e2618e9407b2e7927"
   },
   "src/locales/translations.js": {
-    "mtime": 1791379021.5095856,
-    "seen": 1791379630.9386032,
-    "ast_hash": "95db1396133fb1bd61dbe735cff96213",
+    "mtime": 1791379923.7821765,
+    "seen": 1791380298.3072474,
+    "ast_hash": "1c4e3afd1915aa517c12fb00ab9ff3c1",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791379556.3095858,
-    "seen": 1791379630.9646137,
-    "ast_hash": "4fcd84ad30e1dc1e8e93172687ffc8f8",
+    "mtime": 1791380266.5289085,
+    "seen": 1791380298.3342545,
+    "ast_hash": "8417710e2fdad5d2cebdd24dba3293c9",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1791379590.623366,
-    "seen": 1791379630.9650526,
-    "ast_hash": "50d913829d5dcd5ce2c8bb9a05223905",
+    "mtime": 1791380252.804358,
+    "seen": 1791380298.334712,
+    "ast_hash": "55a2b5dfdbc3892c4586e2f2e6ded308",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2784,9 +2784,9 @@
     "semantic_hash": ""
   },
   "src/routes/ProfileRoute.jsx": {
-    "mtime": 1790737528.4513526,
-    "seen": 1790737672.002021,
-    "ast_hash": "ce699b97f361f5b1376184c26cfe3bb7",
+    "mtime": 1791379997.638329,
+    "seen": 1791380298.3088923,
+    "ast_hash": "337a02a791739e9a0b94bef3f87caa53",
     "semantic_hash": ""
   },
   "src/routes/LegalRoutes.jsx": {

@@ -44,7 +44,6 @@ import ConfirmDialog from './components/ui/ConfirmDialog';
 import { AnimatePresence } from 'framer-motion';
 import { useTutorial } from './hooks/useTutorial';
 import InteractiveTutorial from './components/onboarding/InteractiveTutorial';
-import SplashScreen from './components/onboarding/SplashScreen';
 import {
   translations,
   localizeLocation,
@@ -344,27 +343,6 @@ export default function App() {
     completeTutorial,
     shouldShowTutorial,
   } = useTutorial();
-
-  // Écran d'accueil interactif immersif CRT + Dither (TÂCHE 5)
-  const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    // Mode test forcé via URL : ?splash=1
-    if (window.location.search.includes('splash=1')) {
-      try { sessionStorage.removeItem('troco_splash_seen'); } catch (_) {}
-      return true;
-    }
-    // Sinon, comportement normal : uniquement si pas encore vu dans la session
-    return sessionStorage.getItem('troco_splash_seen') !== 'true';
-  });
-
-  const handleSplashComplete = useCallback(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('troco_splash_seen', 'true');
-      }
-    } catch (_) {}
-    setShowSplash(false);
-  }, []);
 
   const [skills, setSkills] = useState([
     'Prod musicale & Ableton Live',
@@ -2460,19 +2438,6 @@ export default function App() {
       }
     }
   };
-
-  if (showSplash) {
-    return (
-      <SplashScreen
-        onComplete={() => {
-          try { sessionStorage.setItem('troco_splash_seen', 'true'); } catch (_) {}
-          setShowSplash(false);
-        }}
-        darkMode={darkMode}
-        t={t}
-      />
-    );
-  }
 
   if (!isAuthResolved || isLoadingSession || (isAuthenticated && isProfileLoading)) {
     return (
