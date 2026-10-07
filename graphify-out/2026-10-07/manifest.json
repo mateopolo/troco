@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1791324979.847805,
-    "seen": 1791325748.1430168,
-    "ast_hash": "edb4b5d27918e32490b6094b47af2b88",
+    "mtime": 1791369436.0767813,
+    "seen": 1791373574.364632,
+    "ast_hash": "f1a01982c975e54cab5cb315ed7c00a5",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "src/components/FeedCardItem.jsx": {
-    "mtime": 1791324861.3717482,
-    "seen": 1791325748.148922,
-    "ast_hash": "410bd4155732528e334989be8f4b6f13",
+    "mtime": 1791373183.100227,
+    "seen": 1791373574.370573,
+    "ast_hash": "27de6c8d11b8e515f76609db4a962b90",
     "semantic_hash": ""
   },
   "src/components/FeedView.jsx": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "src/components/ListingDetailModal.jsx": {
-    "mtime": 1791324835.797323,
-    "seen": 1791325748.1510527,
-    "ast_hash": "fb75d6a12ffdd834127bea2a6ce77607",
+    "mtime": 1791373288.5300486,
+    "seen": 1791373574.3726661,
+    "ast_hash": "423003110c206919e458eedff1c2bcb6",
     "semantic_hash": ""
   },
   "src/components/ListingDetails.jsx": {
@@ -1062,9 +1062,9 @@
     "semantic_hash": "961ba9997d9c51e9102cd11e6b3ceb8e"
   },
   "src/components/SponsoredFeedCard.jsx": {
-    "mtime": 1790712863.6036963,
-    "seen": 1790713103.3393512,
-    "ast_hash": "37d0eee1aeca422ef2ba6cd6d4e93d9a",
+    "mtime": 1791369336.8348734,
+    "seen": 1791373574.3900497,
+    "ast_hash": "ca3049cfe30efc1f4951b88af9acf3b5",
     "semantic_hash": ""
   },
   "src/components/SwipeableChatItem.jsx": {
@@ -1800,10 +1800,10 @@
     "semantic_hash": "10c59540b3b3c824bd1546428bdbbd7e"
   },
   "src/services/firestoreService.js": {
-    "mtime": 1790010844.5614734,
-    "seen": 1790594464.2383947,
-    "ast_hash": "7681745bf34209a0f431641d378cef55",
-    "semantic_hash": "7681745bf34209a0f431641d378cef55"
+    "mtime": 1791369421.2959516,
+    "seen": 1791373574.426765,
+    "ast_hash": "56ee820356f4b5e483bc496c05d3dcae",
+    "semantic_hash": ""
   },
   "src/services/gdprService.js": {
     "mtime": 1789036625.8495212,
@@ -1992,9 +1992,9 @@
     "semantic_hash": "9f01ee7518066675f14431769ffd74b4"
   },
   "src/utils/dynamicTranslation.js": {
-    "mtime": 1791327424.3795907,
-    "seen": 1791327708.811275,
-    "ast_hash": "05096adf199f682f8bce2cd20a6e4eaa",
+    "mtime": 1791369470.9252005,
+    "seen": 1791373574.433657,
+    "ast_hash": "1151f13f5593269525ca6273a99ed037",
     "semantic_hash": ""
   },
   "src/utils/flagUtils.js": {
@@ -2160,9 +2160,9 @@
     "semantic_hash": "e43d226b80ec7e57c78f01cb64683ae1"
   },
   "src/utils/translationHelpers.js": {
-    "mtime": 1791327394.1474693,
-    "seen": 1791327708.8173,
-    "ast_hash": "f75139a2d7d5dd58b8a2ab9f5a56292d",
+    "mtime": 1791369457.0750997,
+    "seen": 1791373574.4392343,
+    "ast_hash": "6abd2436e8fedb9713214359992d284b",
     "semantic_hash": ""
   },
   "src/utils/translator.js": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791327642.4236732,
-    "seen": 1791327708.8222737,
-    "ast_hash": "42b079d071211b65f69d126ed59ec3fe",
+    "mtime": 1791373449.0946996,
+    "seen": 1791373574.4444506,
+    "ast_hash": "ef6e418642db1cbb61810b95be17d072",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1791327667.811552,
-    "seen": 1791327708.8226907,
-    "ast_hash": "18baa11356c9aebaeae81986434b5b64",
+    "mtime": 1791373492.675847,
+    "seen": 1791373574.444921,
+    "ast_hash": "2d54914235a0dc84b6c1f36952b150d4",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2754,9 +2754,9 @@
     "semantic_hash": ""
   },
   "src/routes/FeedRoute.jsx": {
-    "mtime": 1791327347.8413248,
-    "seen": 1791327708.8022766,
-    "ast_hash": "ef4985d9c3cdd8ac8039837b0ac40279",
+    "mtime": 1791369373.8895357,
+    "seen": 1791373574.4247081,
+    "ast_hash": "49c283d506c65c1c21cff9db754259c3",
     "semantic_hash": ""
   },
   "src/routes/ChatRoute.jsx": {
@@ -2832,9 +2832,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useFeedListings.js": {
-    "mtime": 1790779467.7607987,
-    "seen": 1790780460.3488274,
-    "ast_hash": "48cd4d4bf4eaeb5ec46d4cd6d22a17ea",
+    "mtime": 1791369398.035887,
+    "seen": 1791373574.4204035,
+    "ast_hash": "21796ec878bed9a27dd04a6449c25143",
     "semantic_hash": ""
   },
   "src/hooks/useGlobalCalls.js": {
@@ -3147,6 +3147,12 @@
     "mtime": 1791326076.0370188,
     "seen": 1791327708.8235707,
     "ast_hash": "5dfca582a86fc901a80f942c43e22257",
+    "semantic_hash": ""
+  },
+  "tests/unit/FeedListingTranslationAndSponsoredAd.test.js": {
+    "mtime": 1791373327.7964146,
+    "seen": 1791373574.4419117,
+    "ast_hash": "b9cc7f40370bb7976fba25a7e3cb3ded",
     "semantic_hash": ""
   }
 }

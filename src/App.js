@@ -42,6 +42,8 @@ import { LanguageContext } from './contexts/LanguageContext';
 import { ConfirmProvider, useConfirm } from './hooks/useConfirm';
 import ConfirmDialog from './components/ui/ConfirmDialog';
 import { AnimatePresence } from 'framer-motion';
+import { useTutorial } from './hooks/useTutorial';
+import InteractiveTutorial from './components/onboarding/InteractiveTutorial';
 import {
   translations,
   localizeLocation,
@@ -317,6 +319,18 @@ export default function App() {
     setReportTarget,
     handleOpenReportModal,
   } = useUserReporting({ ui });
+
+  // Gestion du tutoriel interactif IA pour les nouveaux utilisateurs
+  const {
+    isTutorialOpen,
+    setIsTutorialOpen,
+    currentStep: tutorialCurrentStep,
+    nextStep: nextTutorialStep,
+    prevStep: prevTutorialStep,
+    skipTutorial,
+    completeTutorial,
+    shouldShowTutorial,
+  } = useTutorial();
 
   const [skills, setSkills] = useState([
     'Prod musicale & Ableton Live',
@@ -1093,6 +1107,14 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAuthResolved, isLoadingSession, isProfileLoading, profile?.onboardingCompleted, profile?.uid]);
 
+  // ---- DÉTECTION ET OUVERTURE DU TUTORIEL INTERACTIF IA (JOUR 1) ----
+  useEffect(() => {
+    if (!isAuthResolved || isLoadingSession || isProfileLoading || isOnboardingOpen) return;
+    if (isAuthenticated && profile && shouldShowTutorial(profile)) {
+      setIsTutorialOpen(true);
+    }
+  }, [isAuthenticated, isAuthResolved, isLoadingSession, isProfileLoading, isOnboardingOpen, profile?.onboardingCompleted, profile?.tutorialCompleted, profile?.uid, shouldShowTutorial, setIsTutorialOpen]);
+
   // Synchronisation réactive globale avec le store Zustand useWalletStore (élimine le prop drilling)
   useEffect(() => {
     if (profile) {
@@ -1829,21 +1851,23 @@ export default function App() {
       initialQuery,
       (snapshot) => {
         if (isCancelled) return;
-        const firestoreListings = snapshot.docs.map((docSnap) => ({
-          id: docSnap.data().id || docSnap.id,
-          firestoreId: docSnap.id,
-          ...docSnap.data(),
-          status: docSnap.data().status || 'active',
-          isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
-          _doc: docSnap,
-        }));
+        const firestoreListings = snapshot.docs
+          .map((docSnap) => ({
+            id: docSnap.data().id || docSnap.id,
+            firestoreId: docSnap.id,
+            ...docSnap.data(),
+            status: docSnap.data().status || 'active',
+            isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
+            _doc: docSnap,
+          }))
+          .filter(l => !l.isDemo && !(typeof l.id === 'number' && l.id <= 20) && l.status === 'active');
 
         const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
         setLastVisibleListingDoc(lastDoc);
         setHasMoreListings(snapshot.docs.length >= 50);
 
         setListings(prev => {
-          const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+          const customLocalListings = prev.filter(p => !p.isDemo && !(typeof p.id === 'number' && p.id <= 20) && !firestoreListings.some(f => f.id === p.id));
           return [...firestoreListings, ...customLocalListings];
         });
       },
@@ -1854,19 +1878,21 @@ export default function App() {
             const fallbackQuery = query(collection(db, 'listings'), limit(50));
             unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
               if (isCancelled) return;
-              const firestoreListings = snapshot.docs.map((docSnap) => ({
-                id: docSnap.data().id || docSnap.id,
-                firestoreId: docSnap.id,
-                ...docSnap.data(),
-                status: docSnap.data().status || 'active',
-                isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
-                _doc: docSnap,
-              }));
+              const firestoreListings = snapshot.docs
+                .map((docSnap) => ({
+                  id: docSnap.data().id || docSnap.id,
+                  firestoreId: docSnap.id,
+                  ...docSnap.data(),
+                  status: docSnap.data().status || 'active',
+                  isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
+                  _doc: docSnap,
+                }))
+                .filter(l => !l.isDemo && !(typeof l.id === 'number' && l.id <= 20) && l.status === 'active');
               const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
               setLastVisibleListingDoc(lastDoc);
               setHasMoreListings(snapshot.docs.length >= 50);
               setListings(prev => {
-                const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+                const customLocalListings = prev.filter(p => !p.isDemo && !(typeof p.id === 'number' && p.id <= 20) && !firestoreListings.some(f => f.id === p.id));
                 return [...firestoreListings, ...customLocalListings];
               });
             }, (fallbackErr) => {
@@ -2016,7 +2042,8 @@ export default function App() {
 
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
-      if (hideDemos && item.isDemo) return false;
+      // Purge totale des annonces démo : seules les vraies annonces actives Firestore s'affichent
+      if (item.isDemo || (typeof item.id === 'number' && item.id <= 20)) return false;
 
       const rawQuery = (deferredSearchQuery || '').trim();
       const cleanQuery = removeAccents(rawQuery);
@@ -3062,6 +3089,22 @@ export default function App() {
           />
 
           <ConfirmDialog />
+
+          {/* TUTORIEL INTERACTIF IA POUR NOUVEAUX UTILISATEURS (JOUR 1) */}
+          {isTutorialOpen && (
+            <InteractiveTutorial
+              isOpen={isTutorialOpen}
+              currentStep={tutorialCurrentStep}
+              onNext={nextTutorialStep}
+              onPrev={prevTutorialStep}
+              onSkip={skipTutorial}
+              onComplete={completeTutorial}
+              darkMode={darkMode}
+              currentLang={currentLang}
+              t={t}
+              profile={profile}
+            />
+          )}
         </div>
       </ConfirmProvider>
     </LanguageContext.Provider>

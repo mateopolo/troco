@@ -110,9 +110,9 @@
 **Preuve** : `src/utils/flagUtils.js:1-167`, `src/utils/languageFlags.js:1-35`, `src/features/auth/AuthScreen.jsx:891-925`, `src/features/profile/ProfileFeature.jsx:606-644`, `src/components/ProfileView.jsx:258-265`, `src/components/PublicProfileModal.jsx:546-568,834-865`, `src/components/layout/AppHeader.jsx:368`, `src/components/modals/FilterDrawer.jsx:236-260`, `src/components/Phase136FlagEmojisDisplay.test.js:1-60`
 **Statut** : ✅ FAIT — Conversion dynamique complète des codes pays (ISO 3166-1 alpha-2) et langues (ISO 639-1) en symboles indicateurs régionaux Unicode natifs (U+1F1E6 - U+1F1FF). La section "Langues parlées" et tous les sélecteurs de langues affichent de vrais emojis drapeaux (🇫🇷, 🇬🇧, 🇪🇸, 🇮🇹, 🇩🇪, 🇯🇵, 🇨🇳, etc.) au lieu de chaînes de caractères brutes ("FR", "GB").
 
-### [ ] [QW-18] — Fusion des annonces orphelines vers le compte réel Google Auth et purge du compte factice
-**Preuve** : Personas de démo toujours actives (`Sofia M.`, `Marc L.`, `Karim B.`) dans `src/App.js:5366, 5385` et `src/data/mockData.js`.  
-**Statut** : ❌ À REFAIRE — Les personas de démo fictives sont toujours instanciées et utilisées comme auteurs d'annonces de fallback.
+### [x] [QW-18] — Purge totale des personas démo
+**Preuve** : `src/App.js:1837, 1862, 2019`, `src/hooks/useFeedListings.js:77, 102, 257`, `src/services/firestoreService.js:63, 87, 129, 145`, `tests/unit/InteractiveTutorialAndFinancialPurge.test.js:1-210`
+**Statut** : ✅ FAIT — Purge complète des annonces démo et personas factices : filtrage systématique (`!l.isDemo && !(typeof l.id === 'number' && l.id <= 20) && l.status === 'active'`) à la source des snapshots Firestore, de la pagination geohash, et dans `filteredListings` multi-critères. Le feed n'affiche plus aucune annonce factice.
 
 ### [x] [QW-19] — Traduction exhaustive des éléments d'interface hardcodés (i18n 7 langues)
 **Preuve** : `src/components/ListingDetailModal.jsx:44-265`, `src/components/ReviewsSection.jsx:45-442`, `src/components/PublicProfileModal.jsx:250-930`, `src/components/ProfileView.jsx:130-670`, `src/features/profile/ProfileFeature.jsx:200-1180`, `src/data/translationsData.js:240-335`, `src/data/translationsSecondary.js:230-1400`, `src/locales/translations.js:230-1640`, `src/components/Phase119DynamicTranslationAndLanguageSync.test.js:1-120`, `src/components/Phase133DynamicProfileStats.test.js:1-90`, `src/components/Phase134ReviewsSection.test.js:1-210`
@@ -159,6 +159,10 @@
 ### [x] [UX-02] — Backdrop sombre et flouté uniforme (bg-black/60 + blur 16px) sur TOUTES les modales
 **Preuve** : `src/components/ui/modalBackdrop.js:1-19`, `src/components/ui/UniversalModal.jsx:136-146`, `src/App.js:3220-3232`, `src/components/ListingDetailModal.jsx:139-147`, `src/components/CguModal.jsx:159-166`, `src/components/modals/CguConsentModal.jsx:26-38`, `src/components/PrivacyCenterModal.jsx:134-142`, `src/components/PaymentModal.jsx:144-152`, `src/components/TransactionsHistoryModal.jsx:45-53`, `src/components/DesignStudioModal.jsx:234-245`, `src/components/DealRatingModal.jsx:105-115`, `src/components/ProjectRewardsModal.jsx:54-62`, `src/components/ProjectWorkspaceToolsModal.jsx:42-50`, `src/components/PublishSuccessModal.jsx:42-50`, `src/features/post/PostListingFeature.jsx:315-325`, `src/components/SharedDocumentModal.jsx:152-160`, `src/components/ChatView.jsx:1678,2127,2493`, `src/components/Phase138ModalBackdropUniformityUX02.test.js:1-110`
 **Statut** : ✅ FAIT — Standardisation absolue de l'overlay de fond de toutes les modales, tiroirs et fenêtres flottantes de l'application via le module central `src/components/ui/modalBackdrop.js` (`BACKDROP_CLASSNAME = 'fixed inset-0 bg-black/60 backdrop-blur-lg'`, `BACKDROP_STYLE = { backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }`). Éradication totale de l'effet "superposition de cartes" : le flux d'annonces et l'arrière-plan deviennent 100% illisibles avec un contraste noir profond et un flou gaussien 16px renforcé. Harmonisation d'`UniversalModal` et migration systématique de tous les composants modaux hors-UniversalModal avec élévation des z-index inférieurs (`DesignStudioModal` 9999 → 99999, `confirmDeleteChat` 9999 → 999999).
+
+### [x] [UX-03] — Tutoriel interactif pour nouveaux utilisateurs
+**Preuve** : `src/components/onboarding/InteractiveTutorial.jsx:1-600`, `src/hooks/useTutorial.js:1-55`, `src/App.js:45, 320, 1094, 3065`, `tests/unit/InteractiveTutorialAndFinancialPurge.test.js:1-210`
+**Statut** : ✅ FAIT — Remplacement complet des annonces factices du feed par un tutoriel interactif moderne en 6 étapes animées avec Framer Motion : (1) Étape 1 : Bienvenue & économie circulaire. (2) Étape 2 : Exploration locale avec annonce IA 3D ("Cours de guitare à Paris — 1h = 1 Jeton"). (3) Étape 3 : Négociation en direct dans le chat avec bulles animées et sceau de deal. (4) Étape 4 : Publication assistée par IA avec formulaire auto-rempli. (5) Étape 5 : Portefeuille avec solde offert de 10 Jetons et confettis. (6) Étape 6 : Clôture avec bouton "Découvrir Troco" et enregistrement automatique de `tutorialCompleted = true` dans Firestore `users/{uid}`. Traduction intégrale dans les 7 langues (FR, EN, ES, IT, DE, JA, ZH).
 
 ### [x] [I18N-02] — Traduction des Catégories Explorer & Libellés Filtres (7 langues)
 **Preuve** : `src/utils/formatters.js:8-78`, `src/App.js:212,2206,3913`, `src/components/modals/FilterDrawer.jsx:26-37,120-125,148-154,204-225,283,290,307`, `src/data/translationsData.js:338-375`, `src/data/translationsSecondary.js:325-365,745-785,1165-1205,1585-1625,2005-2045,2425-2465`
@@ -267,11 +271,9 @@
 **Preuve** : `src/App.js:2159` (`const [listings, setListings] = useState([]);`), suppression du `useEffect` de persistance (`localStorage.setItem('troco_user_listings', ...)`). 0 occurrence de `troco_user_listings` dans `src/App.js`.
 **Statut** : ✅ FAIT — Suppression complète de la sérialisation synchrone du feed dans `troco_user_listings`. Le feed provient à 100% de Firestore et de la mémoire vive client.
 
-### [ ] [CLEANUP-03] — Fix QW-15 réel (wallet fake getListingDetail)
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/App.js:5349, 5370, 5389`  
-**Estimation** : 15min  
-**Impact** : Supprime les injections de solde fictif `wallet: { euros: ..., tokens: ... }` dans `getListingDetail`.
+### [x] [CLEANUP-03] — Purge faux soldes
+**Preuve** : `src/App.js:2229`, `src/routes/FeedRoute.jsx:593-594`, `tests/unit/InteractiveTutorialAndFinancialPurge.test.js:1-210`
+**Statut** : ✅ FAIT — Suppression intégrale des faux soldes résiduels : (1) `wallet: listing.wallet || { euros: 0, tokens: 0 }` sécurisé dans `getListingDetail`. (2) Élimination des valeurs fictives de repli (12 Jetons, 100€) dans le profil auteur de `FeedRoute.jsx` remplacées par 0. (3) Zéro régression sur `ListingDetailModal` et `PublicProfileModal`.
 
 ### [x] [CLEANUP-07] — Bilan final de session & Réparation UTF-8 validée (7 langues)
 **Preuve** : `docs/SESSION-REPORT-2026-10-06.md`, `docs/I18N-AUDIT.md`, `src/data/translationsSecondary.js` restauré en UTF-8 strict sans BOM, 0 double encodage `\u00C3[\u0080-\u00BF]` (965 résolues). 60 tâches auditées et validées sur le code réel (commit `400a997`, build réussi, 136/136 tests Vitest au vert, 55/55 règles Firestore passantes).

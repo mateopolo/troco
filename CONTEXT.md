@@ -1176,3 +1176,51 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
 5. **Validation Technique & Non-Régression :**
    - `npx vitest run` : 17 suites de tests, 152/152 tests validés avec succès (Exit Code 0).
    - `npm run build` : Compilation de production 100% propre (Exit Code 0).
+
+---
+
+### 15. JOUR 1 : PURGE FINANCIÈRE, PURGE TOTALE DES PERSONAS DÉMO ET TUTORIEL INTERACTIF IA
+
+#### 15.1. Purge des Faux Soldes dans `getListingDetail` et `FeedRoute`
+- **Nettoyage dans `src/App.js` :**
+  - Sécurisation stricte de l'objet portefeuille dans `getListingDetail` : `wallet: listing.wallet || { euros: 0, tokens: 0 }`.
+  - Aucune valeur arbitraire ou factice n'est injectée lors de la consultation des détails d'une annonce ou de son auteur.
+- **Nettoyage dans `src/routes/FeedRoute.jsx` :**
+  - Remplacement des valeurs de repli arbitraires (`trocoTokens: item.trocoTokens || 12`, `euroBalance: item.euroBalance || 100`) par des soldes neutres à zéro (`trocoTokens: item.trocoTokens || 0`, `euroBalance: item.euroBalance || 0`) lors de la sélection d'un profil public d'auteur.
+  - Zéro impact sur `ListingDetailModal` et `PublicProfileModal`.
+
+#### 15.2. Suppression Complète des Annonces & Personas Démo
+- **Filtrage à la source Firestore (`src/services/firestoreService.js`) :**
+  - Dans `fetchListingsPaginated` et `fetchListingsByGeohash`, exclusion systématique des annonces comportant `isDemo: true` ou un identifiant numérique d'amorce `id <= 20`.
+- **Filtrage dans les listeners réactifs (`src/App.js` & `src/hooks/useFeedListings.js`) :**
+  - Les flux `onSnapshot` filtrent directement les documents retournés (`!l.isDemo && !(typeof l.id === 'number' && l.id <= 20) && l.status === 'active'`).
+  - Le `useMemo` de `filteredListings` exclut inconditionnellement toutes les annonces démo, garantissant que le feed ne présente que les annonces réelles issues de Firestore.
+
+#### 15.3. Création du Tutoriel Interactif IA (`InteractiveTutorial.jsx`)
+- **Composant créé :** `src/components/onboarding/InteractiveTutorial.jsx`
+- **Hook dédié :** `src/hooks/useTutorial.js`
+  - Gestion d'état complète : `isTutorialOpen`, `currentStep` (0..5), `nextStep`, `prevStep`, `skipTutorial`, `completeTutorial`, `shouldShowTutorial`.
+  - Condition d'affichage : `profile && !profile.tutorialCompleted && profile.onboardingCompleted`.
+  - Écriture asynchrone non-bloquante dans Firestore : `users/{uid}.tutorialCompleted = true` à la clôture ou au passage du tutoriel.
+- **6 étapes animées en pur React / Framer Motion :**
+  1. *Étape 0 — Bienvenue :* Découverte de l'économie circulaire avec écusson Troco lumineux et jetons en suspension.
+  2. *Étape 1 — Explorer :* Carte d'annonce 3D interactive avec effet de bascule (« Cours de guitare à Paris — 1h = 1 Jeton »).
+  3. *Étape 2 — Négocier :* Simulation de chat en direct avec bulles typewriter animées et sceau de deal sécurisé.
+  4. *Étape 3 — Publier :* Formulaire de dépôt auto-rempli par IA (titre, catégorie, tarif en Jetons, validation gratuite).
+  5. *Étape 4 — Portefeuille :* Incrémentation dynamique du solde de bienvenue (0 → 10 Jetons) avec pluie de confettis festifs.
+  6. *Étape 5 — Fin :* Écusson trophée et bouton d'action final « Découvrir Troco » avec validation Firestore.
+- **Intégration plein écran dans `src/App.js` :**
+  - Overlay plein écran avec `z-index: 999999`, fond `bg-black/72` et flou gaussien `backdrop-blur-md`.
+  - Déclenchement automatique pour tout utilisateur ayant finalisé son onboarding et n'ayant pas encore complété le tutoriel.
+
+#### 15.4. Internationalisation Intégrale dans les 7 Langues
+- Ajout synchronisé de 18 clés i18n obligatoires (`tutorialWelcomeTitle`, `tutorialWelcomeSubtitle`, `tutorialWelcomeCta`, `tutorialExploreTitle`, `tutorialExploreSubtitle`, `tutorialChatTitle`, `tutorialChatSubtitle`, `tutorialPostTitle`, `tutorialPostSubtitle`, `tutorialWalletTitle`, `tutorialWalletSubtitle`, `tutorialFinalTitle`, `tutorialFinalSubtitle`, `tutorialFinalCta`, `tutorialSkip`, `tutorialNext`, `tutorialPrev`, `tutorialStepOf`) ainsi que des chaînes de simulation d'annonces.
+- Dictionnaires mis à jour :
+  - `src/data/translationsData.js` (FR base)
+  - `src/data/translationsSecondary.js` (EN, ES, IT, DE, JA, ZH)
+  - `src/locales/translations.js` (FR, EN, ES, IT, DE, JA, ZH)
+
+#### 15.5. Validation & Non-Régression
+- `npx vitest run` : 18 suites de tests, 168/168 tests au vert (100% passés), incluant la nouvelle suite `tests/unit/InteractiveTutorialAndFinancialPurge.test.js`.
+- `npm run build` : Compilation de production 100% réussie (Exit Code 0).
+

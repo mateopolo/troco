@@ -53,14 +53,16 @@ export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } =
     }
 
     const snapshot = await getDocs(q);
-    const items = snapshot.docs.map((docSnap) => ({
-      id: docSnap.data().id || docSnap.id,
-      firestoreId: docSnap.id,
-      ...docSnap.data(),
-      status: docSnap.data().status || 'active',
-      isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
-      _doc: docSnap,
-    }));
+    const items = snapshot.docs
+      .map((docSnap) => ({
+        id: docSnap.data().id || docSnap.id,
+        firestoreId: docSnap.id,
+        ...docSnap.data(),
+        status: docSnap.data().status || 'active',
+        isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
+        _doc: docSnap,
+      }))
+      .filter((item) => !item.isDemo && !(typeof item.id === 'number' && item.id <= 20) && item.status === 'active');
 
     const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
     const hasMore = snapshot.docs.length === pageSize;
@@ -76,14 +78,16 @@ export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } =
         fallbackQuery = query(collection(db, 'listings'), limit(pageSize));
       }
       const snapshot = await getDocs(fallbackQuery);
-      const items = snapshot.docs.map((docSnap) => ({
-        id: docSnap.data().id || docSnap.id,
-        firestoreId: docSnap.id,
-        ...docSnap.data(),
-        status: docSnap.data().status || 'active',
-        isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
-        _doc: docSnap,
-      }));
+      const items = snapshot.docs
+        .map((docSnap) => ({
+          id: docSnap.data().id || docSnap.id,
+          firestoreId: docSnap.id,
+          ...docSnap.data(),
+          status: docSnap.data().status || 'active',
+          isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
+          _doc: docSnap,
+        }))
+        .filter((item) => !item.isDemo && !(typeof item.id === 'number' && item.id <= 20) && item.status === 'active');
       return {
         items,
         lastVisible: snapshot.docs[snapshot.docs.length - 1] || null,
@@ -119,14 +123,16 @@ export const fetchListingsByGeohash = async ({ center, radiusKm = 20, pageSize =
           limit(pageSize)
         );
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(docSnap => ({
-          id: docSnap.data().id || docSnap.id,
-          firestoreId: docSnap.id,
-          ...docSnap.data(),
-          status: docSnap.data().status || 'active',
-          isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
-          _doc: docSnap,
-        }));
+        return snapshot.docs
+          .map(docSnap => ({
+            id: docSnap.data().id || docSnap.id,
+            firestoreId: docSnap.id,
+            ...docSnap.data(),
+            status: docSnap.data().status || 'active',
+            isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
+            _doc: docSnap,
+          }))
+          .filter(item => !item.isDemo && !(typeof item.id === 'number' && item.id <= 20) && item.status === 'active');
       } catch (err) {
         const fallbackQ = query(
           collection(db, 'listings'),
@@ -135,14 +141,16 @@ export const fetchListingsByGeohash = async ({ center, radiusKm = 20, pageSize =
           limit(pageSize)
         );
         const snapshot = await getDocs(fallbackQ);
-        return snapshot.docs.map(docSnap => ({
-          id: docSnap.data().id || docSnap.id,
-          firestoreId: docSnap.id,
-          ...docSnap.data(),
-          status: docSnap.data().status || 'active',
-          isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
-          _doc: docSnap,
-        }));
+        return snapshot.docs
+          .map(docSnap => ({
+            id: docSnap.data().id || docSnap.id,
+            firestoreId: docSnap.id,
+            ...docSnap.data(),
+            status: docSnap.data().status || 'active',
+            isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
+            _doc: docSnap,
+          }))
+          .filter(item => !item.isDemo && !(typeof item.id === 'number' && item.id <= 20) && item.status === 'active');
       }
     });
 

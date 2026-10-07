@@ -69,21 +69,23 @@ export const useFeedListings = ({
       initialQuery,
       (snapshot) => {
         if (isCancelled) return;
-        const firestoreListings = snapshot.docs.map((docSnap) => ({
-          id: docSnap.data().id || docSnap.id,
-          firestoreId: docSnap.id,
-          ...docSnap.data(),
-          status: docSnap.data().status || 'active',
-          isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
-          _doc: docSnap,
-        }));
+        const firestoreListings = snapshot.docs
+          .map((docSnap) => ({
+            id: docSnap.data().id || docSnap.id,
+            firestoreId: docSnap.id,
+            ...docSnap.data(),
+            status: docSnap.data().status || 'active',
+            isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
+            _doc: docSnap,
+          }))
+          .filter(l => !l.isDemo && !(typeof l.id === 'number' && l.id <= 20) && l.status === 'active');
 
         const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
         setLastVisibleListingDoc(lastDoc);
         setHasMoreListings(snapshot.docs.length >= 50);
 
         setListings(prev => {
-          const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+          const customLocalListings = prev.filter(p => !p.isDemo && !(typeof p.id === 'number' && p.id <= 20) && !firestoreListings.some(f => f.id === p.id));
           return [...firestoreListings, ...customLocalListings];
         });
       },
@@ -94,19 +96,21 @@ export const useFeedListings = ({
             const fallbackQuery = query(collection(db, 'listings'), limit(50));
             unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
               if (isCancelled) return;
-              const firestoreListings = snapshot.docs.map((docSnap) => ({
-                id: docSnap.data().id || docSnap.id,
-                firestoreId: docSnap.id,
-                ...docSnap.data(),
-                status: docSnap.data().status || 'active',
-                isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
-                _doc: docSnap,
-              }));
+              const firestoreListings = snapshot.docs
+                .map((docSnap) => ({
+                  id: docSnap.data().id || docSnap.id,
+                  firestoreId: docSnap.id,
+                  ...docSnap.data(),
+                  status: docSnap.data().status || 'active',
+                  isDemo: Boolean(docSnap.data().isDemo ?? (typeof docSnap.data().id === 'number' && docSnap.data().id <= 20)),
+                  _doc: docSnap,
+                }))
+                .filter(l => !l.isDemo && !(typeof l.id === 'number' && l.id <= 20) && l.status === 'active');
               const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
               setLastVisibleListingDoc(lastDoc);
               setHasMoreListings(snapshot.docs.length >= 50);
               setListings(prev => {
-                const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+                const customLocalListings = prev.filter(p => !p.isDemo && !(typeof p.id === 'number' && p.id <= 20) && !firestoreListings.some(f => f.id === p.id));
                 return [...firestoreListings, ...customLocalListings];
               });
             }, (fallbackErr) => {
@@ -250,7 +254,8 @@ export const useFeedListings = ({
   // Filtrage multi-critères ultra-performant
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
-      if (hideDemos && item.isDemo) return false;
+      // Purge totale des annonces démo : seules les vraies annonces actives Firestore s'affichent
+      if (item.isDemo || (typeof item.id === 'number' && item.id <= 20)) return false;
 
       const rawQuery = (deferredSearchQuery || '').trim();
       const cleanQuery = removeAccents(rawQuery);
