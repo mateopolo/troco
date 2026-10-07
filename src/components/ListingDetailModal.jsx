@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   X,
   ChevronLeft,
@@ -17,10 +17,14 @@ import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 import MobileHeader from './common/MobileHeader';
 import { getFallbackImage } from '../utils/mediaHelpers';
 import {
-  getListingDisplayContent,
+  getKnownTitleTranslation,
+  cleanLanguageTag,
+  parseAndTranslateDynamicText,
+} from '../utils/dynamicTranslation';
+import {
   getBioTranslation,
 } from '../utils/translationHelpers';
-import { subscribeTranslations } from '../utils/translator';
+import { getInstantOrQueueTranslation, subscribeTranslations } from '../utils/translator';
 import {
   localizeTags,
   localizeReview,
@@ -55,14 +59,82 @@ export default function ListingDetailModal({
   const [detailMediaTab, setDetailMediaTab] = useState('video');
   const [selectedDetailImageIndex, setSelectedDetailImageIndex] = useState(0);
   const [localShowOriginal, setLocalShowOriginal] = useState(false);
-  const [, setTransTick] = useState(0);
+  const [translationRevision, setTranslationRevision] = useState(0);
   const modalTouchStartRef = useRef(null);
 
   useEffect(() => {
-    return subscribeTranslations(() => {
-      setTransTick(t => t + 1);
+    const unsub = subscribeTranslations(() => {
+      setTranslationRevision(r => r + 1);
     });
+    return () => unsub();
   }, []);
+
+  const isDetailShowingOriginal = Boolean(
+    localShowOriginal || (listing?.id && showingOriginalListings?.[listing.id])
+  );
+
+  // ALIGNEMENT DU PIPELINE SUR CHATROUTE / COMMUNITYROUTE AVEC RE-RENDER FORCÉ PAR TRANSLATIONREVISION
+  const detailDisplayContent = useMemo(() => {
+    if (!listing) return { title: '', description: '', compensation: '' };
+
+    const rawTitle = listing.title || '';
+    const rawDesc = listing.description || '';
+    const rawComp = listing.compensation || '';
+
+    if (isDetailShowingOriginal) {
+      return {
+        title: cleanLanguageTag(rawTitle),
+        description: cleanLanguageTag(rawDesc),
+        compensation: cleanLanguageTag(rawComp),
+      };
+    }
+
+    const target = (currentLang || 'FR').toUpperCase();
+
+    // 1. Traductions multilingues persistées
+    if (listing.translations && listing.translations[target]) {
+      const tItem = listing.translations[target];
+      return {
+        title: cleanLanguageTag(tItem.title || rawTitle),
+        description: cleanLanguageTag(tItem.description || rawDesc),
+        compensation: cleanLanguageTag(tItem.compensation || rawComp),
+      };
+    }
+
+    // 2. Si langue cible FR sans balise étrangère
+    if (target === 'FR' && !rawTitle.startsWith('[') && !rawDesc.startsWith('[')) {
+      return {
+        title: cleanLanguageTag(rawTitle),
+        description: cleanLanguageTag(rawDesc),
+        compensation: cleanLanguageTag(rawComp),
+      };
+    }
+
+    // 3. Traduction du titre via dictionnaire instantané ou traducteur dynamique
+    let transTitle = getKnownTitleTranslation(rawTitle, target);
+    if (!transTitle) {
+      const cleanTitle = cleanLanguageTag(rawTitle);
+      transTitle = getInstantOrQueueTranslation(cleanTitle, target, 'auto') || parseAndTranslateDynamicText(cleanTitle, target, { forceOriginal: false, sourceLang: 'auto' });
+    }
+
+    // 4. Traduction de la description via traducteur dynamique
+    const cleanDesc = cleanLanguageTag(rawDesc);
+    const transDesc = cleanDesc
+      ? (getInstantOrQueueTranslation(cleanDesc, target, 'auto') || parseAndTranslateDynamicText(cleanDesc, target, { forceOriginal: false, sourceLang: 'auto' }))
+      : '';
+
+    // 5. Traduction de la compensation
+    const cleanComp = cleanLanguageTag(rawComp);
+    const transComp = cleanComp
+      ? (getInstantOrQueueTranslation(cleanComp, target, 'auto') || parseAndTranslateDynamicText(cleanComp, target, { forceOriginal: false, sourceLang: 'auto' }))
+      : '';
+
+    return {
+      title: cleanLanguageTag(transTitle || rawTitle),
+      description: cleanLanguageTag(transDesc || rawDesc),
+      compensation: cleanLanguageTag(transComp || rawComp),
+    };
+  }, [listing, currentLang, isDetailShowingOriginal, translationRevision]);
 
   if (!listing) return null;
 
@@ -111,12 +183,8 @@ export default function ListingDetailModal({
     setDetailMediaTab('image');
   };
 
-  const isDetailShowingOriginal = Boolean(
-    localShowOriginal || (listing?.id && showingOriginalListings?.[listing.id])
-  );
-  const detailDisplayContent = getListingDisplayContent(listing, currentLang, isDetailShowingOriginal);
-  const authorName = listing.authorProfile?.name || listing.author || 'Membre Troco';
-  const authorUid = listing.authorProfile?.uid || listing.authorUid || null;
+  const authorName = listing?.authorProfile?.name || listing?.author || 'Membre Troco';
+  const authorUid = listing?.authorProfile?.uid || listing?.authorUid || null;
   const isOwnListing = Boolean(
     (profile?.name && authorName === profile.name) ||
     (authorUid && (authorUid === profile?.uid || authorUid === auth.currentUser?.uid))
@@ -125,7 +193,7 @@ export default function ListingDetailModal({
   const handleToggleOriginal = (e) => {
     e?.stopPropagation?.();
     setLocalShowOriginal(prev => !prev);
-    if (typeof toggleOriginalListing === 'function') {
+    if (typeof toggleOriginalListing === 'function' && listing?.id) {
       try {
         toggleOriginalListing(listing.id, e);
       } catch (_) {}
@@ -349,7 +417,7 @@ export default function ListingDetailModal({
                 )}
               </div>
               <h3 className="font-editorial-heading" style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{detailDisplayContent.title}</h3>
-              {currentLang !== (listing.nativeLang || 'FR') && (
+              {(currentLang !== (listing.nativeLang || 'FR') || currentLang !== 'FR') && (
                 <button
                   type="button"
                   onClick={handleToggleOriginal}

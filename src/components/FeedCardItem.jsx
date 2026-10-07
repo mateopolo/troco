@@ -1,12 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TextEffect } from './core/text-effect';
 import { ProgressiveImage } from './ui/ProgressiveImage';
 import { safeVibrate } from '../utils/haptics';
 import { useLanguage } from '../contexts/LanguageContext';
-import { subscribeTranslations } from '../utils/translator';
+import { getInstantOrQueueTranslation, subscribeTranslations } from '../utils/translator';
 import { useUserPresence } from '../hooks/useUserPresence';
+import {
+  getKnownTitleTranslation,
+  cleanLanguageTag,
+  parseAndTranslateDynamicText
+} from '../utils/dynamicTranslation';
 import { getListingDisplayContent as helperGetListingDisplayContent } from '../utils/translationHelpers';
 
 function FeedCardItem({
@@ -54,12 +59,13 @@ function FeedCardItem({
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
   const [localShowingOriginal, setLocalShowingOriginal] = useState(false);
-  const [, setTransRevision] = useState(0);
+  const [translationRevision, setTranslationRevision] = useState(0);
 
   useEffect(() => {
-    return subscribeTranslations(() => {
-      setTransRevision(r => r + 1);
+    const unsub = subscribeTranslations(() => {
+      setTranslationRevision(r => r + 1);
     });
+    return () => unsub();
   }, []);
 
   const cardElementRef = useRef(null);
@@ -73,10 +79,69 @@ function FeedCardItem({
   const media = typeof getSuggestedMedia === 'function' ? getSuggestedMedia(item?.title, item?.description || '', item?.image, item?.video) : {};
   const isHovered = hoveredCardId === item?.id;
   const isOriginal = Boolean(showingOriginalListings?.[item?.id] || localShowingOriginal);
-  const resolveDisplayContent = typeof getListingDisplayContent === 'function'
-    ? getListingDisplayContent
-    : helperGetListingDisplayContent;
-  const displayContent = resolveDisplayContent(item, currentLang, isOriginal);
+
+  // ALIGNEMENT DU PIPELINE SUR CHATROUTE / COMMUNITYROUTE AVEC RE-RENDER FORCÉ PAR TRANSLATIONREVISION
+  const displayContent = useMemo(() => {
+    if (!item) return { title: '', description: '', compensation: '' };
+
+    const rawTitle = item.title || '';
+    const rawDesc = item.description || '';
+    const rawComp = item.compensation || '';
+
+    if (isOriginal) {
+      return {
+        title: cleanLanguageTag(rawTitle),
+        description: cleanLanguageTag(rawDesc),
+        compensation: cleanLanguageTag(rawComp),
+      };
+    }
+
+    const target = (currentLang || 'FR').toUpperCase();
+
+    // 1. Traductions multilingues persistées
+    if (item.translations && item.translations[target]) {
+      const tItem = item.translations[target];
+      return {
+        title: cleanLanguageTag(tItem.title || rawTitle),
+        description: cleanLanguageTag(tItem.description || rawDesc),
+        compensation: cleanLanguageTag(tItem.compensation || rawComp),
+      };
+    }
+
+    // 2. Si langue cible FR sans balise étrangère
+    if (target === 'FR' && !rawTitle.startsWith('[') && !rawDesc.startsWith('[')) {
+      return {
+        title: cleanLanguageTag(rawTitle),
+        description: cleanLanguageTag(rawDesc),
+        compensation: cleanLanguageTag(rawComp),
+      };
+    }
+
+    // 3. Traduction du titre via dictionnaire instantané ou traducteur dynamique
+    let transTitle = getKnownTitleTranslation(rawTitle, target);
+    if (!transTitle) {
+      const cleanTitle = cleanLanguageTag(rawTitle);
+      transTitle = getInstantOrQueueTranslation(cleanTitle, target, 'auto') || parseAndTranslateDynamicText(cleanTitle, target, { forceOriginal: false, sourceLang: 'auto' });
+    }
+
+    // 4. Traduction de la description via traducteur dynamique
+    const cleanDesc = cleanLanguageTag(rawDesc);
+    const transDesc = cleanDesc
+      ? (getInstantOrQueueTranslation(cleanDesc, target, 'auto') || parseAndTranslateDynamicText(cleanDesc, target, { forceOriginal: false, sourceLang: 'auto' }))
+      : '';
+
+    // 5. Traduction de la compensation
+    const cleanComp = cleanLanguageTag(rawComp);
+    const transComp = cleanComp
+      ? (getInstantOrQueueTranslation(cleanComp, target, 'auto') || parseAndTranslateDynamicText(cleanComp, target, { forceOriginal: false, sourceLang: 'auto' }))
+      : '';
+
+    return {
+      title: cleanLanguageTag(transTitle || rawTitle),
+      description: cleanLanguageTag(transDesc || rawDesc),
+      compensation: cleanLanguageTag(transComp || rawComp),
+    };
+  }, [item, currentLang, isOriginal, translationRevision]);
 
   const trimStart = Number(item.videoTrimStart || item.videoMetadata?.trimStart || 0);
   const trimEnd = Number(item.videoTrimEnd || item.videoMetadata?.trimEnd || 0);
@@ -461,7 +526,7 @@ function FeedCardItem({
               {displayContent.title}
             </TextEffect>
           </h3>
-          {currentLang !== (item.nativeLang || 'FR') && (
+          {(currentLang !== (item?.nativeLang || 'FR') || currentLang !== 'FR') && (
             <button
               type="button"
               onClick={(e) => {

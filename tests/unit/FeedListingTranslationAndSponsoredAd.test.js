@@ -169,7 +169,7 @@ describe('I18N-09, I18N-10 & UI-01: Traduction Feed, Détail et Annonce Sponsori
       expect(screen.getByText('Sponsored')).toBeTruthy();
     });
 
-    it('traduit en japonais (JA) et chinois (ZH)', () => {
+    it('traduit les partenaires sponsorisés en japonais (JA) et chinois (ZH)', () => {
       const { unmount } = render(
         <SponsoredFeedCard
           index={0}
@@ -198,4 +198,63 @@ describe('I18N-09, I18N-10 & UI-01: Traduction Feed, Détail et Annonce Sponsori
       expect(screen.getByText('赞助推广')).toBeTruthy();
     });
   });
+
+  describe('TÂCHE 5 : Alignement Pipeline ChatRoute / CommunityRoute sur plusieurs langues', () => {
+    const listing = {
+      id: 2,
+      isDemo: true,
+      title: 'cours de violon',
+      description: 'Cours particulier de violon pour débutant.',
+      compensation: '2 Jetons',
+      nativeLang: 'FR',
+    };
+
+    it('traduit FeedCardItem en anglais (EN) et espagnol (ES)', () => {
+      const { unmount } = render(
+        <FeedCardItem
+          item={listing}
+          darkMode={false}
+          currentLang="EN"
+          formatCompensation={(c) => c}
+          t={(k, f) => f || k}
+        />
+      );
+
+      expect(screen.getByText('Violin Lessons')).toBeTruthy();
+      unmount();
+
+      render(
+        <FeedCardItem
+          item={listing}
+          darkMode={false}
+          currentLang="ES"
+          formatCompensation={(c) => c}
+          t={(k, f) => f || k}
+        />
+      );
+
+      expect(screen.getByText('Clases de violín')).toBeTruthy();
+    });
+
+    it('traduit ListingDetailModal en anglais et bascule vers l\'original', () => {
+      render(
+        <ListingDetailModal
+          listing={listing}
+          darkMode={false}
+          currentLang="EN"
+          onClose={() => {}}
+          t={(k) => (k === 'showTranslation' ? 'Show translation' : (k === 'showOriginal' ? 'Show original' : k))}
+        />
+      );
+
+      expect(screen.getByText('Violin Lessons')).toBeTruthy();
+      const toggleBtn = screen.getByText('Show original');
+      expect(toggleBtn).toBeTruthy();
+
+      fireEvent.click(toggleBtn);
+      expect(screen.getByText('cours de violon')).toBeTruthy();
+      expect(screen.getByText('Show translation')).toBeTruthy();
+    });
+  });
 });
+

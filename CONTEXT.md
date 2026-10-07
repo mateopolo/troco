@@ -1113,6 +1113,66 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
    - `npx vitest run` : 17 suites de tests, 150/150 tests validés avec succès (Exit Code 0).
    - `npm run build` : Compilation de production 100% propre (Exit Code 0).
 
+---
 
+## 🌐 14. CORRECTION DÉFINITIVE : ALIGNEMENT DU PIPELINE DU FEED SUR CHAT/COMMUNITY (2026-10-07)
 
+1. **Pipeline Exact Extrait de ChatRoute / CommunityRoute :**
+   - **Helper appelé en premier :**
+     - Dans `CommunityActivityFeed.jsx` et `GlobalLiveChat.jsx` : appel direct à `parseAndTranslateDynamicText(text, currentLang, { forceOriginal, sourceLang: 'auto' })`.
+     - Dans `ChatView.jsx` : appel à `getChatMessageDisplayContent(msg, currentLang, isMsgOriginal)`, qui filtre les messages modèles (`knownMessageTranslations`) puis délègue à `parseAndTranslateDynamicText`.
+     - À l'intérieur de `parseAndTranslateDynamicText` :
+       - Si `forceOriginal` : renvoie le texte nettoyé via `cleanLanguageTag`.
+       - Sinon : interrogation synchrone du cache mémoire `MEMORY_CACHE` via `getInstantOrQueueTranslation(cleanText, targetLang, sourceLang)`.
+       - Si absent du cache mémoire : mise en file d'attente asynchrone pour résolution via l'API de traduction, puis notification de tous les abonnés via `notifySubscribers(cacheKey, translated)`.
+   - **Abonnement à `subscribeTranslations` :**
+     - Écoute active au montage du composant :
+       ```javascript
+       useEffect(() => {
+         const unsub = subscribeTranslations(() => {
+           setTranslationRevision(r => r + 1);
+         });
+         return () => unsub();
+       }, []);
+       ```
+   - **Stockage de `translationRevision` :**
+     - Dans un état local React dédié : `const [translationRevision, setTranslationRevision] = useState(0);` (ou `const [, setTransTick] = useState(0);`).
+   - **Mécanisme de re-render forcé :**
+     - L'incrément de `translationRevision` force un re-render immédiat du composant.
+     - Les calculs de rendu ou `useMemo` dépendant de `translationRevision` ré-exécutent `getInstantOrQueueTranslation`, qui trouve immédiatement la traduction résolue dans le cache mémoire et met à jour le DOM sans clignotement.
+   - **Cache local par message / annonce :**
+     - État local de bascule d'affichage : `const [showingOriginal, setShowingOriginal] = useState({});` combiné aux props globales.
 
+2. **Différences Identifiées dans FeedCardItem.jsx & ListingDetailModal.jsx :**
+   - **Absence de dépendance explicite à `translationRevision` dans le calcul de contenu :**
+     - `FeedCardItem.jsx` (L57-79) appelait `resolveDisplayContent` de manière dérivée au vol sans `useMemo` dépendant de `translationRevision`.
+     - Lorsque `subscribeTranslations` notifiait une nouvelle traduction, l'évaluation synchrone ne garantissait pas le re-render ciblé des chaînes de texte, et `React.memo(FeedCardItem, areFeedCardPropsEqual)` ignorait la révision interne si la prop `langRevision` du parent n'était pas synchronisée.
+   - **Court-circuit potentiel sur les annonces non démo :**
+     - Si une annonce n'avait pas de balise explicite et que `currentLang !== 'FR'`, l'absence d'appel direct à `getInstantOrQueueTranslation` risquait de restituer le titre original non traduit en cas de mismatch de langue d'origine.
+   - **Condition restrictive sur le bouton "Voir l'original" :**
+     - La condition `currentLang !== (item.nativeLang || 'FR')` masquait le bouton si `item.nativeLang` était indéfini ou mal typé. Remplacement par `(currentLang !== (item?.nativeLang || 'FR') || currentLang !== 'FR')` garantissant la présence permanente du bouton sur les interfaces étrangères.
+
+3. **Corrections Appliquées :**
+   - **`src/components/FeedCardItem.jsx` :**
+     - Déclaration explicite de `const [translationRevision, setTranslationRevision] = useState(0);`.
+     - Abonnement `subscribeTranslations` incrémentant `translationRevision`.
+     - Encapsulation du calcul de `displayContent` dans `useMemo` avec dépendance explicite `[item, currentLang, isOriginal, translationRevision]`.
+     - Traduction directe du titre, de la description et de la compensation via `getKnownTitleTranslation` et `getInstantOrQueueTranslation` (avec fallback `parseAndTranslateDynamicText`).
+     - Règle stricte : si `currentLang !== 'FR'` et `!isOriginal`, interdiction absolue de renvoyer `item.title` sans passer par le traducteur.
+     - Bouton "Voir l'original" / "Voir la traduction" réactif, basculant instantanément l'état local `localShowingOriginal`.
+   - **`src/components/ListingDetailModal.jsx` :**
+     - Intégration du même pipeline unifié : `translationRevision` + `subscribeTranslations`.
+     - `useMemo` pour `detailDisplayContent` dépendant de `[listing, currentLang, isDetailShowingOriginal, translationRevision]`.
+     - Traduction dynamique de la biographie auteur (`authorBio`) via `getInstantOrQueueTranslation` et `getBioTranslation`.
+     - Préservation et synchronisation du bouton bilingue (`handleToggleOriginal`).
+
+4. **Résultats Multilingues :**
+   - **Anglais (EN) :** Feed, annonces réelles et démo traduits (« Drill Loan », « Violin Lessons », « Vinyl Listening Session »). Bouton « Show original » / « Show translation » basculant instantanément en 0ms.
+   - **Italien (IT) :** « Prestito trapano », « Lezioni di violino », « Sessione di ascolto di vinili ». Carte sponsorisée 100% en italien (« FAI DA TE & ATTREZZATURA », « Partner Certificato »). Bouton « Mostra originale » / « Mostra traduzione » opérationnel.
+   - **Espagnol (ES) :** « Préstamo de taladro », « Clases de violín ».
+   - **Allemand (DE) :** « Schlagbohrmaschinen-Verleih », « Geigenunterricht ».
+   - **Japonais (JA) & Chinois (ZH) :** Caractères natifs correctement générés et persistés dans le cache.
+
+5. **Validation Technique & Non-Régression :**
+   - `npx vitest run` : 17 suites de tests, 152/152 tests validés avec succès (Exit Code 0).
+   - `npm run build` : Compilation de production 100% propre (Exit Code 0).
