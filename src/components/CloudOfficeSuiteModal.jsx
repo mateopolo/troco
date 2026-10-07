@@ -566,7 +566,7 @@ function CloudOfficeSuiteModalContent({
         try {
           if (snapshot?.exists?.()) {
             const data = snapshot.data() || {};
-            if (data?.title) setSheetTitle(data?.title || 'Tableur Collaboratif');
+            if (data?.title) setSheetTitle(data?.title || t('workspaceSheetsTitle') || 'Troco Sheets');
             if ((data?.gridData || data?.cells) && data?.lastEditor !== (currentUser?.name || currentUser?.displayName || currentUser?.id)) {
               setSheetData((data?.gridData || data?.cells || {}) || {});
             }
@@ -575,7 +575,7 @@ function CloudOfficeSuiteModalContent({
             // Initialisation immédiate par défaut si non existant
             const myName = currentUser?.name || currentUser?.displayName || 'Moi';
             setDoc(sheetRef, {
-              title: sheetTitleRef.current || 'Tableur Collaboratif',
+              title: sheetTitleRef.current || t('workspaceSheetsTitle') || 'Troco Sheets',
               gridData: DEFAULT_SHEET_DATA,
               cells: DEFAULT_SHEET_DATA,
               lastUpdated: Date.now(),
@@ -733,7 +733,7 @@ function CloudOfficeSuiteModalContent({
 
       const sheetRef = doc(db, 'chats', effectiveGroupId, 'workspace', 'spreadsheet');
       await setDoc(sheetRef, {
-        title: newTitle || sheetTitle || 'Tableur Collaboratif',
+        title: newTitle || sheetTitle || t('workspaceSheetsTitle') || 'Troco Sheets',
         gridData: newGridData || {},
         cells: newGridData || {},
         lastUpdated: Date.now(),

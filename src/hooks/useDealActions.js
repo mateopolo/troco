@@ -134,7 +134,10 @@ export const useDealActions = ({
       }
 
       if (typeof setSaveMessage === 'function') {
-        setSaveMessage(`🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`);
+        const transferSentText = typeof t === 'function'
+          ? `🤝 ${t('tokenTransferSent', { count: costTokens, partner })} — ${t('tokenTransferSentSuccess', { partner })}`
+          : `🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`;
+        setSaveMessage(transferSentText);
         safeTimeout(() => setSaveMessage(''), 5000);
       }
     } catch (e) {

@@ -315,7 +315,7 @@ export default function CollaborativeWhiteboardModal({
 
   // 6. Multi-versions & Métadonnées
   const [versionNumber, setVersionNumber] = useState(1);
-  const [workspaceTitle, setWorkspaceTitle] = useState(projectTitle || 'Tableau Blanc Collaboratif');
+  const [workspaceTitle, setWorkspaceTitle] = useState(() => (projectTitle && projectTitle !== 'Tableau Blanc Collaboratif' ? projectTitle : (t('workspaceWhiteboardTitle') || 'Tableau Blanc')));
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
   const [lastEditor, setLastEditor] = useState(myName);
   const [isSaving, setIsSaving] = useState(false);
@@ -1252,7 +1252,7 @@ export default function CollaborativeWhiteboardModal({
               boardId: effectiveId,
               groupId: groupId || 'group_whiteboard',
               chatId: groupId || 'group_whiteboard',
-              title: projectTitle || 'Tableau Blanc',
+              title: (projectTitle && projectTitle !== 'Tableau Blanc Collaboratif' ? projectTitle : (t('workspaceWhiteboardTitle') || 'Tableau Blanc')),
               versionNumber: 1,
               paths: [],
               stickyNotes: [],
@@ -1296,7 +1296,7 @@ export default function CollaborativeWhiteboardModal({
           setTextElements([]);
           setBackgroundColor(darkMode ? '#12100E' : '#FFFFFF');
           setVersionNumber(1);
-          setWorkspaceTitle(projectTitle || 'Tableau Blanc');
+          setWorkspaceTitle(projectTitle && projectTitle !== 'Tableau Blanc Collaboratif' ? projectTitle : (t('workspaceWhiteboardTitle') || 'Tableau Blanc'));
           setHistory([[]]);
           setHistoryStep(0);
           historyStepRef.current = 0;

@@ -496,16 +496,16 @@ function ChatView({
         tools: '💼',
       };
       const toolLabels = {
-        whiteboard: 'Tableau Blanc Collaboratif',
-        notes: 'Notes Partagées (Apple-Style)',
-        docs: 'Document Partagé (Troco Docs)',
-        sheets: 'Tableur Collaboratif (Troco Sheets)',
-        slides: 'Présentation (Troco Slides)',
-        planning: 'Planning & Réunions HD',
-        calendar: 'Planning & Réunions HD',
-        drive: 'Cloud Drive Collaboratif',
-        workspace: 'Outils Pro Workspace',
-        tools: 'Outils Pro Workspace',
+        whiteboard: (typeof t === 'function' ? t('workspaceWhiteboardTitle') : null) || 'Tableau Blanc Collaboratif',
+        notes: (typeof t === 'function' ? t('workspaceNotesTitle') : null) || 'Notes Partagées',
+        docs: (typeof t === 'function' ? t('workspaceDocsTitle') : null) || 'Troco Docs',
+        sheets: (typeof t === 'function' ? t('workspaceSheetsTitle') : null) || 'Troco Sheets',
+        slides: (typeof t === 'function' ? t('workspaceSlidesTitle') : null) || 'Troco Slides',
+        planning: (typeof t === 'function' ? t('workspacePlanningTitle') : null) || 'Planning & Réunions HD',
+        calendar: (typeof t === 'function' ? t('workspacePlanningTitle') : null) || 'Planning & Réunions HD',
+        drive: (typeof t === 'function' ? t('workspaceDriveTitle') : null) || 'Cloud Drive Collaboratif',
+        workspace: (typeof t === 'function' ? t('workspaceProTitle') : null) || 'Outils Pro Workspace',
+        tools: (typeof t === 'function' ? t('workspaceProTitle') : null) || 'Outils Pro Workspace',
       };
       const authorName = profile?.name || 'Moi';
       const authorUid = profile?.uid || profile?.id || 'me';
@@ -1764,10 +1764,14 @@ function ChatView({
                         </div>
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>
-                            🪙 Transfert de {count} Jeton{count > 1 ? 's' : ''} Troco
+                            🪙 {isMine
+                              ? t('tokenTransferSent', { count, partner: activeChatObj?.user || 'votre contact' })
+                              : t('tokenTransferReceived', { count, partner: msg?.senderName || 'votre contact' })}
                           </div>
                           <div style={{ fontSize: '11px', color: '#F59E0B', fontWeight: '700' }}>
-                            {isMine ? `Transféré avec succès à ${activeChatObj?.user || 'votre contact'}` : `Reçu de ${msg?.senderName || 'votre contact'} !`} ✓
+                            {isMine
+                              ? t('tokenTransferSentSuccess', { partner: activeChatObj?.user || 'votre contact' })
+                              : t('tokenTransferReceivedSuccess', { partner: msg?.senderName || 'votre contact' })} ✓
                           </div>
                         </div>
                       </div>
@@ -2504,10 +2508,16 @@ function ChatView({
                           </div>
                           <div>
                             <div style={{ fontSize: '13px', fontWeight: '800', color: isMe ? '#FFFFFF' : 'var(--text-main)' }}>
-                              Transfert de {msg?.tokenAmount || 1} Jeton{Number(msg?.tokenAmount) > 1 ? 's' : ''} Troco
+                              🪙 {isMe
+                                ? t('tokenTransferSent', { count: msg?.tokenAmount || 1, partner: activeChatObj?.user || 'votre contact' })
+                                : t('tokenTransferReceived', { count: msg?.tokenAmount || 1, partner: msg?.senderName || 'votre contact' })}
                             </div>
                             <div style={{ fontSize: '11px', color: isMe ? 'rgba(255,255,255,0.9)' : 'var(--text-secondary)' }}>
-                              {msg?.text || 'Transfert validé immédiatement'}
+                              {msg?.text && !msg.text.includes('Transfert')
+                                ? msg.text
+                                : (isMe
+                                    ? t('tokenTransferSentSuccess', { partner: activeChatObj?.user || 'votre contact' })
+                                    : t('tokenTransferReceivedSuccess', { partner: msg?.senderName || 'votre contact' }))}
                             </div>
                           </div>
                         </div>

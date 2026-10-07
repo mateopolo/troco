@@ -384,7 +384,9 @@ export default function GlobalLiveChat({
             </div>
             <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
               <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
-              <span>{t('live.connected_count')?.replace('{n}', onlineCount.toLocaleString()) || `${onlineCount.toLocaleString()} connectés`}</span>
+              <span>
+                {t('live.connected_count', { count: onlineCount.toLocaleString(), n: onlineCount.toLocaleString() })?.replace('{n}', onlineCount.toLocaleString())?.replace('{count}', onlineCount.toLocaleString()) || `${onlineCount.toLocaleString()} connectés`}
+              </span>
             </div>
           </div>
         </div>

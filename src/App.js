@@ -155,7 +155,19 @@ export default function App() {
   const [isGeolocating, setIsGeolocating] = useState(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const t = useCallback((key, defaultVal) => (translations?.[currentLang]?.[key]) || (translations?.['FR']?.[key]) || defaultVal || key, [currentLang]);
+  const t = useCallback((key, paramsOrDefault) => {
+    let str = (translations?.[currentLang]?.[key]) || (translations?.['FR']?.[key]);
+    if (!str) {
+      if (typeof paramsOrDefault === 'string') return paramsOrDefault;
+      return key;
+    }
+    if (paramsOrDefault && typeof paramsOrDefault === 'object') {
+      Object.keys(paramsOrDefault).forEach((k) => {
+        str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), String(paramsOrDefault[k]));
+      });
+    }
+    return str;
+  }, [currentLang]);
 
   const i18n = useMemo(() => ({
     language: currentLang,

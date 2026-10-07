@@ -1275,3 +1275,40 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
 - `npx vitest run` : 19 suites de tests, 184/184 tests au vert (100% de réussite) avec la suite dédiée `tests/unit/CRTSplashAndHomeAesthetics.test.js`.
 - `npm run build` : Compilation de production 100% réussie (Exit Code 0).
 
+---
+
+### 17. Résolution I18N Complète : Namespace Live, Notifications de Transfert, Cartes Workspace & Placeholders
+
+#### 17.1. Namespace Live Chat Résolu (`live.*`)
+- Éradication totale des clés i18n brutes affichées à l'écran (`live.chat_title`, `live.live_badge`, `live.connected_count`, `live.stream_sounds`, `live.stream_sons`, `live.role_member`, `live.role_founder`, `live.role_vip`, `live.role_pro`, `live.admin_badge`, `live.stream_50ms`, `live.edited_by_admin`, `live.edit_title`, `live.delete_title`, `live.delete_confirm_desc`).
+- Support dynamique des interpolations de variables `{count}` et `{n}` dans `t('live.connected_count', { count, n })` avec préservation du voyant vert connecté.
+- Harmonisation complète sur les 7 langues (FR, EN, ES, IT, DE, JA, ZH) dans `translations.js`, `translationsData.js` et `translationsSecondary.js`.
+
+#### 17.2. Notifications de Transfert de Jetons Troco Localisées
+- Suppression de l'affichage français hardcodé lors des transferts en environnement multilingue (ex. allemand).
+- Intégration de `t('tokenTransferSent', { count, partner })`, `t('tokenTransferSentSuccess', { partner })`, `t('tokenTransferReceived', { count, partner })`, `t('tokenTransferReceivedSuccess', { partner })` dans `ChatView.jsx` et `useDealActions.js`.
+- Remplacement dynamique des tokens `{count}` et `{partner}` dans les messages et toasts.
+
+#### 17.3. Résolution du Placeholder `{author}` dans le Workspace
+- Correction du bug d'affichage `"Von {author} mateo polo"` dans les cartes média `WorkspaceMessageCard.jsx`.
+- Utilisation de `t('authorBy', { name: authorName })` (ex. "Von mateo polo" en DE, "Par mateo polo" en FR) avec repli sécurisé sur le nom réel sans identifiant alphanumérique brut.
+
+#### 17.4. Traduction Intégrale des Outils & Cartes Workspace
+- Traduction de l'ensemble des titres et descriptions d'outils collaboratifs bureautiques :
+  - `workspaceDocsTitle`, `workspaceDocsDesc` (Troco Docs)
+  - `workspaceSheetsTitle`, `workspaceSheetsDesc` (Troco Sheets)
+  - `workspaceNotesTitle`, `workspaceNotesDesc` (Notes Partagées / Shared Notes / Gemeinsame Notizen)
+  - `workspaceWhiteboardTitle`, `workspaceWhiteboardDesc` (Tableau Blanc / Whiteboard)
+  - `workspaceSlidesTitle`, `workspaceSlidesDesc` (Troco Slides)
+- Résolution dynamique des anciens titres français stockés en base (`resolveLocalizedTitle`).
+- Harmonisation dans `ChatView.jsx` (`toolLabels`), `CloudOfficeSuiteModal.jsx`, `SharedDocumentModal.jsx`, `CollaborativeWhiteboardModal.jsx`.
+
+#### 17.5. Moteur d'Interpolation Universel dans `t()`
+- Mise à niveau du moteur de traduction `t()` dans `LanguageContext.jsx` et `App.js` pour supporter automatiquement le remplacement par regex de tous les paramètres `{key}` fournis sous forme d'objet d'options `{ count, partner, name, ... }`.
+
+#### 17.6. Validation & Non-Régression
+- Suite de tests unitaire dédiée : `tests/unit/I18nLiveWorkspaceTransferFix.test.js` (34/34 tests passés).
+- Test suite globale Vitest : 20 fichiers de test, 218/218 tests réussis (100% vert).
+- `npm run build` : Exit Code 0, bundle de production vérifié.
+
+

@@ -55,8 +55,18 @@ export function LanguageProvider({ children, initialLang = null }) {
     setLang(langCode);
   }, [setLang]);
 
-  const t = useCallback((key) => {
-    return translations?.[currentLang]?.[key] || translations?.['FR']?.[key] || key;
+  const t = useCallback((key, paramsOrDefault) => {
+    let str = translations?.[currentLang]?.[key] || translations?.['FR']?.[key];
+    if (!str) {
+      if (typeof paramsOrDefault === 'string') return paramsOrDefault;
+      return key;
+    }
+    if (paramsOrDefault && typeof paramsOrDefault === 'object') {
+      Object.keys(paramsOrDefault).forEach((k) => {
+        str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), String(paramsOrDefault[k]));
+      });
+    }
+    return str;
   }, [currentLang]);
 
   const i18n = useMemo(() => ({

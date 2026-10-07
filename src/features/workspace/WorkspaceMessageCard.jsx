@@ -52,22 +52,44 @@ export default function WorkspaceMessageCard(props) {
   const documentId = message?.documentId || message?.docId || message?.workspaceId || message?.boardId || message?.document?.id || '';
   const buttonLabel = isMine ? (t('workspace.card_open') || 'Ouvrir') : (t('workspace.card_join') || 'Rejoindre');
 
-  // 🚨 PHASE 103 : FALLBACKS DE TITRE ET SNIPPET SÉCURISÉS
-  const safeTitle = message?.title || message?.dealTerms?.title || (t('workspace.collab_doc') || 'Document partagé');
-  const safeSnippet = message?.snippet || (t('workspace.card_default_snippet') || 'Cliquez pour ouvrir le document...');
-
+  // 🚨 PHASE 103 : FALLBACKS DE TITRE ET SNIPPET SÉCURISÉS & TRADUCTION INTÉGRALE DES OUTILS
   const defaultTitle = isWhiteboard
-    ? (t('workspace.whiteboard_card_title') || 'Tableau Blanc collaboratif')
+    ? (t('workspaceWhiteboardTitle') || t('workspace.whiteboard_card_title') || 'Tableau Blanc')
     : isNotes
-      ? (t('workspace.notes_card_title') || 'Notes Partagées')
+      ? (t('workspaceNotesTitle') || t('workspace.notes_card_title') || 'Notes Partagées')
       : isDocs
-        ? (t('workspace.docs_card_title') || 'Troco Doc')
+        ? (t('workspaceDocsTitle') || t('workspace.docs_card_title') || 'Troco Docs')
         : isSheets
-          ? (t('workspace.sheets_card_title') || 'Troco Sheet')
-          : (t('workspace.slides_card_title') || 'Troco Slides');
+          ? (t('workspaceSheetsTitle') || t('workspace.sheets_card_title') || 'Troco Sheets')
+          : (t('workspaceSlidesTitle') || t('workspace.slides_card_title') || 'Troco Slides');
+
+  // Traduction dynamique si un ancien titre hardcodé en français est stocké
+  const resolveLocalizedTitle = (tStr) => {
+    if (!tStr || typeof tStr !== 'string') return defaultTitle;
+    const trimmed = tStr.trim();
+    if (trimmed.includes('Tableau Blanc') || trimmed.includes('Whiteboard')) return t('workspaceWhiteboardTitle') || 'Tableau Blanc';
+    if (trimmed.includes('Notes Partagées') || trimmed.includes('Note Partagée') || trimmed.includes('Shared Notes')) return t('workspaceNotesTitle') || 'Notes Partagées';
+    if (trimmed.includes('Tableur Collaboratif') || trimmed.includes('Troco Sheet') || trimmed.includes('Spreadsheet')) return t('workspaceSheetsTitle') || 'Troco Sheets';
+    if (trimmed.includes('Document Partagé') || trimmed.includes('Troco Doc') || trimmed.includes('Docs')) return t('workspaceDocsTitle') || 'Troco Docs';
+    if (trimmed.includes('Présentation') || trimmed.includes('Troco Slides') || trimmed.includes('Presentation')) return t('workspaceSlidesTitle') || 'Troco Slides';
+    return formatDocumentName(trimmed, wType);
+  };
+
+  const safeTitle = message?.title || message?.dealTerms?.title || defaultTitle;
   const rawTitle = message?.workspaceTitle || safeTitle || message?.document?.title || defaultTitle;
-  const displayTitle = formatDocumentName(rawTitle || documentId, wType);
-  const rawSnippet = String(message?.snippet || safeSnippet || message?.summary || message?.text || message?.content || message?.document?.content || (t('workspace.collab_snippet_fallback') || "Document collaboratif partagé dans l'espace de travail."));
+  const displayTitle = resolveLocalizedTitle(rawTitle);
+
+  const defaultSnippet = isWhiteboard
+    ? (t('workspaceWhiteboardDesc') || 'Tableau blanc collaboratif P2P')
+    : isNotes
+      ? (t('workspaceNotesDesc') || 'Bloc-notes collaboratif')
+      : isDocs
+        ? (t('workspaceDocsDesc') || 'Éditeur de texte collaboratif')
+        : isSheets
+          ? (t('workspaceSheetsDesc') || 'Tableur collaboratif')
+          : (t('workspaceSlidesDesc') || 'Présentations collaboratives');
+
+  const rawSnippet = String(message?.snippet || message?.summary || message?.text || message?.content || message?.document?.content || defaultSnippet);
   const truncatedSnippet = rawSnippet.slice(0, 100) + (rawSnippet.length > 100 ? '...' : '');
 
   const thumbnail = message?.thumbnailBase64 || message?.previewUrl || null;
@@ -194,7 +216,7 @@ export default function WorkspaceMessageCard(props) {
                   <Paintbrush size={32} />
                 </div>
                 <span style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(255, 255, 255, 0.7)' }}>
-                  Tableau Blanc Collaboratif
+                  {t('workspaceWhiteboardTitle') || 'Tableau Blanc'}
                 </span>
               </div>
             )
@@ -218,7 +240,17 @@ export default function WorkspaceMessageCard(props) {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
                 {typeIcon}
-                <span>{isNotes ? 'Note Partagée' : isDocs ? 'Troco Doc' : isSheets ? 'Troco Sheet' : isSlides ? 'Troco Slides' : 'Document'}</span>
+                <span>
+                  {isNotes
+                    ? (t('workspaceNotesTitle') || 'Notes Partagées')
+                    : isDocs
+                    ? (t('workspaceDocsTitle') || 'Troco Docs')
+                    : isSheets
+                    ? (t('workspaceSheetsTitle') || 'Troco Sheets')
+                    : isSlides
+                    ? (t('workspaceSlidesTitle') || 'Troco Slides')
+                    : (t('workspace.document') || 'Document')}
+                </span>
               </div>
               <div style={{ fontSize: '13px', fontWeight: '800', color: '#111827', lineHeight: 1.25 }}>
                 {displayTitle}
@@ -311,11 +343,18 @@ export default function WorkspaceMessageCard(props) {
                 marginTop: '1px',
               }}
             >
-              {message?.senderName && !isAlphanumericId(message.senderName)
-                ? `${t('workspace.by_author') || 'Par'} ${message.senderName}`
-                : isMine
+              {(() => {
+                const authorCandidate = message?.authorName || message?.senderName;
+                const authorName = authorCandidate && !isAlphanumericId(authorCandidate) ? authorCandidate : '';
+                if (authorName) {
+                  return t('authorBy', { name: authorName })?.replace('{name}', authorName)?.replace('{author}', authorName)
+                    || t('workspace.by_author', { author: authorName, name: authorName })?.replace('{author}', authorName)?.replace('{name}', authorName)
+                    || `Par ${authorName}`;
+                }
+                return isMine
                   ? (t('workspace.by_you') || 'Par Vous')
-                  : (t('workspace.collab_doc') || 'Document partagé')}
+                  : (t('workspace.collab_doc') || 'Document partagé');
+              })()}
             </div>
           </div>
 

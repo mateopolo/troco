@@ -9,6 +9,7 @@ import {
 import { doc, setDoc, onSnapshot, serverTimestamp, addDoc, collection } from 'firebase/firestore';
 import { db } from '../firebase';
 import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const DEFAULT_NOTE_CONTENT = `# 📝 Notes de Session & Objectifs Collaboratifs
 
@@ -62,6 +63,7 @@ function SharedDocumentModalContent({
   onSendToChat = null,
   handleSendMessage = null,
 }) {
+  const { t } = useLanguage?.() || { t: (k) => k };
   const effectiveDoc = propDoc || propDocAlias || note || documentData || defaultDoc;
   const effectiveGroupId = String(groupId?.id || groupId || 'demo_group_notes');
   const effectiveDocId = String(docId || documentId || effectiveDoc?.id || effectiveDoc?.docId || `doc_${effectiveGroupId}_notes`);
@@ -69,7 +71,8 @@ function SharedDocumentModalContent({
   // 🚨 PHASE 103 : Initialisation avec fallback sécurisé
   const contentValue = documentData?.content ?? defaultContent ?? (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : defaultDoc.content)) ?? '';
 
-  const [title, setTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Notes - ${projectTitle}` : defaultDoc.title));
+  const fallbackTitle = t('workspaceNotesTitle') || 'Notes Partagées';
+  const [title, setTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle && projectTitle !== 'Notes Partagées' ? `Notes - ${projectTitle}` : fallbackTitle));
   const [content, setContent] = useState(() => contentValue);
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
   const [previewMode, setPreviewMode] = useState(false);
