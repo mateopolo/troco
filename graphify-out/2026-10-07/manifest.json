@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1791369436.0767813,
-    "seen": 1791373574.364632,
-    "ast_hash": "f1a01982c975e54cab5cb315ed7c00a5",
+    "mtime": 1791374411.7278025,
+    "seen": 1791374810.4689496,
+    "ast_hash": "c2c735d46461a881a77f1f496ca90316",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -1434,15 +1434,15 @@
     "semantic_hash": "d6cbd99abea778cd447820a111d1b50c"
   },
   "src/data/translationsData.js": {
-    "mtime": 1791325566.722212,
-    "seen": 1791325748.1947472,
-    "ast_hash": "bb83cae54d01867290ca5777a0d394da",
+    "mtime": 1791374246.1951413,
+    "seen": 1791374810.5225282,
+    "ast_hash": "4424fb116ecce56f642021426ba4e29c",
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1791327310.733293,
-    "seen": 1791327708.7879808,
-    "ast_hash": "57da9994b7298413862838706e217c30",
+    "mtime": 1791374246.2076302,
+    "seen": 1791374810.522534,
+    "ast_hash": "6fa465f3ce37c0834dd490e157c29ac3",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": "2c8beff856537a1e2618e9407b2e7927"
   },
   "src/locales/translations.js": {
-    "mtime": 1791325316.6812615,
-    "seen": 1791325748.208656,
-    "ast_hash": "21e6b5a3f90ab2e8bb17b02037e30b54",
+    "mtime": 1791374246.2158647,
+    "seen": 1791374810.5521019,
+    "ast_hash": "b6cc883c8b711be4419cb78dce5e2754",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -1800,9 +1800,9 @@
     "semantic_hash": "10c59540b3b3c824bd1546428bdbbd7e"
   },
   "src/services/firestoreService.js": {
-    "mtime": 1791369421.2959516,
-    "seen": 1791373574.426765,
-    "ast_hash": "56ee820356f4b5e483bc496c05d3dcae",
+    "mtime": 1791374309.119582,
+    "seen": 1791374810.5587661,
+    "ast_hash": "819029cbbbef53c35d14d674899ee731",
     "semantic_hash": ""
   },
   "src/services/gdprService.js": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791373449.0946996,
-    "seen": 1791373574.4444506,
-    "ast_hash": "ef6e418642db1cbb61810b95be17d072",
+    "mtime": 1791374770.0649326,
+    "seen": 1791374810.6062098,
+    "ast_hash": "a3f551ea8f1be5973e6d1bf5d59a96bf",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1791373492.675847,
-    "seen": 1791373574.444921,
-    "ast_hash": "2d54914235a0dc84b6c1f36952b150d4",
+    "mtime": 1791374738.641879,
+    "seen": 1791374810.607078,
+    "ast_hash": "efe9c6ecd3a1f2512201f90623de02c1",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2754,9 +2754,9 @@
     "semantic_hash": ""
   },
   "src/routes/FeedRoute.jsx": {
-    "mtime": 1791369373.8895357,
-    "seen": 1791373574.4247081,
-    "ast_hash": "49c283d506c65c1c21cff9db754259c3",
+    "mtime": 1791374262.2251108,
+    "seen": 1791374810.5534601,
+    "ast_hash": "1cb753e3c82aee9b8b3aa5017819e75a",
     "semantic_hash": ""
   },
   "src/routes/ChatRoute.jsx": {
@@ -2832,9 +2832,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useFeedListings.js": {
-    "mtime": 1791369398.035887,
-    "seen": 1791373574.4204035,
-    "ast_hash": "21796ec878bed9a27dd04a6449c25143",
+    "mtime": 1791374359.9089377,
+    "seen": 1791374810.540035,
+    "ast_hash": "d7da970fa42751fe66f5767026205ca1",
     "semantic_hash": ""
   },
   "src/hooks/useGlobalCalls.js": {
@@ -3153,6 +3153,24 @@
     "mtime": 1791373327.7964146,
     "seen": 1791373574.4419117,
     "ast_hash": "b9cc7f40370bb7976fba25a7e3cb3ded",
+    "semantic_hash": ""
+  },
+  "src/components/onboarding/InteractiveTutorial.jsx": {
+    "mtime": 1791374153.567371,
+    "seen": 1791374810.5081758,
+    "ast_hash": "fbe16cce6b50a577a0439fe1a2b308a8",
+    "semantic_hash": ""
+  },
+  "src/hooks/useTutorial.js": {
+    "mtime": 1791374084.0808935,
+    "seen": 1791374810.5457747,
+    "ast_hash": "681deaa5f7444a7e337deddc300f5b94",
+    "semantic_hash": ""
+  },
+  "tests/unit/InteractiveTutorialAndFinancialPurge.test.js": {
+    "mtime": 1791374540.3578625,
+    "seen": 1791374810.6012764,
+    "ast_hash": "0dc8fc52d953e0092e28373c69936c98",
     "semantic_hash": ""
   }
 }

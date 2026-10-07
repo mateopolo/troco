@@ -365,6 +365,81 @@ class AudioService {
       logger.warn('[AudioService] Swoosh sound error:', e);
     }
   }
+
+  /**
+   * Son 9 : Son de démarrage Splash Screen CRT rétro (accord Do-Mi-Sol + souffle 1-bit)
+   * Durée totale : 1.2s. Retourne une Promise résolue après 1.2s.
+   * @returns {Promise<void>}
+   */
+  playSplashSound() {
+    return new Promise((resolve) => {
+      const fallbackTimer = setTimeout(resolve, 1200);
+
+      if (!this.isEnabled) {
+        clearTimeout(fallbackTimer);
+        resolve();
+        return;
+      }
+
+      const ctx = this.initContext();
+      if (!ctx) {
+        clearTimeout(fallbackTimer);
+        resolve();
+        return;
+      }
+
+      try {
+        const now = ctx.currentTime;
+
+        // 1. Souffle blanc CRT rétro (200ms à faible gain 0.03)
+        try {
+          const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * 0.2));
+          const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          const channelData = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            channelData[i] = Math.random() * 2 - 1;
+          }
+          const noiseSource = ctx.createBufferSource();
+          noiseSource.buffer = noiseBuffer;
+          const noiseGain = ctx.createGain();
+          noiseGain.gain.setValueAtTime(0.03, now);
+          noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          noiseSource.connect(noiseGain);
+          noiseGain.connect(this.masterGain || ctx.destination);
+          noiseSource.start(now);
+          noiseSource.stop(now + 0.2);
+        } catch (_) {}
+
+        // 2. Trois oscillateurs sine : 523.25 Hz, 659.25 Hz, 783.99 Hz (Do-Mi-Sol)
+        const chord = [
+          { freq: 523.25, gain: 0.15, delay: 0.00 },
+          { freq: 659.25, gain: 0.12, delay: 0.08 },
+          { freq: 783.99, gain: 0.10, delay: 0.16 },
+        ];
+
+        chord.forEach(({ freq, gain: initGain, delay }) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const startTime = now + delay;
+          const stopTime = startTime + 0.8;
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, startTime);
+
+          gain.gain.setValueAtTime(initGain, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, stopTime);
+
+          osc.connect(gain);
+          gain.connect(this.masterGain || ctx.destination);
+
+          osc.start(startTime);
+          osc.stop(stopTime);
+        });
+      } catch (e) {
+        logger.warn('[AudioService] Splash sound error:', e);
+      }
+    });
+  }
 }
 
 // Instance singleton principale
@@ -380,6 +455,7 @@ export const playApplePaySound = () => audioService.playApplePaySound();
 export const playBetclicBalanceSound = (isIncrease = false) => audioService.playBetclicBalanceSound(isIncrease);
 export const playWelcomeGiftFanfare = () => audioService.playWelcomeGiftFanfare();
 export const playSwooshSound = () => audioService.playSwooshSound();
+export const playSplashSound = () => audioService.playSplashSound();
 
 export { AudioService };
 export default audioService;

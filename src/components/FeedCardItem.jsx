@@ -299,7 +299,9 @@ function FeedCardItem({
         contentVisibility: 'auto',
         containIntrinsicSize: '0 420px',
         backgroundColor: 'var(--bg-card)',
-        border: item.isBoosted ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+        border: item.isBoosted
+          ? '2px solid var(--accent-primary)'
+          : (darkMode ? '1px dashed rgba(255, 255, 255, 0.12)' : '1px dashed rgba(0, 0, 0, 0.1)'),
         borderRadius: '20px',
         overflow: 'hidden',
         boxShadow: item.isBoosted
@@ -515,7 +517,21 @@ function FeedCardItem({
       {/* CORPS DE CARTE & TYPOGRAPHIE ÉDITORIALE */}
       <div style={{ padding: '16px 18px' }}>
         <div>
-          <h3 className="font-editorial-heading" style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)', margin: '0 0 4px 0', lineHeight: 1.3, letterSpacing: '-0.015em', cursor: 'pointer' }}>
+          <h3
+            className="font-editorial-heading"
+            style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: 'var(--text-main)',
+              margin: '0 0 4px 0',
+              lineHeight: 1.3,
+              letterSpacing: '-0.015em',
+              cursor: 'pointer',
+              textShadow: (typeof window !== 'undefined' && window.innerWidth > 768)
+                ? '0 0 2px rgba(255, 0, 0, 0.1), 0 0 2px rgba(0, 255, 255, 0.1)'
+                : 'none',
+            }}
+          >
             <TextEffect
               key={`${currentLang}-${isOriginal ? 'orig' : 'trans'}-${displayContent.title}`}
               preset="fade-in-blur"

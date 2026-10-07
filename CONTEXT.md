@@ -1224,3 +1224,54 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
 - `npx vitest run` : 18 suites de tests, 168/168 tests au vert (100% passés), incluant la nouvelle suite `tests/unit/InteractiveTutorialAndFinancialPurge.test.js`.
 - `npm run build` : Compilation de production 100% réussie (Exit Code 0).
 
+---
+
+### 16. SPLASH SCREEN PREMIUM CRT + DITHER 1-BIT & ESTHÉTIQUE RETRO HOME (UX-04 & UX-05)
+
+#### 16.1. Module Utilitaires Cathodiques (`src/utils/crtEffects.js`)
+- **getDitherBayerMatrix(size) :** Retourne les matrices de Bayer standards d'ordre 4×4 ou 8×8 pour la quantification et le tramage ordonné 1-bit.
+- **applyDitherToImageData(imageData, threshold) :** Convertit les niveaux de gris en noir (#000000) et blanc (#FFFFFF) purs sans teintes intermédiaires via la matrice de seuillage spatiale.
+- **generateCRTScanlinesSVG(width, height) :** Génère un flux SVG de scanlines horizontales répétées tous les 3px avec une opacité de 0.15.
+- **generateNoiseSVG(width, height, intensity) :** Génère un motif de bruit statique avec filtre `feTurbulence` simulant la neige hertzienne cathodique.
+
+#### 16.2. Composant de Surcouche CRT (`src/components/onboarding/CRTOverlay.jsx`)
+- Composant léger sans Canvas 4K (respect strict de la mémoire iOS Safari / zéro OOM).
+- Réunit 4 couches visuelles simultanées :
+  1. Scanlines horizontales à espacement 3px via `<pattern>`.
+  2. Aberration chromatique RGB légère via `mix-blend-mode: screen`, `filter: hue-rotate(180deg)`.
+  3. Vignette incurvée CRT via dégradé radial `radial-gradient(circle, transparent 55%, rgba(0,0,0,0.5) 100%)`.
+  4. Scintillement (flicker) cathodique cyclique 100ms via keyframes CSS.
+
+#### 16.3. Sound Design Cathodique (`playSplashSound` dans `src/services/audioService.js`)
+- Réutilisation du singleton `AudioContext` de l'application.
+- Triade harmonieuse Do-Mi-Sol (523.25 Hz, 659.25 Hz, 783.99 Hz) avec décalage progressif (+0ms, +80ms, +160ms) et extinction exponentielle douce (`exponentialRampToValueAtTime`) sur 1.2s.
+- Couche de bruit blanc (white noise) synthétisée de 200ms à gain atténué (0.03) pour reproduire le claquement d'allumage caractéristique d'un tube cathodique.
+- Enveloppé dans un bloc `try/catch` totalement silencieux pour les navigateurs restreignant l'autoplay audio.
+
+#### 16.4. Composant Splash Screen Immersif (`src/components/onboarding/SplashScreen.jsx`)
+- Structure orchestrée en 3 états :
+  - **État 1 — Idle :** Fond noir profond `#0A0A0A`, monogramme Troco avec scintillement cathodique 80ms, canvas d'arrière-plan 256×256 avec motif abstrait dither 1-bit, typographie monospace rétro "TROCO", bouton d'entrée rétro stylisé et indication "Appuyez pour commencer". Déclenchement au clic ou à l'appui sur n'importe quelle touche.
+  - **État 2 — Animating :** Glitch géométrique `clip-path` polygon sur 300ms avec micro-translations horizontales, réveil du canvas dither (contraste augmenté), convergence de 12 particules blanches en blend screen vers le centre, grossissement du logo Troco et effet typewriter sur le titre "TROCO" (+50ms par lettre).
+  - **État 3 — Exiting :** Glitch vertical terminal, fondu d'opacité vers 0 et appel sécurisé du callback `onComplete()`.
+- Performances & Sécurité iOS : Canvas strictement limité à 256×256 pixels, zéro GPU bloquant, rendu immédiat < 100ms.
+
+#### 16.5. Intégration Haute Priorité dans `src/App.js`
+- Vérification au montage de `sessionStorage.getItem('troco_splash_seen') !== 'true'`.
+- Affichage conditionnel `{showSplash && !isAuthenticated && <SplashScreen onComplete={handleSplashComplete} ... />}`.
+- Élévation maximale au premier plan (`z-index: 9999999`).
+- Enregistrement `sessionStorage.setItem('troco_splash_seen', 'true')` à la fin de l'animation pour ne pas réapparaître lors des rechargements simples (F5) tout en redevenant visible lors d'une nouvelle session d'onglet.
+
+#### 16.6. Touches Subtiles CRT & Dither sur la Page d'Accueil (`FeedRoute.jsx` & `FeedCardItem.jsx`)
+- Arrière-plan Feed : surcouche `CRTOverlay` légère à 5% d'opacité en fond fixe, désactivée sur mobile.
+- Scroll Déformation : distorsion transitoire `skewX(0.5deg)` au moment du défilement, active uniquement sur Desktop.
+- Cartes d'annonces : bordure pointillée dither `1px dashed rgba(255,255,255,0.12)`.
+- Titres éditoriaux : aberration chromatique douce `text-shadow: 0 0 2px rgba(255,0,0,0.1), 0 0 2px rgba(0,255,255,0.1)` sur Desktop uniquement (`src/index.css`).
+
+#### 16.7. Internationalisation dans les 7 Langues
+- Clés traduites : `splashEnter`, `splashSubtitle`, `splashLoading`, `splashPressAnyKey`.
+- Dictionnaires synchronisés : `src/data/translationsData.js`, `src/data/translationsSecondary.js`, `src/locales/translations.js`.
+
+#### 16.8. Validation & Non-Régression
+- `npx vitest run` : 19 suites de tests, 184/184 tests au vert (100% de réussite) avec la suite dédiée `tests/unit/CRTSplashAndHomeAesthetics.test.js`.
+- `npm run build` : Compilation de production 100% réussie (Exit Code 0).
+

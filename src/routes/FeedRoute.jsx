@@ -15,6 +15,7 @@ import SponsoredFeedCard from '../components/SponsoredFeedCard';
 import PullToRefresh from '../components/ui/PullToRefresh';
 import { EmptyState } from '../components/ui/EmptyState';
 import TranslatedText from '../components/common/TranslatedText';
+import CRTOverlay from '../components/onboarding/CRTOverlay';
 import { pageTransitionVariants, pageTransitionConfig } from './pageTransitions';
 
 const MapSection = React.lazy(() => import('../features/map/MapSection'));
@@ -105,6 +106,26 @@ export default function FeedRoute({
   handleLoadMoreListings,
   isLoadingMoreListings,
 }) {
+  // Déformation CRT transitoire lors du défilement (Desktop uniquement, préservation perf mobile)
+  const [isScrolling, setIsScrolling] = React.useState(false);
+  const scrollTimerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (isMobile) return;
+    const handleScroll = () => {
+      setIsScrolling(true);
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+      scrollTimerRef.current = setTimeout(() => {
+        setIsScrolling(false);
+      }, 150);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    };
+  }, [isMobile]);
+
   return (
     <motion.div
       key="page-feed"
@@ -113,10 +134,33 @@ export default function FeedRoute({
       animate="animate"
       exit="exit"
       transition={pageTransitionConfig}
-      style={{ width: '100%' }}
+      style={{
+        width: '100%',
+        transform: (!isMobile && isScrolling) ? 'skewX(0.5deg)' : 'none',
+        transition: 'transform 0.15s ease-out'
+      }}
     >
-      <div className="feed-layout-container">
-
+      <div className="feed-layout-container" style={{ position: 'relative' }}>
+        {/* ARRIÈRE-PLAN CRT SUBTIL (5% opacité, désactivé sur mobile) */}
+        {!isMobile && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              pointerEvents: 'none',
+              zIndex: 0,
+              opacity: 0.05,
+            }}
+          >
+            <CRTOverlay
+              showScanlines={true}
+              showNoise={true}
+              intensity={0.05}
+              style={{ width: '100%', height: '100%' }}
+            />
+          </div>
+        )}
 
         {/* CONTENU CENTRAL DU FEED */}
         <div className="feed-main-content">

@@ -1007,6 +1007,10 @@ export const secondaryTranslations = {
     "tutorialDemoGuitarAuthor": "Alexandre M.",
     "tutorialDemoChatMsg1": "Hello! I offer 1 Token for a 1-hour lesson 🎸",
     "tutorialDemoChatMsg2": "Awesome, slot confirmed! Deal accepted 🤝",
+    "splashEnter": "Enter Troco",
+    "splashSubtitle": "The circular economy starts here",
+    "splashLoading": "Initializing...",
+    "splashPressAnyKey": "Press to start",
   },
   ES: {
     "workspace.slides_title": "Troco Slides",
@@ -2013,6 +2017,10 @@ export const secondaryTranslations = {
     "tutorialDemoGuitarAuthor": "Alexandre M.",
     "tutorialDemoChatMsg1": "¡Hola! Te ofrezco 1 Ficha por 1 hora de clase 🎸",
     "tutorialDemoChatMsg2": "¡Perfecto, horario confirmado! Trato hecho 🤝",
+    "splashEnter": "Entrar en Troco",
+    "splashSubtitle": "La economía circular empieza aquí",
+    "splashLoading": "Inicializando...",
+    "splashPressAnyKey": "Presiona para comenzar",
   },
   IT: {
     "workspace.slides_title": "Troco Slides",
@@ -3019,6 +3027,10 @@ export const secondaryTranslations = {
     "tutorialDemoGuitarAuthor": "Alexandre M.",
     "tutorialDemoChatMsg1": "Ciao! Ti propongo 1 Gettone per 1h di lezione 🎸",
     "tutorialDemoChatMsg2": "Perfetto, orario confermato! Accordo concluso 🤝",
+    "splashEnter": "Entra su Troco",
+    "splashSubtitle": "L'economia circolare inizia qui",
+    "splashLoading": "Inizializzazione...",
+    "splashPressAnyKey": "Premi per iniziare",
   },
   DE: {
     "workspace.slides_title": "Troco Slides",
@@ -4025,6 +4037,10 @@ export const secondaryTranslations = {
     "tutorialDemoGuitarAuthor": "Alexandre M.",
     "tutorialDemoChatMsg1": "Hallo! Ich biete 1 Token für 1 Stunde Unterricht 🎸",
     "tutorialDemoChatMsg2": "Perfekt, Termin bestätigt! Deal abgeschlossen 🤝",
+    "splashEnter": "Troco betreten",
+    "splashSubtitle": "Die Kreislaufwirtschaft beginnt hier",
+    "splashLoading": "Initialisierung...",
+    "splashPressAnyKey": "Drücken zum Starten",
   },
   JA: {
     "workspace.slides_title": "Troco Slides",
@@ -5031,6 +5047,10 @@ export const secondaryTranslations = {
     "tutorialDemoGuitarAuthor": "Alexandre M.",
     "tutorialDemoChatMsg1": "こんにちは！1時間のレッスンに1トークンを提案します 🎸",
     "tutorialDemoChatMsg2": "了解しました！取引成立です 🤝",
+    "splashEnter": "Trocoに入る",
+    "splashSubtitle": "循環型エコノミーはここから始まる",
+    "splashLoading": "初期化中...",
+    "splashPressAnyKey": "タップして開始",
   },
   ZH: {
     "workspace.slides_title": "Troco 演示文稿",
@@ -6036,6 +6056,10 @@ export const secondaryTranslations = {
     "tutorialDemoGuitarAuthor": "Alexandre M.",
     "tutorialDemoChatMsg1": "你好！我用1枚代币预约1小时吉他课 🎸",
     "tutorialDemoChatMsg2": "太棒了，时间已确认！交易达成 🤝",
+    "splashEnter": "进入 Troco",
+    "splashSubtitle": "循环共享经济由此开启",
+    "splashLoading": "初始化中...",
+    "splashPressAnyKey": "点击开始",
   },
 
 };

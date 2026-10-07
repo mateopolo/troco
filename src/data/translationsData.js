@@ -1080,6 +1080,10 @@ export const translations = {
     "tutorialDemoGuitarAuthor": "Alexandre M.",
     "tutorialDemoChatMsg1": "Bonjour ! Je te propose 1 Jeton pour 1h de cours 🎸",
     "tutorialDemoChatMsg2": "Parfait, créneau validé ! Deal conclu 🤝",
+    "splashEnter": "Entrer sur Troco",
+    "splashSubtitle": "L'économie circulaire commence ici",
+    "splashLoading": "Initialisation...",
+    "splashPressAnyKey": "Appuyez pour commencer",
   },
 };
 

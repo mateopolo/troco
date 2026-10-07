@@ -44,6 +44,7 @@ import ConfirmDialog from './components/ui/ConfirmDialog';
 import { AnimatePresence } from 'framer-motion';
 import { useTutorial } from './hooks/useTutorial';
 import InteractiveTutorial from './components/onboarding/InteractiveTutorial';
+import SplashScreen from './components/onboarding/SplashScreen';
 import {
   translations,
   localizeLocation,
@@ -331,6 +332,25 @@ export default function App() {
     completeTutorial,
     shouldShowTutorial,
   } = useTutorial();
+
+  // Écran d'accueil interactif immersif CRT + Dither (TÂCHE 5)
+  const [showSplash, setShowSplash] = useState(() => {
+    try {
+      if (typeof window === 'undefined') return false;
+      return sessionStorage.getItem('troco_splash_seen') !== 'true';
+    } catch (_) {
+      return false;
+    }
+  });
+
+  const handleSplashComplete = useCallback(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('troco_splash_seen', 'true');
+      }
+    } catch (_) {}
+    setShowSplash(false);
+  }, []);
 
   const [skills, setSkills] = useState([
     'Prod musicale & Ableton Live',
@@ -3103,6 +3123,15 @@ export default function App() {
               currentLang={currentLang}
               t={t}
               profile={profile}
+            />
+          )}
+
+          {/* SPLASH SCREEN INTERACTIF CRT + 1-BIT DITHER (TÂCHE 5) */}
+          {showSplash && !isAuthenticated && (
+            <SplashScreen
+              onComplete={handleSplashComplete}
+              darkMode={darkMode}
+              t={t}
             />
           )}
         </div>

@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1791374411.7278025,
-    "seen": 1791374810.4689496,
-    "ast_hash": "c2c735d46461a881a77f1f496ca90316",
+    "mtime": 1791375282.9007888,
+    "seen": 1791375809.528783,
+    "ast_hash": "265ccb5c1ae725c8eec32d0477d29789",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "src/components/FeedCardItem.jsx": {
-    "mtime": 1791373183.100227,
-    "seen": 1791373574.370573,
-    "ast_hash": "27de6c8d11b8e515f76609db4a962b90",
+    "mtime": 1791375339.872463,
+    "seen": 1791375809.5345569,
+    "ast_hash": "c58b74b48da6d4d9f1561682e5f1e5e5",
     "semantic_hash": ""
   },
   "src/components/FeedView.jsx": {
@@ -1434,15 +1434,15 @@
     "semantic_hash": "d6cbd99abea778cd447820a111d1b50c"
   },
   "src/data/translationsData.js": {
-    "mtime": 1791374246.1951413,
-    "seen": 1791374810.5225282,
-    "ast_hash": "4424fb116ecce56f642021426ba4e29c",
+    "mtime": 1791375425.9515133,
+    "seen": 1791375809.5782297,
+    "ast_hash": "263ed40a768dc79a5d09e9a19d72fd26",
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1791374246.2076302,
-    "seen": 1791374810.522534,
-    "ast_hash": "6fa465f3ce37c0834dd490e157c29ac3",
+    "mtime": 1791375457.2265716,
+    "seen": 1791375809.578232,
+    "ast_hash": "bce070656925a04565e00fcb7d46e10e",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": "2c8beff856537a1e2618e9407b2e7927"
   },
   "src/locales/translations.js": {
-    "mtime": 1791374246.2158647,
-    "seen": 1791374810.5521019,
-    "ast_hash": "b6cc883c8b711be4419cb78dce5e2754",
+    "mtime": 1791375457.2306569,
+    "seen": 1791375809.598871,
+    "ast_hash": "32bee08b2cafb3433414901cca5ab1f0",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -1776,9 +1776,9 @@
     "semantic_hash": "6c73ced9b8f0c75970112c1cc6f5d26d"
   },
   "src/services/audioService.js": {
-    "mtime": 1791320136.6623924,
-    "seen": 1791320580.6603286,
-    "ast_hash": "c898074b67baf68bbfef55b7d0d23846",
+    "mtime": 1791374965.6532793,
+    "seen": 1791375809.600825,
+    "ast_hash": "14ee81ea7abe8f537f3eae3db8ecd73a",
     "semantic_hash": ""
   },
   "src/services/audioService.test.js": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791374770.0649326,
-    "seen": 1791374810.6062098,
-    "ast_hash": "a3f551ea8f1be5973e6d1bf5d59a96bf",
+    "mtime": 1791375751.4491553,
+    "seen": 1791375809.6203864,
+    "ast_hash": "24967094f2c956095d3db3f628a60c68",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1791374738.641879,
-    "seen": 1791374810.607078,
-    "ast_hash": "efe9c6ecd3a1f2512201f90623de02c1",
+    "mtime": 1791375718.602641,
+    "seen": 1791375809.6208062,
+    "ast_hash": "b1dc0e6873d1e52eb162fc6cfef7dc45",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2754,9 +2754,9 @@
     "semantic_hash": ""
   },
   "src/routes/FeedRoute.jsx": {
-    "mtime": 1791374262.2251108,
-    "seen": 1791374810.5534601,
-    "ast_hash": "1cb753e3c82aee9b8b3aa5017819e75a",
+    "mtime": 1791375315.2008605,
+    "seen": 1791375809.5995326,
+    "ast_hash": "302e20ddecf0edfdc42560d7a08abf33",
     "semantic_hash": ""
   },
   "src/routes/ChatRoute.jsx": {
@@ -3171,6 +3171,30 @@
     "mtime": 1791374540.3578625,
     "seen": 1791374810.6012764,
     "ast_hash": "0dc8fc52d953e0092e28373c69936c98",
+    "semantic_hash": ""
+  },
+  "src/components/onboarding/CRTOverlay.jsx": {
+    "mtime": 1791374939.5590367,
+    "seen": 1791375809.565827,
+    "ast_hash": "74a87fc11eced8fdd6760ec5f488891b",
+    "semantic_hash": ""
+  },
+  "src/components/onboarding/SplashScreen.jsx": {
+    "mtime": 1791375517.4054396,
+    "seen": 1791375809.5660636,
+    "ast_hash": "4e137d1db196d6dd5eea14c75889b1b7",
+    "semantic_hash": ""
+  },
+  "src/utils/crtEffects.js": {
+    "mtime": 1791374923.170693,
+    "seen": 1791375809.6077538,
+    "ast_hash": "c4497f606140d4aee2d0ad05c913b146",
+    "semantic_hash": ""
+  },
+  "tests/unit/CRTSplashAndHomeAesthetics.test.js": {
+    "mtime": 1791375535.94855,
+    "seen": 1791375809.6165526,
+    "ast_hash": "5dfda7ce02330a19bb19ab468f4fb589",
     "semantic_hash": ""
   }
 }
