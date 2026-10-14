@@ -1448,3 +1448,49 @@ Composants sécurisés :
 - `npm run build` : Exit Code 0.
 - `npx vitest run` : 20 fichiers de test, 218/218 tests réussis (100% au vert).
 - Élimination intégrale des erreurs console relatives à `src=""`.
+
+---
+
+## 23. PROMPT 3 — i18n : theme.dark_mode + Déduplication des Clés editProfile
+
+### 23.1. Problématiques & Contexte
+1. **Clé brute `theme.dark_mode` affichée dans l'UI :**
+   - Sur le bouton de bascule du mode sombre (`AppHeader.jsx`), le titre et l'attribut `aria-label` affichaient la clé brute `'theme.dark_mode'`.
+   - Cause : la clé `theme.dark_mode` était absente des dictionnaires i18n (`src/data/translationsData.js`, `src/data/translationsSecondary.js`, `src/locales/translations.js`). Comme la fonction `t(key)` renvoyait la clé textuelle non traduite en l'absence de valeur, l'expression `t('theme.dark_mode') || 'Activer le mode sombre'` évaluait à `'theme.dark_mode'` (chaîne non-vide truthy en JavaScript), bloquant le fallback.
+2. **Warning ESLint `no-dupe-keys` (ligne ~6129) :**
+   - Lors de `npm run build`, ESLint émettait des avertissements `no-dupe-keys` sur la clé `editProfile` (notamment ligne ~6129 dans `translationsSecondary.js` sous la langue ZH) ainsi que sur plusieurs autres clés dupliquées issues de concaténations antérieures (`legal.back_to_home`, `legal.refund_badge`, `closedDeals`, `swapHistory`, etc.).
+
+### 23.2. Actions & Corrections Réalisées
+1. **Internationalisation des clés de thème dans les 7 langues :**
+   - Ajout systématique de `theme.dark_mode` et `theme.light_mode` dans `src/data/translationsData.js` (FR), `src/data/translationsSecondary.js` (EN, ES, IT, DE, JA, ZH) et `src/locales/translations.js` :
+     - FR : `"Passer en mode sombre"` / `"Passer en mode clair"`
+     - EN : `"Toggle dark mode"` / `"Toggle light mode"`
+     - ES : `"Cambiar a modo oscuro"` / `"Cambiar a modo claro"`
+     - IT : `"Attiva modalità scura"` / `"Attiva modalità chiara"`
+     - DE : `"Dunkelmodus umschalten"` / `"Hellmodus umschalten"`
+     - JA : `"ダークモード切替"` / `"ライトモード切替"`
+     - ZH : `"切换深色模式"` / `"切换浅色模式"`
+2. **Sécurisation des composants avec fallbacks explicites :**
+   - `src/components/layout/AppHeader.jsx` : passage du fallback explicite en argument de `t` :
+     ```jsx
+     title={darkMode ? (t('theme.light_mode', 'Passer en mode clair') || 'Passer en mode clair') : (t('theme.dark_mode', 'Passer en mode sombre') || 'Passer en mode sombre')}
+     aria-label={darkMode ? (t('theme.light_mode', 'Passer en mode clair') || 'Passer en mode clair') : (t('theme.dark_mode', 'Passer en mode sombre') || 'Passer en mode sombre')}
+     ```
+   - `src/components/Navbar.jsx` : synchronisation du bouton mode sombre avec `t('theme.light_mode')` et `t('theme.dark_mode')` et fallbacks associés.
+3. **Déduplication intégrale des dictionnaires i18n :**
+   - Analyse AST via Babel des objets littéraux de traduction.
+   - Suppression propre de toutes les occurrences dupliquées (25 dans `translationsData.js`, 168 dans `translationsSecondary.js`, 115 dans `translations.js`).
+   - `editProfile` est désormais unique par langue :
+     - FR : `"Modifier le profil"`
+     - EN : `"Edit profile"`
+     - ES : `"Editar perfil"`
+     - IT : `"Modifica profilo"`
+     - DE : `"Profil bearbeiten"`
+     - JA : `"プロフィール編集"`
+     - ZH : `"编辑个人资料"`
+   - Éradication totale des warnings ESLint `no-dupe-keys`.
+
+### 23.3. Validation
+- `npm run build` : Exit Code 0, 0 warning `no-dupe-keys`.
+- `npx vitest run` : 20 fichiers de test, 218/218 tests au vert (100% pass).
+

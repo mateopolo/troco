@@ -624,10 +624,10 @@
     "semantic_hash": "5f0f58ec2d7d3db8c284321f7a2001bd"
   },
   "src/components/Navbar.jsx": {
-    "mtime": 1790037496.9853504,
-    "seen": 1790594464.2381337,
-    "ast_hash": "5d5895f17c58cdf9d6214ac955ca87fa",
-    "semantic_hash": "5d5895f17c58cdf9d6214ac955ca87fa"
+    "mtime": 1792001400.5586,
+    "seen": 1792001701.3377304,
+    "ast_hash": "6582b1403a5fc9c489af0a49d39c2e02",
+    "semantic_hash": ""
   },
   "src/components/NotesAndDocsDefensive.test.js": {
     "mtime": 1788394399.2423215,
@@ -1254,9 +1254,9 @@
     "semantic_hash": ""
   },
   "src/components/layout/AppHeader.jsx": {
-    "mtime": 1791323281.269455,
-    "seen": 1791323591.8674002,
-    "ast_hash": "c156b388ff3d858954c94986ca290762",
+    "mtime": 1792001388.455631,
+    "seen": 1792001701.363013,
+    "ast_hash": "b74980461dfc1c83277cfa680c285ee2",
     "semantic_hash": ""
   },
   "src/components/layout/GeometricBackground.jsx": {
@@ -1434,15 +1434,15 @@
     "semantic_hash": "d6cbd99abea778cd447820a111d1b50c"
   },
   "src/data/translationsData.js": {
-    "mtime": 1791379923.8036096,
-    "seen": 1791380298.28803,
-    "ast_hash": "c6bf81fdc1c5ad94969dec1c3ab43fc4",
+    "mtime": 1792001321.2447903,
+    "seen": 1792001701.377846,
+    "ast_hash": "7cb6e863120ea40bfa4b1e8f6a039282",
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1791379923.841941,
-    "seen": 1791380298.288033,
-    "ast_hash": "06279b919e6ffd066901c27cbff21c8a",
+    "mtime": 1792001321.4241421,
+    "seen": 1792001701.3778484,
+    "ast_hash": "d2df219de9dee1f56f6727fd203e5351",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": "2c8beff856537a1e2618e9407b2e7927"
   },
   "src/locales/translations.js": {
-    "mtime": 1791379923.7821765,
-    "seen": 1791380298.3072474,
-    "ast_hash": "1c4e3afd1915aa517c12fb00ab9ff3c1",
+    "mtime": 1792001321.52661,
+    "seen": 1792001701.3942103,
+    "ast_hash": "dd9624d61035bc4909b2d72d93e24696",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1792000582.8753593,
-    "seen": 1792000656.392835,
-    "ast_hash": "8cf1a6e26f2ca53be8e18b599b06f813",
+    "mtime": 1792001671.9889119,
+    "seen": 1792001701.4174776,
+    "ast_hash": "19e9858e6ec1a2447f3df5c36f5f74ad",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1792000626.6216972,
-    "seen": 1792000656.393554,
-    "ast_hash": "4ecf83fa87fe67ff810c9cfd8c012189",
+    "mtime": 1792001655.102313,
+    "seen": 1792001701.4179707,
+    "ast_hash": "d77c7e4d0f80122185cd3f59762d623f",
     "semantic_hash": ""
   },
   "README.md": {

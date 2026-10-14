@@ -95,7 +95,9 @@ export default function Navbar({
           </button>
           <button
             onClick={toggleDarkMode}
-            title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"}
+            title={darkMode ? (t ? t('theme.light_mode', 'Passer en mode clair') : 'Passer en mode clair') : (t ? t('theme.dark_mode', 'Passer en mode sombre') : 'Passer en mode sombre')}
+            aria-label={darkMode ? (t ? t('theme.light_mode', 'Passer en mode clair') : 'Passer en mode clair') : (t ? t('theme.dark_mode', 'Passer en mode sombre') : 'Passer en mode sombre')}
+            aria-pressed={darkMode}
             className="premium-button darkmode-btn"
             style={{
               border: '1px solid var(--border-color)',
