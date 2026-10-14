@@ -1598,3 +1598,46 @@ Composants sécurisés :
   - **Profil INP = 192ms** (seuil cible < 200ms validé).
   - **CLS global maintenu < 0.01** (entre 0.0004 et 0.0098).
 
+---
+
+## 27. PROMPT 7 & 8 — Firebase Emulators, Rapport E2E v2 & Issues GitHub
+
+### 27.1. Contexte & Déblocage des Tests Authentifiés
+1. **Mise en place de Firebase Emulator Suite :**
+   - Intégration d'OpenJDK 21 (Temurin) et démarrage des 4 émulateurs : Auth (9099), Firestore (8080), Functions (5001), Storage (9199).
+   - Création de `e2e/globalSetup.js` : génération des utilisateurs `user@test.troco` et `admin@test.troco` (`claims: { admin: true }`), tokens personnalisés et seeding des collections Firestore (`users`, `chats`, `listings`, `reports`, `globalChat`).
+   - Implémentation de `signInWithCustomToken(page, token)` dans `e2e/helpers.js` et connexion automatique aux émulateurs dans `src/firebase.js`.
+   - Adaptation de `e2e/full-audit.spec.js` avec double contexte Playwright (`contextUser` et `contextAdmin`) et déverrouillage PIN `2609` pour l'Admin Panel.
+
+### 27.2. Synthèse des Résultats E2E v2
+- **Rapport généré :** [`docs/E2E-REPORT-2026-10-14-v2.md`](file:///c:/Users/mateo/Desktop/TROCO/docs/E2E-REPORT-2026-10-14-v2.md).
+- **Vérifications :** 114 vérifications totales.
+  - **PASS : 89** (+38 par rapport à la v1).
+  - **FAIL : 13** (-3 par rapport à la v1).
+  - **BLOCKED : 5** (-35 par rapport à la v1, chute de 40 à 5).
+  - **MISSING : 7** (Splash screen optionnel et clustering carte).
+- **Suites Playwright :** 14/14 suites validées avec succès (`14 passed`).
+- **Score E2E estimé :** **8.5 / 10** (anciennement 5.0/10).
+
+### 27.3. Traçabilité & Issues GitHub Créées
+16 issues créées sur le dépôt `mateopolo/troco` via le GitHub MCP Server :
+- **Bugs réels & ambiguïtés de test (13 issues) :**
+  - [#1](https://github.com/mateopolo/troco/issues/1) : `[E2E-FAIL-01]` Nettoyage des console.error résiduels en chargement initial
+  - [#2](https://github.com/mateopolo/troco/issues/2) : `[E2E-FAIL-02]` Détection du message d'erreur d'authentification invalide (sélecteur/UI)
+  - [#3](https://github.com/mateopolo/troco/issues/3) : `[E2E-FAIL-03]` Contrôle interactif du filtre de rayon kilométrique dans le Feed
+  - [#4](https://github.com/mateopolo/troco/issues/4) : `[E2E-FAIL-04]` Pagination et déclenchement du scroll infini dans le Feed d'annonces
+  - [#5](https://github.com/mateopolo/troco/issues/5) : `[E2E-FAIL-05]` Ouverture de la popup ou fiche détaillée au clic sur un marqueur cartographique
+  - [#6](https://github.com/mateopolo/troco/issues/6) : `[E2E-FAIL-06]` Affichage et synchronisation du nom d'utilisateur dans la vue Profil
+  - [#7](https://github.com/mateopolo/troco/issues/7) : `[E2E-FAIL-07]` Présence et accessibilité du bouton 'Revoir le tutoriel' dans les paramètres du profil
+  - [#8](https://github.com/mateopolo/troco/issues/8) : `[E2E-FAIL-08]` Progression pas-à-pas à travers les 6 étapes du tutoriel interactif
+  - [#9](https://github.com/mateopolo/troco/issues/9) : `[E2E-FAIL-09]` Sélecteurs de filtrage des publications dans l'espace Communauté
+  - [#10](https://github.com/mateopolo/troco/issues/10) : `[E2E-FAIL-10]` Contrôle administrateur de suppression de message dans le Global Chat
+  - [#11](https://github.com/mateopolo/troco/issues/11) : `[E2E-FAIL-11]` Intégration et partage des outils de travail collaboratif dans le Chat
+  - [#12](https://github.com/mateopolo/troco/issues/12) : `[E2E-FAIL-12]` Prise en compte dynamique de la langue Allemande (DE) dans l'interface
+  - [#13](https://github.com/mateopolo/troco/issues/13) : `[E2E-FAIL-13]` Navigation vers l'onglet sandbox de modération dans le Panel Admin
+- **Fonctionnalités manquantes (3 issues) :**
+  - [#14](https://github.com/mateopolo/troco/issues/14) : `[E2E-MISSING-01]` Bouton « Voir l'original » / « Voir la traduction » sur le détail d'annonce
+  - [#15](https://github.com/mateopolo/troco/issues/15) : `[E2E-MISSING-02]` Regroupement cartographique (clustering) des annonces Leaflet
+  - [#16](https://github.com/mateopolo/troco/issues/16) : `[E2E-MISSING-03]` Restauration du Splash Screen CRT rétro optionnel via ?splash=1
+
+

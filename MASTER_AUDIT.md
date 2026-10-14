@@ -870,10 +870,12 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
 
 ---
 
-## ✅ Suivi E2E (2026-10-14)
+## ✅ Suivi E2E (2026-10-14 / 2026-10-15)
 
 - [x] `[E2E-01]` — Suite de tests E2E Playwright exécutée (`e2e/full-audit.spec.js`, 113 vérifications : 51 PASS / 16 FAIL / 40 BLOCKED / 6 MISSING)
 - [x] `[E2E-02]` — Rapport E2E complet généré (`docs/E2E-REPORT-2026-10-14.md`)
+- [x] `[E2E-03]` — Rapport E2E v2 post-Firebase Emulators (`docs/E2E-REPORT-2026-10-14-v2.md` : 89 PASS / 13 FAIL / 5 BLOCKED / 7 MISSING)
+- [x] `[E2E-04]` — Issues GitHub créées pour les FAIL/MISSING (16 issues #1 à #16 sur mateopolo/troco)
 
 ---
 
