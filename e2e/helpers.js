@@ -27,25 +27,51 @@ const TEST_PROFILE = {
   verified: true,
 };
 
-/** Injecte une session E2E (bypass d'auth géré par window.__E2E__ dans l'app). */
-async function seedSession(page, { tutorial = true, extra = {} } = {}) {
+let cachedCredentials = null;
+function getTestCredentials() {
+  if (cachedCredentials) return cachedCredentials;
+  try {
+    const credsPath = path.join(__dirname, '.test-credentials.json');
+    if (fs.existsSync(credsPath)) {
+      cachedCredentials = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
+    }
+  } catch (_) {}
+  return cachedCredentials || {};
+}
+
+/** Authentifie la session via Custom Token Firebase dans les émulateurs. */
+async function signInWithCustomToken(page, token, { tutorial = true, extra = {} } = {}) {
+  const creds = getTestCredentials();
+  const effectiveToken = token || creds.userToken || '';
+
   await page.addInitScript(
-    ({ profile, tutorial: tut, extra: ex }) => {
+    ({ tok, profile, tutorial: tut, extra: ex }) => {
       window.__E2E__ = true;
-      const p = { ...profile, tutorialCompleted: tut, ...ex };
-      localStorage.setItem('troco_e2e_authenticated', 'true');
-      localStorage.setItem('troco_auth_session', 'true');
-      localStorage.setItem('troco_cgu_accepted', 'true');
-      localStorage.setItem('troco_cookie_consent', 'accepted');
-      localStorage.setItem('troco_consent_timestamp', String(Date.now()));
-      localStorage.setItem('troco_user_profile', JSON.stringify(p));
-      localStorage.setItem(
-        'troco_auth_store',
-        JSON.stringify({ state: { isAuthenticated: true, profile: p, profileDraft: p }, version: 0 })
-      );
+      window.__USE_FIREBASE_EMULATOR__ = true;
+      try {
+        localStorage.setItem('troco_use_emulator', 'true');
+        if (tok) localStorage.setItem('troco_custom_token', tok);
+        localStorage.setItem('troco_e2e_authenticated', 'true');
+        localStorage.setItem('troco_auth_session', 'true');
+        localStorage.setItem('troco_cgu_accepted', 'true');
+        localStorage.setItem('troco_cookie_consent', 'accepted');
+        localStorage.setItem('troco_consent_timestamp', String(Date.now()));
+        const p = { ...profile, tutorialCompleted: tut, ...ex };
+        localStorage.setItem('troco_user_profile', JSON.stringify(p));
+        localStorage.setItem(
+          'troco_auth_store',
+          JSON.stringify({ state: { isAuthenticated: true, profile: p, profileDraft: p }, version: 0 })
+        );
+      } catch (_) {}
     },
-    { profile: TEST_PROFILE, tutorial, extra }
+    { tok: effectiveToken, profile: TEST_PROFILE, tutorial, extra }
   );
+}
+
+/** Rétrocompatibilité : seedSession redirige vers signInWithCustomToken */
+async function seedSession(page, options = {}) {
+  const creds = getTestCredentials();
+  await signInWithCustomToken(page, creds.userToken, options);
 }
 
 /** Collecte erreurs console / pageerror / requêtes en échec. */
@@ -88,4 +114,16 @@ async function installVitals(page) {
   });
 }
 
-module.exports = { ROOT, SHOT_DIR, LOG_DIR, VIDEO_DIR, TEST_PROFILE, seedSession, attachCollectors, shot, installVitals };
+module.exports = {
+  ROOT,
+  SHOT_DIR,
+  LOG_DIR,
+  VIDEO_DIR,
+  TEST_PROFILE,
+  getTestCredentials,
+  signInWithCustomToken,
+  seedSession,
+  attachCollectors,
+  shot,
+  installVitals,
+};

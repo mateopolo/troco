@@ -1,9 +1,9 @@
 import logger from './utils/logger';
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import { getFunctions } from "firebase/functions";
+import { getAuth, connectAuthEmulator, signInWithCustomToken as fbSignInWithCustomToken } from "firebase/auth";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator } from "firebase/firestore";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
 const firebaseConfig = {
@@ -59,4 +59,41 @@ try {
 }
 
 export const db = firestoreInstance;
+
+// Connexion automatique aux émulateurs Firebase en local / E2E
+const shouldUseEmulators = (
+  process.env.REACT_APP_USE_EMULATORS === 'true' ||
+  (typeof window !== 'undefined' && (
+    window.__USE_FIREBASE_EMULATOR__ === true ||
+    window.localStorage?.getItem('troco_use_emulator') === 'true'
+  ))
+);
+
+if (shouldUseEmulators) {
+  try {
+    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+    connectFirestoreEmulator(db, '127.0.0.1', 8080);
+    connectStorageEmulator(storage, '127.0.0.1', 9199);
+    connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+  } catch (_) {
+    /* Émulateurs déjà connectés */
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.__firebaseAuth = auth;
+  window.__firebaseDb = db;
+  window.__firebaseStorage = storage;
+  window.__firebaseFunctions = functions;
+  window.__firebaseSignInWithCustomToken = (token) => fbSignInWithCustomToken(auth, token);
+
+  // Auto signin si un custom token est stocké dans le localStorage
+  const savedCustomToken = window.localStorage?.getItem('troco_custom_token');
+  if (savedCustomToken && !auth.currentUser) {
+    fbSignInWithCustomToken(auth, savedCustomToken).catch((err) => {
+      logger.warn('[E2E Auth] Auto signin with custom token failed:', err);
+    });
+  }
+}
+
 

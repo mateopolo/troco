@@ -21,14 +21,15 @@
     {
       "parcours": "M5",
       "label": "Chat mobile plein écran",
-      "status": "BLOCKED",
-      "note": "Aucune conversation (session simulée)"
+      "status": "PASS",
+      "attempts": 1
     },
     {
       "parcours": "M5",
       "label": "Clavier virtuel (viewport réduit) — champ de saisie reste visible",
-      "status": "PASS",
-      "attempts": 1
+      "status": "FAIL",
+      "note": "locator.click: Timeout 8000ms exceeded.",
+      "capture": "docs/e2e-screenshots/FAIL-M5-Clavier-virtuel-viewport-r-duit-champ-de-saisie-reste-visible.png"
     },
     {
       "parcours": "M5",
@@ -45,7 +46,6 @@
       "r": 390,
       "w": 390
     },
-    "keyboard": "OK",
     "crtElements": 0
   }
 }

@@ -1,10 +1,641 @@
 {
-  "date": "2026-10-14T20:46:31.623Z",
+  "date": "2026-10-14T22:01:13.050Z",
   "meta": {
-    "loadMs": null,
-    "lcpInitial": null
+    "loadMs": 2763,
+    "lcpInitial": 1120
   },
   "results": [
+    {
+      "parcours": "M1",
+      "label": "La page se charge (nav visible)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M1",
+      "label": "Aucune erreur JS non capturée (pageerror)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M1",
+      "label": "Aucun console.error",
+      "status": "FAIL",
+      "note": "console.error présents",
+      "capture": "docs/e2e-screenshots/FAIL-M1-Aucun-console-error.png"
+    },
+    {
+      "parcours": "M1",
+      "label": "Aucun warning Firestore permission-denied en session authentifiée",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P1",
+      "label": "Écran de login affiché (non connecté)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P1",
+      "label": "Connexion Google (popup OAuth déclenchée)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P1",
+      "label": "Connexion Email/Mot de passe — formulaire",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P1",
+      "label": "Email/MDP invalides → message d’erreur",
+      "status": "FAIL",
+      "note": "locator.click: Timeout 5000ms exceeded.",
+      "capture": "docs/e2e-screenshots/FAIL-P1-Email-MDP-invalides-message-d-erreur.png"
+    },
+    {
+      "parcours": "P1",
+      "label": "Magic Link Email",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P1",
+      "label": "Splash ?splash=1 (voir Parcours 15)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P1",
+      "label": "Bouton « Accès Rapide Démo » présent",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P1",
+      "label": "Déconnexion depuis le Profil",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P2",
+      "label": "Affichage des annonces",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P2",
+      "label": "Recherche par mot-clé (résultat filtré)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P2",
+      "label": "Filtre catégorie",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P2",
+      "label": "Filtre format Sur place / À distance",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P2",
+      "label": "Filtres avancés (langue / paiement)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P2",
+      "label": "Rayon de distance 5km → 100km → infini",
+      "status": "FAIL",
+      "note": "valeurs observées: ♾️ Infini",
+      "capture": "docs/e2e-screenshots/FAIL-P2-Rayon-de-distance-5km-100km-infini.png"
+    },
+    {
+      "parcours": "P2",
+      "label": "Scroll infini (plus d’annonces après scroll)",
+      "status": "FAIL",
+      "note": "Cartes avant=1 après=1 (virtualisation ou pas de pagination)",
+      "capture": "docs/e2e-screenshots/FAIL-P2-Scroll-infini-plus-d-annonces-apr-s-scroll-.png"
+    },
+    {
+      "parcours": "P2",
+      "label": "Clic sur annonce → détail",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P2",
+      "label": "Bouton « Voir l’original » / « Voir la traduction »",
+      "status": "MISSING",
+      "note": "Absent du détail (annonce déjà dans la langue UI ou fonctionnalité non exposée)"
+    },
+    {
+      "parcours": "P2",
+      "label": "Bouton « Proposer un Deal » (détail)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P2",
+      "label": "Bouton « Voir sur la carte »",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P3",
+      "label": "Bascule Liste → Carte",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P3",
+      "label": "Affichage des pins",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P3",
+      "label": "Clic sur pin → popup",
+      "status": "FAIL",
+      "note": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed",
+      "capture": "docs/e2e-screenshots/FAIL-P3-Clic-sur-pin-popup.png"
+    },
+    {
+      "parcours": "P3",
+      "label": "Bouton « Me localiser »",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P3",
+      "label": "Zoom / dézoom",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P3",
+      "label": "Clustering des annonces",
+      "status": "MISSING",
+      "note": "Aucun cluster rendu (peu d’annonces ou clustering non implémenté)"
+    },
+    {
+      "parcours": "P4",
+      "label": "Liste des discussions (vue chat chargée)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P4",
+      "label": "Ouverture d’un chat",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P4",
+      "label": "Envoi de message texte",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P4",
+      "label": "Envoi de note vocale",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P4",
+      "label": "Envoi de document Workspace",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P4",
+      "label": "Réception temps réel",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P4",
+      "label": "Indicateur « En train d’écrire »",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P4",
+      "label": "Proposer un Deal via le chat",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P4",
+      "label": "Accepter / Contre-proposer / Refuser un Deal",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P4",
+      "label": "Voir l’original / la traduction sur un message",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P5",
+      "label": "Démarrer un appel vidéo",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P5",
+      "label": "Réception d’un appel (2e onglet)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P5",
+      "label": "Accepter l’appel → audio/vidéo",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P5",
+      "label": "Toggle micro",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P5",
+      "label": "Toggle caméra",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P5",
+      "label": "Partage d’écran",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P5",
+      "label": "Raccrocher → fin propre + arrêt sonnerie",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P5",
+      "label": "API WebRTC disponible dans le navigateur",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P6",
+      "label": "Affichage du profil (nom)",
+      "status": "FAIL",
+      "note": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed",
+      "capture": "docs/e2e-screenshots/FAIL-P6-Affichage-du-profil-nom-.png"
+    },
+    {
+      "parcours": "P6",
+      "label": "Statistiques (deals / note / avis)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P6",
+      "label": "Édition du profil (formulaire)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P6",
+      "label": "Upload de photo (input file)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P6",
+      "label": "Portfolio (ajout/suppression)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P6",
+      "label": "Bouton « Revoir l’animation d’accueil »",
+      "status": "MISSING",
+      "note": "Bouton absent (SplashScreen.jsx non monté dans l’app)"
+    },
+    {
+      "parcours": "P14",
+      "label": "Bouton « Revoir le tutoriel »",
+      "status": "FAIL",
+      "note": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed",
+      "capture": "docs/e2e-screenshots/FAIL-P14-Bouton-Revoir-le-tutoriel-.png"
+    },
+    {
+      "parcours": "P14",
+      "label": "Navigation à travers les étapes (6)",
+      "status": "FAIL",
+      "note": "étapes parcourues: 1",
+      "capture": "docs/e2e-screenshots/FAIL-P14-Navigation-travers-les-tapes-6-.png"
+    },
+    {
+      "parcours": "P14",
+      "label": "Fermeture du tutoriel",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P14",
+      "label": "Première connexion → tutoriel auto + tutorialCompleted:true au rechargement",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P7",
+      "label": "Étape 1 : format + catégorie",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P7",
+      "label": "Étape 2 : détails (titre, description, photo, vidéo, localisation)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P7",
+      "label": "Étape 3 : compensation (jetons/€/troc/hybride)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P7",
+      "label": "Publication → apparition dans le feed",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P7",
+      "label": "Édition d’une annonce existante",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P7",
+      "label": "Suppression d’une annonce",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P8",
+      "label": "Affichage du solde (€ + jetons)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P8",
+      "label": "Recharger le solde (modale paiement)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P8",
+      "label": "F5 pendant paiement → session persistante",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P8",
+      "label": "Achat de jetons (mock Stripe)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P8",
+      "label": "Souscription Troco Plus (modale)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P8",
+      "label": "Historique des transactions",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P8",
+      "label": "Factures PDF",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P9",
+      "label": "Ouverture de la page Communauté",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P9",
+      "label": "Global Live Chat affiché",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P9",
+      "label": "Envoi d’un message dans le chat mondial",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P9",
+      "label": "Filtrage du fil d’actualité",
+      "status": "FAIL",
+      "note": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed",
+      "capture": "docs/e2e-screenshots/FAIL-P9-Filtrage-du-fil-d-actualit-.png"
+    },
+    {
+      "parcours": "P9",
+      "label": "Suppression d’un message (admin)",
+      "status": "FAIL",
+      "note": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m",
+      "capture": "docs/e2e-screenshots/FAIL-P9-Suppression-d-un-message-admin-.png"
+    },
+    {
+      "parcours": "P10",
+      "label": "Ouverture de Troco Docs",
+      "status": "BLOCKED",
+      "note": "Outils Workspace accessibles uniquement dans un chat ouvert (aucun chat disponible en session simulée)"
+    },
+    {
+      "parcours": "P10",
+      "label": "Ouverture de Troco Sheets",
+      "status": "BLOCKED",
+      "note": "Outils Workspace accessibles uniquement dans un chat ouvert (aucun chat disponible en session simulée)"
+    },
+    {
+      "parcours": "P10",
+      "label": "Ouverture de Troco Notes",
+      "status": "BLOCKED",
+      "note": "Outils Workspace accessibles uniquement dans un chat ouvert (aucun chat disponible en session simulée)"
+    },
+    {
+      "parcours": "P10",
+      "label": "Ouverture de Troco Slides",
+      "status": "BLOCKED",
+      "note": "Outils Workspace accessibles uniquement dans un chat ouvert (aucun chat disponible en session simulée)"
+    },
+    {
+      "parcours": "P10",
+      "label": "Ouverture de Whiteboard collaboratif",
+      "status": "BLOCKED",
+      "note": "Outils Workspace accessibles uniquement dans un chat ouvert (aucun chat disponible en session simulée)"
+    },
+    {
+      "parcours": "P10",
+      "label": "Édition collaborative / Partage dans le chat",
+      "status": "FAIL",
+      "note": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m",
+      "capture": "docs/e2e-screenshots/FAIL-P10-dition-collaborative-Partage-dans-le-chat.png"
+    },
+    {
+      "parcours": "P11",
+      "label": "Bascule mode clair / sombre",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P11",
+      "label": "Studio de design (thèmes, couleur magique, typo, zoom, radius)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P11",
+      "label": "Curseurs zoom / radius + générateur magique",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P12",
+      "label": "FR → EN",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P12",
+      "label": "FR → ES",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P12",
+      "label": "FR → IT",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P12",
+      "label": "FR → DE",
+      "status": "FAIL",
+      "note": "texte DE non détecté",
+      "capture": "docs/e2e-screenshots/FAIL-P12-FR-DE.png"
+    },
+    {
+      "parcours": "P12",
+      "label": "FR → JA",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P12",
+      "label": "FR → ZH",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P12",
+      "label": "Aucune clé i18n brute dans le texte visible",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P12",
+      "label": "Annonces UGC traduites dynamiquement / « Voir l’original »",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P13",
+      "label": "Panel admin masqué pour un utilisateur non-admin",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P13",
+      "label": "Panel admin accessible pour un utilisateur admin",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P13",
+      "label": "Liste des utilisateurs",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P13",
+      "label": "Liste des signalements",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P13",
+      "label": "Modération d’un message",
+      "status": "FAIL",
+      "note": "locator.click: Timeout 5000ms exceeded.",
+      "capture": "docs/e2e-screenshots/FAIL-P13-Mod-ration-d-un-message.png"
+    },
+    {
+      "parcours": "P13",
+      "label": "Ban / Shadow-ban",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P13",
+      "label": "Reset d’un profil",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "P15",
+      "label": "Ouverture avec ?splash=1 → splash CRT affiché",
+      "status": "MISSING",
+      "note": "SplashScreen.jsx existe mais n’est importé nulle part : ?splash=1 affiche simplement le login"
+    },
+    {
+      "parcours": "P15",
+      "label": "Clic sur « Entrer »",
+      "status": "MISSING",
+      "note": "Dépend du splash non monté"
+    },
+    {
+      "parcours": "P15",
+      "label": "Animation + son",
+      "status": "MISSING",
+      "note": "Dépend du splash non monté"
+    },
+    {
+      "parcours": "P15",
+      "label": "Redirection vers l’app",
+      "status": "MISSING",
+      "note": "Dépend du splash non monté"
+    },
     {
       "parcours": "M3",
       "label": "Vitals Feed",
@@ -34,39 +665,1170 @@
       "label": "Fuite mémoire (heap avant/après 5 cycles de navigation)",
       "status": "PASS",
       "attempts": 1
+    },
+    {
+      "parcours": "M4",
+      "label": "Mode hors-ligne → bannière / comportement dégradé",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M4",
+      "label": "Retour réseau → récupération",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M4",
+      "label": "Coupure réseau en plein chat → reconnexion",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M4",
+      "label": "Coupure réseau en plein appel → fallback",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M4",
+      "label": "F5 en plein appel → reprise",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M4",
+      "label": "F5 en plein paiement → persistance",
+      "status": "PASS",
+      "attempts": 1
     }
   ],
   "perf": {
     "Feed": {
-      "lcp": 2748,
+      "lcp": 1656,
       "cls": 0.0004,
-      "inp": 104,
-      "domNodes": 970
+      "inp": 72,
+      "domNodes": 407
     },
     "Chat": {
-      "lcp": 1444,
-      "cls": 0.0078,
-      "inp": 216,
-      "domNodes": 232
+      "lcp": 1132,
+      "cls": 0.0004,
+      "inp": 192,
+      "domNodes": 236
     },
     "Profil": {
-      "lcp": 1456,
-      "cls": 0.008,
-      "inp": 192,
+      "lcp": 1324,
+      "cls": 0.0004,
+      "inp": 168,
       "domNodes": 457
     },
     "Communauté": {
-      "lcp": 1424,
-      "cls": 0.0098,
-      "inp": 264,
-      "domNodes": 377
+      "lcp": 2372,
+      "cls": 0.006,
+      "inp": 224,
+      "domNodes": 246
     },
     "memory": {
-      "beforeMB": 21.1,
-      "afterMB": 23.4,
-      "deltaMB": 2.4
+      "beforeMB": 18,
+      "afterMB": 21.4,
+      "deltaMB": 3.4
     }
   },
   "mobile": {},
-  "console": {}
+  "console": {
+    "initial": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      }
+    ],
+    "p1": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [WebRTC] calls targetParticipants onSnapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useUsersPublic] Erreur snapshot chunk: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [WebRTC] calls targetParticipants onSnapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useUsersPublic] Erreur snapshot chunk: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useUsersPublic] Erreur snapshot chunk: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [WebRTC] calls targetParticipants onSnapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [WebRTC] calls targetParticipants onSnapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useUsersPublic] Erreur snapshot chunk: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 400 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useAdminGuard] Erreur lecture tokenResult: FirebaseError: Firebase: Error (auth/invalid-refresh-token).\n    at createErrorInternal (http://localhost:3000/static/js/bundle.js:58284:37)\n    at _fail (http://localhost:3000/static/js/bundle.js:58250:9)\n    at _performFetchWithErrorHandling (http://localhost:3000/static/js/bundle.js:58751:9)\n    at async requestStsToken (http://localhost:3000/s"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useGlobalContent] Erreur écoute 'welcome_message': FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] onSnapshot listings query error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [App.js] Global calls calleeUid error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useGlobalContent] Erreur écoute 'platform_announcement': FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Notifications] Erreur écoute notifications temps réel: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] chats query error: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [App.js] Background message listener warning (participants): FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] App.js user snapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [AuthContext] onSnapshot user doc error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useWalletStore] onSnapshot balance error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] Profile listener error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 400 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useAdminGuard] Erreur lecture tokenResult: FirebaseError: Firebase: Error (auth/invalid-refresh-token).\n    at createErrorInternal (http://localhost:3000/static/js/bundle.js:58284:37)\n    at _fail (http://localhost:3000/static/js/bundle.js:58250:9)\n    at _performFetchWithErrorHandling (http://localhost:3000/static/js/bundle.js:58751:9)\n    at async requestStsToken (http://localhost:3000/s"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] chats onSnapshot warning for participantUids: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [App.js] Background message listener error (participantUids): FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [WebRTC] calls targetParticipants onSnapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [App.js] Global calls targetParticipants error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] Transactions listener: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [WebRTC] calls toUid onSnapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [App.js] Global calls toUid error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.error",
+        "text": "[Firestore] Fallback listings query failed: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useUsersPublic] Erreur snapshot chunk: FirebaseError: Missing or insufficient permissions."
+      }
+    ],
+    "p1b": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useGlobalContent] Erreur écoute 'welcome_message': FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] onSnapshot listings query error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [App.js] Global calls calleeUid error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useGlobalContent] Erreur écoute 'platform_announcement': FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Notifications] Erreur écoute notifications temps réel: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] chats query error: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [App.js] Background message listener warning (participants): FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] App.js user snapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [AuthContext] onSnapshot user doc error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useWalletStore] onSnapshot balance error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] Profile listener error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] chats onSnapshot warning for participantUids: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [App.js] Background message listener error (participantUids): FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [WebRTC] calls targetParticipants onSnapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [App.js] Global calls targetParticipants error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [Firestore] Transactions listener: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [WebRTC] calls toUid onSnapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [App.js] Global calls toUid error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.error",
+        "text": "[Firestore] Fallback listings query failed: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useUsersPublic] Erreur snapshot chunk: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage avis pour DOVBK04NXDL8sv00hd3OTN9BKv9n: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage avis pour DOVBK04NXDL8sv00hd3OTN9BKv9n: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useUserRealStats] onSnapshot reviews warning: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour DOVBK04NXDL8sv00hd3OTN9BKv9n: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour DOVBK04NXDL8sv00hd3OTN9BKv9n: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [ReviewsSection] query with orderBy failed, fallback to unordered collection: FirebaseError: Missing or insufficient permissions."
+      }
+    ],
+    "p2": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      }
+    ],
+    "p4": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 33.40ms (mount) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 63.50ms (mount) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 19.40ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 20.50ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 29.50ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 21.70ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 18.50ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 19.10ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 17.30ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 26.10ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 17.50ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 19.00ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 18.60ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 19.60ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 20.10ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 20.80ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 17.90ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 20.70ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 17.00ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 17.50ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 16.90ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 20.00ms (update) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 18.50ms (update) pour être calculé. Budget 16ms dépassé !"
+      }
+    ],
+    "p6": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      }
+    ],
+    "p7": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      }
+    ],
+    "p8": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      }
+    ],
+    "p9": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] ⚡ [Performance Drop] <ChatView> a pris 19.80ms (mount) pour être calculé. Budget 16ms dépassé !"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      }
+    ],
+    "p11": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=it&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=it&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=it&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=it&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=de&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=de&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=de&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=de&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=de&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=de&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ja&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=Cours%20de%20dev%20React%20%26%20Firebase' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Access to fetch at 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=Session%20de%20coaching%20et%20programmation%20collaborative.' from origin 'http://localhost:3000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource."
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      }
+    ],
+    "p13": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      }
+    ],
+    "p15": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [WebRTC] calls targetParticipants onSnapshot error: FirebaseError: Missing or insufficient permissions."
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useUsersPublic] Erreur snapshot chunk: FirebaseError: Missing or insufficient permissions."
+      }
+    ],
+    "m4": [
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [useFeedStore] loadSavedFilters error: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147, Property admin is undefined on object. for 'list' @ L83, Property admin is undefined on object. for 'list' @ L147"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[2026-10-14T22:00:58.901Z]  @firebase/firestore: Firestore (12.17.0): WebChannelConnection RPC 'Write' stream 0x80c69244 transport errored. Name: undefined Message: undefined"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[2026-10-14T22:00:58.903Z]  @firebase/firestore: Firestore (12.17.0): WebChannelConnection RPC 'Listen' stream 0x80c69245 transport errored. Name: undefined Message: undefined"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[2026-10-14T22:00:59.065Z]  @firebase/firestore: Firestore (12.17.0): WebChannelConnection RPC 'Write' stream 0x80c69246 transport errored. Name: undefined Message: undefined"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[2026-10-14T22:00:59.068Z]  @firebase/firestore: Firestore (12.17.0): WebChannelConnection RPC 'Listen' stream 0x80c69247 transport errored. Name: undefined Message: undefined"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[2026-10-14T22:00:59.690Z]  @firebase/firestore: Firestore (12.17.0): WebChannelConnection RPC 'Listen' stream 0x80c69248 transport errored. Name: undefined Message: undefined"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[2026-10-14T22:00:59.856Z]  @firebase/firestore: Firestore (12.17.0): WebChannelConnection RPC 'Write' stream 0x80c69249 transport errored. Name: undefined Message: undefined"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[2026-10-14T22:01:01.023Z]  @firebase/firestore: Firestore (12.17.0): WebChannelConnection RPC 'Listen' stream 0x80c6924a transport errored. Name: undefined Message: undefined"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[WARN] [userStatsService] Erreur comptage transactions pour Lrjgl9JxQLtqgd2CyeUKXVSenVfP: FirebaseError: \nProperty admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276, Property admin is undefined on object. for 'list' @ L83, Property partnerUid is undefined on object. for 'list' @ L276"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[2026-10-14T22:01:06.251Z]  @firebase/firestore: Firestore (12.17.0): WebChannelConnection RPC 'Listen' stream 0x80c6924d transport errored. Name: undefined Message: undefined"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[2026-10-14T22:01:06.254Z]  @firebase/firestore: Firestore (12.17.0): WebChannelConnection RPC 'Listen' stream 0x80c6924e transport errored. Name: undefined Message: undefined"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+      },
+      {
+        "kind": "console.warning",
+        "text": "[2026-10-14T22:01:07.024Z]  @firebase/firestore: Firestore (12.17.0): WebChannelConnection RPC 'Listen' stream 0x80c6924f transport errored. Name: undefined Message: undefined"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: net::ERR_FAILED"
+      },
+      {
+        "kind": "console.error",
+        "text": "Failed to load resource: the server responded with a status of 404 ()"
+      }
+    ]
+  }
 }
