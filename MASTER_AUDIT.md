@@ -848,3 +848,11 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
 
 - [x] `[E2E-01]` — Suite de tests E2E Playwright exécutée (`e2e/full-audit.spec.js`, 113 vérifications : 51 PASS / 16 FAIL / 40 BLOCKED / 6 MISSING)
 - [x] `[E2E-02]` — Rapport E2E complet généré (`docs/E2E-REPORT-2026-10-14.md`)
+
+---
+
+## 🚨 Suivi Hotfix Build & Déploiement Vercel (2026-10-14)
+
+- [x] `[HOTFIX-08]` — Correction de l'import useMemo dans AuthScreen (build Vercel)
+**Preuve** : [`src/features/auth/AuthScreen.jsx:2`](file:///c:/Users/mateo/Desktop/TROCO/src/features/auth/AuthScreen.jsx#L2) (`import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';`).
+**Statut** : ✅ FAIT — Résolution de l'erreur `no-undef: 'useMemo' is not defined` qui bloquait la compilation Vercel en production (`CI=true`). Scan global `no-undef` à 0 erreur. Build local validé à 100% avec Exit Code 0 (`npm run build`) et 218/218 tests Vitest au vert.

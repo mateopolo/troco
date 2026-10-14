@@ -1,5 +1,5 @@
 import logger from '../../utils/logger';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Sparkles, Sun, Moon, Phone, Mail, X } from 'lucide-react';
 import TrocoLogo from '../../components/common/TrocoLogo';
 import { auth, db } from '../../firebase';

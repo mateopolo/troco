@@ -1404,10 +1404,10 @@
     "semantic_hash": "6cae5545198bd5634ac073886a47bad5"
   },
   "src/contexts/AuthContext.jsx": {
-    "mtime": 1790178539.5985796,
-    "seen": 1790594464.2383046,
-    "ast_hash": "aba1dabe25c8729f3f6136e15bf88cdf",
-    "semantic_hash": "aba1dabe25c8729f3f6136e15bf88cdf"
+    "mtime": 1791976031.7443345,
+    "seen": 1791976101.3224385,
+    "ast_hash": "e59407145f15b2cd44ea0235ec0968ee",
+    "semantic_hash": ""
   },
   "src/contexts/LanguageContext.jsx": {
     "mtime": 1791377952.807136,
@@ -1476,10 +1476,10 @@
     "semantic_hash": "aa7979ae4c9c38e69806b37499ce52f8"
   },
   "src/features/auth/AuthScreen.jsx": {
-    "mtime": 1790113592.3139558,
-    "seen": 1790594464.238324,
-    "ast_hash": "0279d885e07ca8be19c4b57a27d51f79",
-    "semantic_hash": "0279d885e07ca8be19c4b57a27d51f79"
+    "mtime": 1791976002.6780236,
+    "seen": 1791976101.332358,
+    "ast_hash": "795caee1913a623afc087c58768962f1",
+    "semantic_hash": ""
   },
   "src/features/call/CallFeature.jsx": {
     "mtime": 1787717878.9814632,
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791390965.0736568,
-    "seen": 1791391018.851302,
-    "ast_hash": "a0e8f0d4c08f8a9f2d1f174da5513c30",
+    "mtime": 1791974724.6735983,
+    "seen": 1791976101.3733487,
+    "ast_hash": "9be49eaa9934360c14e4627896e71786",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1791390987.8427088,
-    "seen": 1791391018.8519876,
-    "ast_hash": "ad049fa70518ad3e1ed08e1bb5ff450b",
+    "mtime": 1791974724.6755984,
+    "seen": 1791976101.3738666,
+    "ast_hash": "549765ab8d88d51f56831e8c16ca4607",
     "semantic_hash": ""
   },
   "README.md": {
@@ -3201,6 +3201,450 @@
     "mtime": 1791378772.702903,
     "seen": 1791379630.9585488,
     "ast_hash": "8e8e66fc2bf16a74d44f261646ab173f",
+    "semantic_hash": ""
+  },
+  "docs/e2e-logs/results-mobile.json": {
+    "mtime": 1791974585.023658,
+    "seen": 1791976101.2442338,
+    "ast_hash": "b2937407442c37ebe3673926f42cb091",
+    "semantic_hash": ""
+  },
+  "docs/e2e-logs/results.json": {
+    "mtime": 1791974568.8207574,
+    "seen": 1791976101.2442389,
+    "ast_hash": "e2964fd60e8e0f4913560646fce68b95",
+    "semantic_hash": ""
+  },
+  "e2e/full-audit.spec.js": {
+    "mtime": 1791974258.4182458,
+    "seen": 1791976101.2447436,
+    "ast_hash": "cfb8670ae4af7cb4b28c671e4f77895c",
+    "semantic_hash": ""
+  },
+  "e2e/helpers.js": {
+    "mtime": 1791973729.8860548,
+    "seen": 1791976101.2447462,
+    "ast_hash": "6e8cd2ade238c9f286bf9f0d909817fa",
+    "semantic_hash": ""
+  },
+  "docs/E2E-REPORT-2026-10-14.md": {
+    "mtime": 1791974706.886206,
+    "seen": 1791976101.3746338,
+    "ast_hash": "c6e339b260f4efd5dceb32d6596bdfd0",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-M1-Aucun-console-error.png": {
+    "mtime": 1791974268.8089323,
+    "seen": 1791976101.3905392,
+    "ast_hash": "1af12d15b43da662256d40ace3f90bce",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-M1-Aucun-warning-Firestore-permission-denied-en-session-authentifi-e.png": {
+    "mtime": 1791974269.1335921,
+    "seen": 1791976101.390544,
+    "ast_hash": "2b7ddce49f3b9bcdeac963ee7c4b2703",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P1-Email-MDP-invalides-message-d-erreur.png": {
+    "mtime": 1791974285.809514,
+    "seen": 1791976101.3905478,
+    "ast_hash": "5aca910f48ee47bce080c78843df4b46",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P12-FR-DE.png": {
+    "mtime": 1791974483.0570362,
+    "seen": 1791976101.3905525,
+    "ast_hash": "1d2b5967adb8721f7a96ac44627e6fbd",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P12-FR-EN.png": {
+    "mtime": 1791974466.1885126,
+    "seen": 1791976101.3905563,
+    "ast_hash": "af7958c8b2a8f8b0c70cb87fa0dc762e",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P12-FR-ES.png": {
+    "mtime": 1791974472.0365071,
+    "seen": 1791976101.3905602,
+    "ast_hash": "1ca5b3780d81c773cee0fc524ba2a3a4",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P12-FR-IT.png": {
+    "mtime": 1791974477.6484106,
+    "seen": 1791976101.3905635,
+    "ast_hash": "0b5e08fa7c427afb83c9ca68e2a10f08",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P12-FR-JA.png": {
+    "mtime": 1791974488.5091693,
+    "seen": 1791976101.3905678,
+    "ast_hash": "17f94bda4505b3800e65e9185e6089cd",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P12-FR-ZH.png": {
+    "mtime": 1791974494.1031055,
+    "seen": 1791976101.390572,
+    "ast_hash": "b3d77d7cc3502dddbf986236be90062a",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P13-Panel-admin-masqu-pour-un-utilisateur-non-admin.png": {
+    "mtime": 1791974501.2949169,
+    "seen": 1791976101.3905761,
+    "ast_hash": "91cabfa043bf59c344b257900e544805",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P14-Bouton-Revoir-le-tutoriel-.png": {
+    "mtime": 1791974396.7140467,
+    "seen": 1791976101.3905797,
+    "ast_hash": "ca68515fd7671ca39bed18ba371fb669",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P14-Navigation-travers-les-tapes-6-.png": {
+    "mtime": 1791974397.6857066,
+    "seen": 1791976101.3905833,
+    "ast_hash": "6f45c6d81fc918f2537fae21189ba3d2",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P2-Rayon-de-distance-5km-100km-infini.png": {
+    "mtime": 1791974335.6844683,
+    "seen": 1791976101.3905869,
+    "ast_hash": "eaa0071c11e388b7c348f1c8e9b4ba16",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P2-Scroll-infini-plus-d-annonces-apr-s-scroll-.png": {
+    "mtime": 1791974346.4181254,
+    "seen": 1791976101.390591,
+    "ast_hash": "3de4b89a6211851b23f34168fbb94601",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P3-Clic-sur-pin-popup.png": {
+    "mtime": 1791974369.9290943,
+    "seen": 1791976101.3905942,
+    "ast_hash": "aa9b258c55e9af0f0a35ec1d5df27bb4",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P9-Filtrage-du-fil-d-actualit-.png": {
+    "mtime": 1791974440.7008595,
+    "seen": 1791976101.3905983,
+    "ast_hash": "6696591f19412bfac2de65ea82394d4e",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M1-initial-load.png": {
+    "mtime": 1791974268.4595845,
+    "seen": 1791976101.3906019,
+    "ast_hash": "9e6aef46f2dc3d33c31e7bfe6b0eadde",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M3-Chat.png": {
+    "mtime": 1791974516.9763398,
+    "seen": 1791976101.390606,
+    "ast_hash": "67322e7df508e4ef75f227c5c29fb28a",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M3-Communaut\u00e9.png": {
+    "mtime": 1791974529.884487,
+    "seen": 1791976101.390611,
+    "ast_hash": "ebe4df7fe562cdb368471d5afb6130a3",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M3-Feed.png": {
+    "mtime": 1791974510.7798922,
+    "seen": 1791976101.3906145,
+    "ast_hash": "0467295c030794a90f1bff668fe92fba",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M3-Profil.png": {
+    "mtime": 1791974523.3189793,
+    "seen": 1791976101.390618,
+    "ast_hash": "ab28cc3645b83beb980dc5d140265cd4",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M4-chat-reconnect.png": {
+    "mtime": 1791974566.153746,
+    "seen": 1791976101.3906217,
+    "ast_hash": "db96ee3aa42e44eae9e1bac28248498b",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M4-offline.png": {
+    "mtime": 1791974556.8314028,
+    "seen": 1791976101.3906255,
+    "ast_hash": "9dd31b81dff77f6ce4cb3bdc834d0bea",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M4-online.png": {
+    "mtime": 1791974560.1396823,
+    "seen": 1791976101.3906293,
+    "ast_hash": "9f5e8525ecbb01be98a7839c006b8786",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M5-feed.png": {
+    "mtime": 1791974572.324854,
+    "seen": 1791976101.390633,
+    "ast_hash": "beb81a2bba7329ce6c7b18f70eb675f8",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M5-keyboard.png": {
+    "mtime": 1791974584.8846576,
+    "seen": 1791976101.3906367,
+    "ast_hash": "d3e4b0ec98c1da03f56d398fb73d7945",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M5-modal-topup.png": {
+    "mtime": 1791974580.9611785,
+    "seen": 1791976101.39064,
+    "ast_hash": "e810f669f136fd337693dac91b0178ec",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M5-nav-Communaut\u00e9.png": {
+    "mtime": 1791974573.6668768,
+    "seen": 1791976101.3906443,
+    "ast_hash": "5862dc2d458b9dc4eb6541bed01b005b",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M5-nav-D\u00e9poser.png": {
+    "mtime": 1791974576.201965,
+    "seen": 1791976101.3906484,
+    "ast_hash": "80e478a481fa0fd4577667e63c72d48e",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M5-nav-Explorer.png": {
+    "mtime": 1791974579.2041786,
+    "seen": 1791976101.3906522,
+    "ast_hash": "d61e9d87720cf966ff2e30121aedb59e",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M5-nav-Messages.png": {
+    "mtime": 1791974574.9529479,
+    "seen": 1791976101.390656,
+    "ast_hash": "7bf26cd5eb1d8bdbed1274d92a819986",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/M5-nav-Profil.png": {
+    "mtime": 1791974577.4558575,
+    "seen": 1791976101.3906598,
+    "ast_hash": "7800964a2c290f1ef9332e60dd44c26d",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P1-after-logout.png": {
+    "mtime": 1791974298.7005627,
+    "seen": 1791976101.3906636,
+    "ast_hash": "58be18049b4521f90493e17a0412f3d3",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P1-email-form.png": {
+    "mtime": 1791974275.5883992,
+    "seen": 1791976101.3906674,
+    "ast_hash": "117da281fc1b8426e3a4f7163f5a4277",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P1-google-click.png": {
+    "mtime": 1791974274.451275,
+    "seen": 1791976101.3906713,
+    "ast_hash": "58be18049b4521f90493e17a0412f3d3",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P1-login.png": {
+    "mtime": 1791974271.174804,
+    "seen": 1791976101.3906746,
+    "ast_hash": "fb104b5fd49f2bc00c5499566cb87451",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P1-profile-before-logout.png": {
+    "mtime": 1791974293.4284406,
+    "seen": 1791976101.3906786,
+    "ast_hash": "dbfa6a389204ec14aba7c08811b864ee",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P11-dark.png": {
+    "mtime": 1791974450.2787788,
+    "seen": 1791976101.3906825,
+    "ast_hash": "98acb4e790d78ee451c85253e7b3946d",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P11-design-studio.png": {
+    "mtime": 1791974456.165075,
+    "seen": 1791976101.390686,
+    "ast_hash": "1db9aa16f5ceda1fc6fd5550fdaef27a",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P12-DE.png": {
+    "mtime": 1791974482.7155895,
+    "seen": 1791976101.3906898,
+    "ast_hash": "746024947e5586b4c39b6c9d590f6e98",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P12-EN.png": {
+    "mtime": 1791974465.672206,
+    "seen": 1791976101.3906934,
+    "ast_hash": "4fdc4ff4c64b759fad4158fc3a81f855",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P12-ES.png": {
+    "mtime": 1791974471.6719525,
+    "seen": 1791976101.3906968,
+    "ast_hash": "453d6b9f776131a86c089927e3faa914",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P12-IT.png": {
+    "mtime": 1791974477.185146,
+    "seen": 1791976101.3907003,
+    "ast_hash": "2367bf40bafa35c2ba9b584a82b469f0",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P12-JA.png": {
+    "mtime": 1791974488.251701,
+    "seen": 1791976101.390704,
+    "ast_hash": "aadadf3fb204f329ed97f41106181f23",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P12-ZH.png": {
+    "mtime": 1791974493.7247663,
+    "seen": 1791976101.3907075,
+    "ast_hash": "6ec6e365d945514ab699ed6212bc91ca",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P14-first-login.png": {
+    "mtime": 1791974406.52248,
+    "seen": 1791976101.390711,
+    "ast_hash": "3f21ea2e16582e64ae1fa24b7774ddb9",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P14-tutorial-last.png": {
+    "mtime": 1791974397.2791939,
+    "seen": 1791976101.390715,
+    "ast_hash": "264b5c4765c3d2a2cfea107d72f2d187",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P15-splash-param.png": {
+    "mtime": 1791974505.213586,
+    "seen": 1791976101.3907182,
+    "ast_hash": "58be18049b4521f90493e17a0412f3d3",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P2-category.png": {
+    "mtime": 1791974307.7172997,
+    "seen": 1791976101.3907218,
+    "ast_hash": "02b695b50cdfa5b720ca6ac279092ee6",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P2-detail.png": {
+    "mtime": 1791974348.176224,
+    "seen": 1791976101.3907251,
+    "ast_hash": "8863bb926fd9331576cb04bd6fe0ed33",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P2-feed.png": {
+    "mtime": 1791974303.005659,
+    "seen": 1791976101.3907292,
+    "ast_hash": "ad52755693e194fbb245cf2eb0a7e835",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P2-filter-drawer.png": {
+    "mtime": 1791974312.8207195,
+    "seen": 1791976101.3907325,
+    "ast_hash": "a68b65596982601c0aabfaa5f9b4d816",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P2-infinite-scroll.png": {
+    "mtime": 1791974346.1299124,
+    "seen": 1791976101.3907363,
+    "ast_hash": "ffc94676ba47160ef1eb3e8561f5f9f6",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P2-onsite.png": {
+    "mtime": 1791974309.8249955,
+    "seen": 1791976101.3907402,
+    "ast_hash": "2a2bd9117d518a22d36bcd647f6df18b",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P2-radius.png": {
+    "mtime": 1791974335.2812378,
+    "seen": 1791976101.3907437,
+    "ast_hash": "4cf977a15646b380e85a23ce3948754c",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P2-search-empty.png": {
+    "mtime": 1791974304.983246,
+    "seen": 1791976101.3907473,
+    "ast_hash": "dd495bdd0f433e554f27ecbf01891524",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P2-see-on-map.png": {
+    "mtime": 1791974351.1305315,
+    "seen": 1791976101.390751,
+    "ast_hash": "d653d0682da5cdab270fcc057b898c8f",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P3-map.png": {
+    "mtime": 1791974357.2827,
+    "seen": 1791976101.3907545,
+    "ast_hash": "e215f8de2ebc9b82eff65cc9a82ce1ae",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P3-popup.png": {
+    "mtime": 1791974365.2165196,
+    "seen": 1791976101.3907578,
+    "ast_hash": "152b0bf6494493c56b3990564195fd08",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P3-zoom.png": {
+    "mtime": 1791974372.6921384,
+    "seen": 1791976101.3907611,
+    "ast_hash": "0f3a888be2064a263a56f03da3f68d0c",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P4-chat-list.png": {
+    "mtime": 1791974379.5204098,
+    "seen": 1791976101.3907647,
+    "ast_hash": "2d4fa3ee6e55f09c18f736043806b72d",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P6-edit.png": {
+    "mtime": 1791974388.07389,
+    "seen": 1791976101.3907685,
+    "ast_hash": "c943a8867758ece5efd59727a6af906a",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P6-profile.png": {
+    "mtime": 1791974386.1797128,
+    "seen": 1791976101.3907723,
+    "ast_hash": "84141348d14c196a19ab953e82f9920a",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P7-step1.png": {
+    "mtime": 1791974412.862798,
+    "seen": 1791976101.3907764,
+    "ast_hash": "8654a1dd9178217749a3a6bde483bf35",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P7-step2.png": {
+    "mtime": 1791974414.6501737,
+    "seen": 1791976101.39078,
+    "ast_hash": "4eaa470dea752230f32865d028ea7a83",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P8-after-reload.png": {
+    "mtime": 1791974421.268891,
+    "seen": 1791976101.390784,
+    "ast_hash": "b5249d1471f38ece30925db799411616",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P8-plus.png": {
+    "mtime": 1791974423.3965468,
+    "seen": 1791976101.390788,
+    "ast_hash": "132c97499af5f2872d09f7c2fdcd48fe",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P8-topup.png": {
+    "mtime": 1791974419.8720405,
+    "seen": 1791976101.3907917,
+    "ast_hash": "736491a10ed51e2f05ae7c1c19de4658",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P9-community.png": {
+    "mtime": 1791974432.433925,
+    "seen": 1791976101.3907955,
+    "ast_hash": "97d75a37bfbab7eaccd958c8bee5c794",
     "semantic_hash": ""
   }
 }

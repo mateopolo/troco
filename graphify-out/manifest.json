@@ -1476,9 +1476,9 @@
     "semantic_hash": "aa7979ae4c9c38e69806b37499ce52f8"
   },
   "src/features/auth/AuthScreen.jsx": {
-    "mtime": 1791976002.6780236,
-    "seen": 1791976101.332358,
-    "ast_hash": "795caee1913a623afc087c58768962f1",
+    "mtime": 1791976521.7763214,
+    "seen": 1791976738.634947,
+    "ast_hash": "0fad44385da0bc07a1dc6245f925d30d",
     "semantic_hash": ""
   },
   "src/features/call/CallFeature.jsx": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791974724.6735983,
-    "seen": 1791976101.3733487,
-    "ast_hash": "9be49eaa9934360c14e4627896e71786",
+    "mtime": 1791976694.3483808,
+    "seen": 1791976738.6767442,
+    "ast_hash": "9023432aea4cf80e5b0f7074b4941029",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1791974724.6755984,
-    "seen": 1791976101.3738666,
-    "ast_hash": "549765ab8d88d51f56831e8c16ca4607",
+    "mtime": 1791976704.6400046,
+    "seen": 1791976738.6773393,
+    "ast_hash": "bb84e58821c5113ce3cb39b7e8f9109a",
     "semantic_hash": ""
   },
   "README.md": {
@@ -3222,14 +3222,14 @@
     "semantic_hash": ""
   },
   "e2e/helpers.js": {
-    "mtime": 1791973729.8860548,
-    "seen": 1791976101.2447462,
+    "mtime": 1791976251.1880732,
+    "seen": 1791976738.555083,
     "ast_hash": "6e8cd2ade238c9f286bf9f0d909817fa",
     "semantic_hash": ""
   },
   "docs/E2E-REPORT-2026-10-14.md": {
-    "mtime": 1791974706.886206,
-    "seen": 1791976101.3746338,
+    "mtime": 1791976249.3562007,
+    "seen": 1791976738.6781478,
     "ast_hash": "c6e339b260f4efd5dceb32d6596bdfd0",
     "semantic_hash": ""
   },

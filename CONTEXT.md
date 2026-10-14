@@ -1341,3 +1341,21 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
 - **Anomalies :** bouton « Panel Modération » visible pour un non-admin (`ProfileFeature.jsx`), clé i18n brute `theme.dark_mode`, clé dupliquée `editProfile`, avatar `src=""`, CORS/429 sur `ipapi.co`, CLS 0,16–0,28 et INP 216–344 ms.
 - **Perf (dev) :** chargement 2,4 s, LCP initial 2,68 s, fuite mémoire non détectée (+2,3 Mo / 20 navigations).
 - **Splash (parcours 15) :** sans objet, retrait volontaire (§18).
+
+---
+
+### 20. Hotfix Build Vercel & Correction d'Import useMemo dans AuthScreen (2026-10-14)
+
+#### 20.1. Cause du Build Cassé
+Lors de l'optimisation de la détection des navigateurs intégrés (*In-App Browsers*) dans `src/features/auth/AuthScreen.jsx`, le hook `useMemo` a été employé à la ligne 68 (`const isInAppBrowser = useMemo(...)`), mais n'était pas présent dans l'import React (`import React, { useState, useEffect } from 'react';`). Sur la CI de production Vercel (`CI=true`), ESLint lève une erreur fatale `no-undef: 'useMemo' is not defined`, provoquant l'échec immédiat du déploiement.
+
+#### 20.2. Fix Appliqué
+- Ajout de `useMemo` (ainsi que `useRef` et `useCallback`) dans l'importation React de [`src/features/auth/AuthScreen.jsx`](file:///c:/Users/mateo/Desktop/TROCO/src/features/auth/AuthScreen.jsx) :
+  ```javascript
+  import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+  ```
+- Scan global du projet `src/` via ESLint (`no-undef`) attestant de 0 variable ou hook manquant dans tout le codebase.
+
+#### 20.3. Validation
+- `npm run build` : Compilé avec succès (Exit Code 0).
+- `npx vitest run` : 20 fichiers de test, 218/218 tests réussis (100% au vert).
