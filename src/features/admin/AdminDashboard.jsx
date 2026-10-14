@@ -31,11 +31,6 @@ export default function AdminDashboard({
 
   // Vérification de sécurité / Code PIN d'urgence
   const { isAdmin: isGuardAdmin } = useAdminGuard();
-  const isDirectAdmin = Boolean(
-    isGuardAdmin ||
-    currentUser?.isAdmin === true ||
-    currentUser?.role === 'admin'
-  );
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
@@ -88,7 +83,7 @@ export default function AdminDashboard({
   const handleUnlockWithPin = (e) => {
     if (e) e.preventDefault();
     const pin = pinInput.trim();
-    if (pin === '2609' || pin === 'troco2026' || (isDirectAdmin && pin === 'admin')) {
+    if (pin === '2609' || pin === 'troco2026' || (isGuardAdmin && pin === 'admin')) {
       setIsUnlocked(true);
       setPinError('');
       showToast('⚡ Mode Administrateur déverrouillé');
@@ -950,7 +945,7 @@ export default function AdminDashboard({
     });
   }, [transactionsList, txSearch, txFilter, getTxUserDisplayName]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isGuardAdmin) return null;
 
   // ================= VUE 0 : ÉCRAN DE VERROUILLAGE SÉCURITÉ ADMIN =================
   if (!isUnlocked) {

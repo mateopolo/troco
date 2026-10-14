@@ -7,6 +7,7 @@ import CheckoutModal from './modals/CheckoutModal';
 import TransactionSuccessModal from './TransactionSuccessModal';
 import { RateLimitToast } from './ui/RateLimitToast';
 import { SkeletonModalFallback } from './SkeletonLoader';
+import { useAdminGuard } from '../hooks/useAdminGuard';
 
 // Lazy-loaded heavy components & modals (Strict Code-Splitting)
 const AdminDashboard = React.lazy(() => import('../features/admin/AdminDashboard'));
@@ -202,6 +203,8 @@ export default function AppModalsOrchestrator({
   isUserBanned,
   bannedReason,
 }) {
+  const { isAdmin } = useAdminGuard();
+
   return (
     <>
       {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
@@ -513,7 +516,7 @@ export default function AppModalsOrchestrator({
       </Suspense>
 
       {/* PANEL ADMINISTRATEUR "GOD MODE" TEMPS RÉEL (/admin) */}
-      {isAdminPanelOpen && (
+      {isAdminPanelOpen && isAdmin && (
         <Suspense fallback={null}>
           <AdminDashboard
             isOpen={isAdminPanelOpen}

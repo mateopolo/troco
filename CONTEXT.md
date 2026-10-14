@@ -1359,3 +1359,33 @@ Lors de l'optimisation de la détection des navigateurs intégrés (*In-App Brow
 #### 20.3. Validation
 - `npm run build` : Compilé avec succès (Exit Code 0).
 - `npx vitest run` : 20 fichiers de test, 218/218 tests réussis (100% au vert).
+
+---
+
+### 21. Sécurité — Masquage & Verrouillage du Panel Modération / Administration aux Non-Admins (2026-10-14)
+
+#### 21.1. Vulnérabilité Résolue
+Dans `src/features/profile/ProfileFeature.jsx`, deux boutons d'accès à la modération/administration étaient rendus inconditionnellement pour tous les utilisateurs connectés ou visiteurs :
+1. Le badge d'action en en-tête de profil (« Panel Modération »).
+2. Le bouton de la section paramètres avancés (« Panel Administrateur & Modération »).
+
+Bien que Firestore refuse les opérations d'écriture grâce aux règles serveur `request.auth.token.admin == true`, exposer ces boutons aux utilisateurs non-admins révélait l'existence et l'accès à la modération interne et risquait de provoquer des tentatives d'accès non autorisées.
+
+#### 21.2. Mesures & Gardes Appliquées
+- **`src/features/profile/ProfileFeature.jsx` :**
+  - Import et invocation de `useAdminGuard()` (`const { isAdmin } = useAdminGuard();`), qui vérifie strictement le claim cryptographique Firebase `tokenResult.claims?.admin === true` (avec rotation des tokens toutes les 55 minutes).
+  - Enveloppement strict des deux boutons admin dans `{isAdmin && (...)}`.
+- **`src/components/AdminPanel.jsx` :**
+  - Verrouillage défensif au rendu : `if (!isOpen || !isGuardAdmin) return null;`.
+  - Contrôle d'autorisation strict lors de la soumission du code PIN (`isGuardAdmin` obligatoire).
+- **`src/features/admin/AdminDashboard.jsx` :**
+  - Rendu protégé : `if (!isOpen || !isGuardAdmin) return null;`.
+  - Déverrouillage PIN subordonné à `isGuardAdmin`.
+- **`src/components/AppModalsOrchestrator.jsx` :**
+  - Montage conditionnel d'`AdminDashboard` sous `{isAdminPanelOpen && isAdmin && (...)}`.
+- **`firestore.rules` :**
+  - Vérification de la conformité Zero-Trust : toutes les collections et actions d'administration (`adminAuditLogs`, suppression de comptes, etc.) exigent formellement `isAdmin()` défini par `request.auth.token.admin == true`.
+
+#### 21.3. Validation
+- `npm run build` : Compilé avec succès (Exit Code 0, aucun warning bloquant).
+- `npx vitest run` : 20 suites de tests, 218/218 tests réussis (100% au vert).

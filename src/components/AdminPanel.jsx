@@ -46,17 +46,17 @@ export default function AdminPanel({
 
   const { isAdmin: isGuardAdmin } = useAdminGuard();
 
-  // Vérification PIN d'accès (sécurité administrateur stricte)
+  // Vérification PIN d'accès (sécurité administrateur stricte basée sur Custom Claims)
   const handleUnlock = (e) => {
     if (e) e.preventDefault();
-    const isAuthorizedAdmin = isGuardAdmin || currentUser?.isAdmin === true || currentUser?.role === 'admin';
+    const isAuthorizedAdmin = Boolean(isGuardAdmin);
     if (pinInput.trim() === '2609' && isAuthorizedAdmin) {
       setIsUnlocked(true);
       setPinError('');
     } else if (pinInput.trim() !== '2609') {
       setPinError('Code PIN incorrect.');
     } else {
-      setPinError('Privilèges administrateur requis.');
+      setPinError('Privilèges administrateur requis (Custom Claims Firebase).');
     }
   };
 
@@ -118,7 +118,7 @@ export default function AdminPanel({
     return analyzeContent(sandboxText);
   }, [sandboxText]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isGuardAdmin) return null;
 
   return (
     <div

@@ -2,6 +2,7 @@ import logger from '../../utils/logger';
 import React, { useState, useRef } from 'react';
 import { ProgressiveImage } from '../../components/ui/ProgressiveImage';
 import { useSafeTimeout } from '../../hooks/useSafeTimeout';
+import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import {
   ShieldCheck,
@@ -97,6 +98,7 @@ export default function ProfileFeature({
 
   // Hook pour gérer les timeouts en toute sécurité
   const { safeTimeout } = useSafeTimeout();
+  const { isAdmin } = useAdminGuard();
   const { themeMode, setThemeMode, themeSchedule, setThemeSchedule, isDark } = useTheme();
   
   const [isDesignStudioOpen, setIsDesignStudioOpen] = useState(false);
@@ -384,27 +386,29 @@ export default function ProfileFeature({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => setIsAdminPanelOpen(true)}
-          className="premium-button"
-          style={{
-            border: '1px solid var(--border-color)',
-            borderRadius: '999px',
-            padding: '8px 14px',
-            backgroundColor: 'var(--bg-subtle)',
-            color: 'var(--text-main)',
-            fontWeight: '800',
-            fontSize: '12px',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            boxShadow: 'var(--shadow-card)'
-          }}
-        >
-          <ShieldAlert size={14} color="var(--accent-primary)" /> {t('moderationPanel', 'Panel Modération')}
-        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setIsAdminPanelOpen(true)}
+            className="premium-button"
+            style={{
+              border: '1px solid var(--border-color)',
+              borderRadius: '999px',
+              padding: '8px 14px',
+              backgroundColor: 'var(--bg-subtle)',
+              color: 'var(--text-main)',
+              fontWeight: '800',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: 'var(--shadow-card)'
+            }}
+          >
+            <ShieldAlert size={14} color="var(--accent-primary)" /> {t('moderationPanel', 'Panel Modération')}
+          </button>
+        )}
 
         <button
           type="button"
@@ -1364,29 +1368,31 @@ export default function ProfileFeature({
             <ChevronRight size={16} color="var(--accent-primary)" />
           </button>
 
-          <button
-            onClick={() => setIsAdminPanelOpen(true)}
-            className="premium-button"
-            style={{
-              border: '1px solid var(--border-color)',
-              borderRadius: '16px',
-              padding: '14px 16px',
-              backgroundColor: 'var(--bg-card)',
-              color: 'var(--text-main)',
-              fontWeight: '700',
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              boxShadow: 'var(--shadow-card)',
-            }}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ShieldAlert size={16} color="var(--accent-success)" /> {t('adminModerationPanel', 'Panel Administrateur & Modération')}
-            </span>
-            <ChevronRight size={16} color="var(--accent-primary)" />
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setIsAdminPanelOpen(true)}
+              className="premium-button"
+              style={{
+                border: '1px solid var(--border-color)',
+                borderRadius: '16px',
+                padding: '14px 16px',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                fontWeight: '700',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                boxShadow: 'var(--shadow-card)',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ShieldAlert size={16} color="var(--accent-success)" /> {t('adminModerationPanel', 'Panel Administrateur & Modération')}
+              </span>
+              <ChevronRight size={16} color="var(--accent-primary)" />
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -474,9 +474,9 @@
 **Preuve** : `functions/src/gdpr/deleteUserCompletely.ts`, `functions/src/gdpr/anonymizeTransactions.ts`
 **Statut** : ✅ FAIT — Cascade de nettoyage conforme à l'article 17 du RGPD (droit à l'effacement).
 
-### [x] [P0-SEC-01] — Protection administrateur par Custom Claims vérifiés
-**Preuve** : `src/hooks/useAdminGuard.js:25`, `firestore.rules:46`
-**Statut** : ✅ FAIT — Les rôles s'appuient sur des jetons cryptographiques signés par Firebase Admin SDK.
+### [x] [P0-SEC-01] — Protection administrateur par Custom Claims vérifiés & Masquage UI des boutons de modération
+**Preuve** : `src/hooks/useAdminGuard.js:25`, `firestore.rules:46`, `src/features/profile/ProfileFeature.jsx:387-407,1367-1389`, `src/components/AdminPanel.jsx:38,44`, `src/features/admin/AdminDashboard.jsx:42,50`, `src/components/AppModalsOrchestrator.jsx:625-635`
+**Statut** : ✅ FAIT — Les rôles s'appuient sur des jetons cryptographiques signés par Firebase Admin SDK (`request.auth.token.admin == true`). Les boutons d'accès « Panel Modération » (badge d'en-tête et paramètres de profil) sont strictement masqués aux non-admins sous `{isAdmin && (...)}` alimenté par `useAdminGuard()`. Les modales et composants `AdminPanel` et `AdminDashboard` sont protégés en rendu et en déverrouillage contre tout accès non autorisé.
 
 ---
 
