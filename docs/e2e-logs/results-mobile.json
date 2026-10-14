@@ -1,0 +1,51 @@
+{
+  "results": [
+    {
+      "parcours": "M5",
+      "label": "Navigation mobile (bottom nav) fonctionne",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M5",
+      "label": "Pas de scroll horizontal (débordement de page)",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M5",
+      "label": "Les modales ne débordent pas du viewport",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M5",
+      "label": "Chat mobile plein écran",
+      "status": "BLOCKED",
+      "note": "Aucune conversation (session simulée)"
+    },
+    {
+      "parcours": "M5",
+      "label": "Clavier virtuel (viewport réduit) — champ de saisie reste visible",
+      "status": "PASS",
+      "attempts": 1
+    },
+    {
+      "parcours": "M5",
+      "label": "Effets CRT absents/atténués sur mobile",
+      "status": "PASS",
+      "attempts": 1
+    }
+  ],
+  "mobile": {
+    "nav": "OK",
+    "overflowPx": 0,
+    "modal": {
+      "l": 0,
+      "r": 390,
+      "w": 390
+    },
+    "keyboard": "OK",
+    "crtElements": 0
+  }
+}

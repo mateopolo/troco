@@ -1330,3 +1330,14 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
 #### 18.3. Validation & Non-Régression
 - `npx vitest run` : 20 suites de tests, 218/218 tests réussis (100% au vert).
 - `npm run build` : Exit Code 0, bundle de production validé (allégement du bundle principal gzippé).
+
+---
+
+### 19. Campagne E2E Playwright complète (2026-10-14)
+
+- **Suite :** `e2e/full-audit.spec.js` + `e2e/helpers.js`, activée uniquement avec `E2E_FULL_AUDIT=1` (`npx playwright test e2e/full-audit.spec.js --project=chromium --workers=1`) ; la CI existante n'est pas impactée.
+- **Résultat :** 113 vérifications — 51 PASS, 16 FAIL, 40 BLOCKED, 6 MISSING. Score 5/10. Rapport : `docs/E2E-REPORT-2026-10-14.md` ; données : `docs/e2e-logs/results.json`.
+- **Limite majeure :** la session E2E simulée (`window.__E2E__`) n'a pas d'auth Firebase réelle → Firestore refuse les collections privées ; chat, WebRTC, admin, paiements, publication non vérifiables. À résoudre via Firebase Emulator Suite + custom token.
+- **Anomalies :** bouton « Panel Modération » visible pour un non-admin (`ProfileFeature.jsx`), clé i18n brute `theme.dark_mode`, clé dupliquée `editProfile`, avatar `src=""`, CORS/429 sur `ipapi.co`, CLS 0,16–0,28 et INP 216–344 ms.
+- **Perf (dev) :** chargement 2,4 s, LCP initial 2,68 s, fuite mémoire non détectée (+2,3 Mo / 20 navigations).
+- **Splash (parcours 15) :** sans objet, retrait volontaire (§18).

@@ -840,4 +840,11 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
   - `initiate_payment` : 10 requêtes / 15 min
   - `api_call` : 60 requêtes / min
   - Purge horaire automatisée via `cleanupRateLimits`.
-- **Frontend :** Hook `useRateLimit()` avec notification discrète `<RateLimitToast />`.
+- **Frontend :** Hook `useRateLimit()` avec notification discrète `<RateLimitToast />`.
+
+---
+
+## ✅ Suivi E2E (2026-10-14)
+
+- [x] `[E2E-01]` — Suite de tests E2E Playwright exécutée (`e2e/full-audit.spec.js`, 113 vérifications : 51 PASS / 16 FAIL / 40 BLOCKED / 6 MISSING)
+- [x] `[E2E-02]` — Rapport E2E complet généré (`docs/E2E-REPORT-2026-10-14.md`)
