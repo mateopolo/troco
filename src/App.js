@@ -38,7 +38,7 @@ import {
   getListingDisplayContent,
   getListingTitleTranslation,
 } from './utils/translationHelpers';
-import { LanguageContext } from './contexts/LanguageContext';
+import { LanguageContext, normalizeLanguageCode } from './contexts/LanguageContext';
 import { ConfirmProvider, useConfirm } from './hooks/useConfirm';
 import ConfirmDialog from './components/ui/ConfirmDialog';
 import { AnimatePresence } from 'framer-motion';
@@ -113,7 +113,8 @@ export default function App() {
   }, []);
   const [currentLang, setCurrentLangState] = useState(() => {
     try {
-      return localStorage.getItem('troco_language') || localStorage.getItem('troco_lang') || 'FR';
+      const stored = localStorage.getItem('troco_language') || localStorage.getItem('troco_lang');
+      return stored ? normalizeLanguageCode(stored) : 'FR';
     } catch (_) {
       return 'FR';
     }
@@ -121,7 +122,7 @@ export default function App() {
 
   const setLang = useCallback((langCode) => {
     if (!langCode) return;
-    const normalized = String(langCode).toUpperCase();
+    const normalized = normalizeLanguageCode(langCode);
     setCurrentLangState(normalized);
     try {
       localStorage.setItem('troco_language', normalized);
@@ -141,8 +142,11 @@ export default function App() {
   useEffect(() => {
     const handleLangChange = (e) => {
       const code = e.detail?.lang;
-      if (code && code !== currentLang) {
-        setCurrentLangState(code);
+      if (code) {
+        const normalized = normalizeLanguageCode(code);
+        if (normalized !== currentLang) {
+          setCurrentLangState(normalized);
+        }
       }
     };
     window.addEventListener('languagechange', handleLangChange);

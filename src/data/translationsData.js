@@ -1102,6 +1102,36 @@ if (secondaryTranslations) {
   Object.assign(translations, secondaryTranslations);
 }
 
+// Aliases JP -> JA, CN -> ZH et variantes régionales (DE-de, etc.)
+translations.JP = translations.JA;
+translations.CN = translations.ZH;
+translations['de'] = translations.DE;
+translations['de-de'] = translations.DE;
+translations['DE-de'] = translations.DE;
+translations['DE-DE'] = translations.DE;
+
+// Fallback garanti vers le français (FR) si une clé est indéfinie dans DE (ou autre langue secondaire)
+const createLanguageFallbackProxy = (targetDict, fallbackDict) => {
+  if (!targetDict || typeof targetDict !== 'object') return targetDict;
+  return new Proxy(targetDict, {
+    get(target, prop) {
+      if (typeof prop === 'string' && prop in target && target[prop] !== undefined) {
+        return target[prop];
+      }
+      if (typeof prop === 'string' && fallbackDict && prop in fallbackDict) {
+        return fallbackDict[prop];
+      }
+      return target[prop];
+    }
+  });
+};
+
+Object.keys(translations).forEach((lang) => {
+  if (lang !== 'FR' && translations[lang] && typeof translations[lang] === 'object') {
+    translations[lang] = createLanguageFallbackProxy(translations[lang], translations.FR);
+  }
+});
+
 // Tableaux mutables exportés pour compatibilité synchrone
 export const knownTitles = { ...(secKnownTitles || {}) };
 export const knownMessageTranslations = { ...(secKnownMessageTranslations || {}) };

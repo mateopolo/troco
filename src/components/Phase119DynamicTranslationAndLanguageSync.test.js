@@ -7,7 +7,7 @@ import {
   parseAndTranslateListing,
   LANGUAGE_TAG_REGEX,
 } from '../utils/dynamicTranslation';
-import { LanguageContext, LanguageProvider, useLanguage } from '../contexts/LanguageContext';
+import { LanguageContext, LanguageProvider, useLanguage, SUPPORTED_LANGUAGES } from '../contexts/LanguageContext';
 import { useUIStore, i18n } from '../stores/useUIStore';
 import { translations } from '../data/translationsData';
 import ListingCard from './ListingCard';
@@ -179,6 +179,58 @@ describe('Phase 119: Moteur de traduction global (UI & Annonces)', () => {
 
       expect(useUIStore.getState().currentLang).toBe('DE');
       expect(i18n.language).toBe('DE');
+      expect(localStorage.getItem('troco_language')).toBe('DE');
+    });
+
+    test('DE et DE-de sont correctement supportés, les clés allemandes sont chargées et le fallback est FR', () => {
+      expect(SUPPORTED_LANGUAGES).toContain('DE');
+      expect(SUPPORTED_LANGUAGES).toContain('DE-de');
+
+      // Vérification des clés allemandes spécifiques demandées
+      expect(translations.DE.explorer).toBe('Erkunden');
+      expect(translations.DE.messages).toBe('Nachrichten');
+      expect(translations.DE.profile).toBe('Profil');
+
+      // Vérification du fallback : clé absente de DE doit retourner la valeur FR et non EN
+      const testKey = 'unique_test_key_for_fallback_' + Date.now();
+      translations.FR[testKey] = 'Valeur Française';
+      expect(translations.DE[testKey]).toBe('Valeur Française');
+
+      // Test de setLang('DE') et setLang('DE-de')
+      function TestDeConsumer() {
+        const { currentLang, setLang, t } = useLanguage();
+        return (
+          <div>
+            <span data-testid="app-lang-indicator">{currentLang}</span>
+            <span data-testid="explorer-text">{t('explorer')}</span>
+            <span data-testid="messages-text">{t('messages')}</span>
+            <span data-testid="profile-text">{t('profile')}</span>
+            <button data-testid="set-de" onClick={() => setLang('DE')}>DE</button>
+            <button data-testid="set-de-locale" onClick={() => setLang('DE-de')}>DE-de</button>
+          </div>
+        );
+      }
+
+      render(
+        <LanguageProvider initialLang="FR">
+          <TestDeConsumer />
+        </LanguageProvider>
+      );
+
+      act(() => {
+        fireEvent.click(screen.getByTestId('set-de'));
+      });
+
+      expect(screen.getByTestId('app-lang-indicator').textContent).toBe('DE');
+      expect(screen.getByTestId('explorer-text').textContent).toBe('Erkunden');
+      expect(screen.getByTestId('messages-text').textContent).toBe('Nachrichten');
+      expect(screen.getByTestId('profile-text').textContent).toBe('Profil');
+      expect(localStorage.getItem('troco_language')).toBe('DE');
+
+      act(() => {
+        fireEvent.click(screen.getByTestId('set-de-locale'));
+      });
+      expect(screen.getByTestId('app-lang-indicator').textContent).toBe('DE');
       expect(localStorage.getItem('troco_language')).toBe('DE');
     });
   });

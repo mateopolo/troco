@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { ConfirmProvider } from './hooks/useConfirm';
 import { ErrorBoundary } from './ErrorBoundary';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
@@ -21,9 +22,11 @@ root.render(
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <ConfirmProvider>
-            <App />
-          </ConfirmProvider>
+          <LanguageProvider>
+            <ConfirmProvider>
+              <App />
+            </ConfirmProvider>
+          </LanguageProvider>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

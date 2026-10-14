@@ -3,7 +3,24 @@ import { translations } from '../data/translationsData';
 
 export const LanguageContext = createContext(null);
 
-export const SUPPORTED_LANGUAGES = ['FR', 'EN', 'ES', 'IT', 'DE', 'JA', 'ZH'];
+export const SUPPORTED_LANGUAGES = ['FR', 'EN', 'ES', 'IT', 'DE', 'JA', 'ZH', 'DE-DE', 'DE-de', 'PT', 'NL'];
+
+export function normalizeLanguageCode(code) {
+  if (!code || typeof code !== 'string') return 'FR';
+  const clean = code.trim();
+  const upper = clean.toUpperCase();
+  if (['DE-DE', 'DE-DE', 'DE-de', 'de-de', 'de-DE', 'DE'].includes(clean) || upper.startsWith('DE')) return 'DE';
+  if (['FR-FR', 'fr-fr', 'FR'].includes(clean) || upper.startsWith('FR')) return 'FR';
+  if (['EN-US', 'EN-GB', 'en-us', 'en-gb', 'EN'].includes(clean) || upper.startsWith('EN')) return 'EN';
+  if (['ES-ES', 'es-es', 'ES'].includes(clean) || upper.startsWith('ES')) return 'ES';
+  if (['IT-IT', 'it-it', 'IT'].includes(clean) || upper.startsWith('IT')) return 'IT';
+  if (['JA-JP', 'ja-jp', 'JA', 'JP'].includes(clean) || upper.startsWith('JA')) return 'JA';
+  if (['ZH-CN', 'zh-cn', 'ZH', 'CN'].includes(clean) || upper.startsWith('ZH')) return 'ZH';
+  const prefix = upper.split(/[-_]/)[0];
+  if (SUPPORTED_LANGUAGES.includes(prefix)) return prefix;
+  if (SUPPORTED_LANGUAGES.includes(upper)) return upper;
+  return 'FR';
+}
 
 export function useLanguage() {
   const context = useContext(LanguageContext);
@@ -26,10 +43,10 @@ export function useLanguage() {
 
 export function LanguageProvider({ children, initialLang = null }) {
   const [currentLang, setCurrentLangState] = useState(() => {
-    if (initialLang) return initialLang.toUpperCase();
+    if (initialLang) return normalizeLanguageCode(initialLang);
     try {
       const stored = localStorage.getItem('troco_language') || localStorage.getItem('troco_lang');
-      return stored && SUPPORTED_LANGUAGES.includes(stored.toUpperCase()) ? stored.toUpperCase() : 'FR';
+      return stored ? normalizeLanguageCode(stored) : 'FR';
     } catch (_) {
       return 'FR';
     }
@@ -37,7 +54,7 @@ export function LanguageProvider({ children, initialLang = null }) {
 
   const setLang = useCallback((langCode) => {
     if (!langCode || typeof langCode !== 'string') return;
-    const normalized = langCode.toUpperCase();
+    const normalized = normalizeLanguageCode(langCode);
     setCurrentLangState(normalized);
     try {
       localStorage.setItem('troco_language', normalized);
@@ -80,6 +97,20 @@ export function LanguageProvider({ children, initialLang = null }) {
       document.documentElement.lang = currentLang.toLowerCase();
     }
   }, [currentLang]);
+
+  useEffect(() => {
+    const handleLanguageChange = (e) => {
+      const detailLang = e?.detail?.lang;
+      if (detailLang) {
+        const normalized = normalizeLanguageCode(detailLang);
+        setCurrentLangState((prev) => (prev !== normalized ? normalized : prev));
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('languagechange', handleLanguageChange);
+      return () => window.removeEventListener('languagechange', handleLanguageChange);
+    }
+  }, []);
 
   const value = useMemo(() => ({
     currentLang,

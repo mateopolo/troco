@@ -881,6 +881,14 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
   - **Ordre de résolution strict :** `profile.displayName` (Google Auth) → `profile.name` (Firestore) → `profile.username` (pseudo) → `email.split('@')[0]` humanisé → fallback final "Membre Troco".
   - **Attribut Playwright :** `data-testid="profile-username"` ajouté sur l'en-tête de nom du profil.
   - **Tests :** Suite unitaire dédiée créée (`tests/unit/displayName.test.js`), 140/140 tests unitaires verts.
+- [x] `[E2E-FIX-02]` — Résolution de [E2E-FAIL-12] : Prise en compte dynamique de la langue Allemande (DE) (Issue #12)
+  - **Fichiers modifiés :** `src/contexts/LanguageContext.jsx`, `src/data/translationsSecondary.js`, `src/locales/translations.js`, `src/data/translationsData.js`, `src/App.js`, `src/index.js`, `src/components/layout/AppHeader.jsx`, `src/components/Navbar.jsx`.
+  - **Normalisation & Langues supportées :** Définition de `normalizeLanguageCode` gérant `DE`, `de`, `DE-de`, `de-de`, `de-DE` en standard `DE`. `SUPPORTED_LANGUAGES` étendu pour inclure `DE` et `DE-de`.
+  - **Propagation synchrone :** `setLang('DE')` persiste dans `localStorage` (`troco_language` et `troco_lang`), synchronise `document.documentElement.lang = 'de'`, et émet `CustomEvent('languagechange', { detail: { lang: 'DE' } })`. Écouteurs `languagechange` ajoutés dans `LanguageContext.jsx` et `App.js`.
+  - **Clés de navigation allemandes :** `explorer` corrigé de `"Entdecken"` vers `"Erkunden"` (aligné sur l'assertion Playwright `/Erkunden|Suche/i`), `explore: "Erkunden"`, `search: "Suche"`, `messages: "Nachrichten"`, `profile: "Profil"`.
+  - **Proxy Fallback FR :** Proxy dynamique transparent assurant que toute clé absente de `translations.DE` bascule automatiquement sur `translations.FR` (et non EN).
+  - **Sélecteur & Testabilité E2E :** Ajout de `data-testid="app-lang-indicator"` dans le header (`AppHeader.jsx`) et la barre de navigation (`Navbar.jsx`).
+  - **Tests :** Suite unitaire dédiée créée (`tests/unit/germanLanguageI18n.test.js`), 15/15 fichiers de tests unitaires passés (146/146 tests verts), `npm run build` Exit Code 0.
 
 ---
 

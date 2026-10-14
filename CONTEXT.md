@@ -1674,5 +1674,37 @@ Composants sécurisés :
    - Exécution de Vitest : 14/14 suites unitaires passées (140/140 tests verts).
    - Compilation de production : `npm run build` validé avec succès (Exit Code 0).
 
+---
+
+## 29. PROMPT 10 — FIX #2 : Prise en compte dynamique de la langue Allemande (DE) (E2E-FAIL-12)
+
+### 29.1. Problématique & Analyse
+- **Bug ciblé :** `[E2E-FAIL-12]` — Prise en compte dynamique de la langue Allemande (DE) dans l'interface ([Issue #12](https://github.com/mateopolo/troco/issues/12)).
+- **Symptôme :** Le test E2E (`e2e/full-audit.spec.js:653`) sélectionnait la langue allemande (DE / 🇩🇪) et attendait la présence de texte correspondant au pattern `/Erkunden|Suche/i`. L'interface ne basculait pas ou affichait des traductions inadéquates.
+- **Causes racines identifiées :**
+  1. **Discordance lexicale sur les onglets de navigation :** Dans `src/data/translationsSecondary.js:3215` et `src/locales/translations.js:3175`, la clé `explorer` était traduite par `"Entdecken"` au lieu de `"Erkunden"`. La barre de navigation affichait donc « Entdecken », ce qui échouait à satisfaire l'assertion regex `/Erkunden|Suche/i`.
+  2. **Absence de normalisation de code langue locale :** Les formats tels que `de`, `de-de`, `DE-de`, `de-DE` n'étaient pas normalisés vers le standard `DE`, risquant d'aboutir à un dictionnaire `undefined` et un repli inopportun vers le français.
+  3. **Absence de Proxy de Fallback FR systématique :** Si une clé i18n manquait dans le dictionnaire allemand, l'accès direct `translations['DE']['cle']` renvoyait `undefined` sans basculer de manière transparente vers `translations.FR`.
+  4. **Absence de l'indicateur de test :** Le sélecteur de langue dans `AppHeader.jsx` et `Navbar.jsx` ne disposait pas de `data-testid="app-lang-indicator"` affichant explicitement le code de langue actif `currentLang`.
+
+### 29.2. Correctifs Appliqués
+1. **Normalisation et support complet dans `src/contexts/LanguageContext.jsx` & `src/App.js` :**
+   - `SUPPORTED_LANGUAGES` étendu pour inclure `'DE'`, `'DE-DE'`, `'DE-de'`.
+   - Création de `normalizeLanguageCode(code)` convertissant toute variante locale (`de`, `de-de`, `de-DE`, `DE-de`) en `'DE'`.
+   - `setLang('DE')` sauvegarde dans `localStorage.setItem('troco_language', 'DE')`, `localStorage.setItem('troco_lang', 'DE')`, applique `document.documentElement.lang = 'de'`, et émet `CustomEvent('languagechange', { detail: { lang: 'DE' } })`.
+   - Écouteurs d'événements `languagechange` configurés dans `LanguageContext.jsx` et `App.js` pour synchronisation bidirectionnelle.
+2. **Alignement du dictionnaire allemand dans `src/data/translationsSecondary.js` et `src/locales/translations.js` :**
+   - Mise à jour de la clé `explorer: "Erkunden"`, ajout de `explore: "Erkunden"` et `search: "Suche"`.
+   - Conservation des traductions complètes `messages: "Nachrichten"` et `profile: "Profil"`.
+   - Implémentation d'un Proxy de fallback universel garantissant que pour toute clé absente de `translations['DE']`, la valeur est résolue depuis `translations['FR']` (et non EN).
+   - Création des alias directs `translations['de']`, `translations['de-de']`, `translations['DE-de']`, `translations['DE-DE']`.
+3. **Encapsulation globale et sélecteur de test dans l'interface :**
+   - Ajout de `<LanguageProvider>` dans l'arbre racine de `src/index.js`.
+   - Ajout de `<span data-testid="app-lang-indicator">{currentLang}</span>` dans les boutons de changement de langue de `AppHeader.jsx` et `Navbar.jsx`.
+4. **Validation des tests :**
+   - Création de la suite unitaire `tests/unit/germanLanguageI18n.test.js` (6 tests couvrant la normalisation, le chargement des clés de navigation, le fallback FR et la propagation d'événements).
+   - Exécution de Vitest : 15/15 suites unitaires passées (146/146 tests verts).
+   - Exécution de `npm run build` : Exit Code 0 (bundle de production compilé avec succès).
+
 
 

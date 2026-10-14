@@ -139,6 +139,9 @@ export default function Navbar({
             <span style={{ fontSize: '13px' }}>
               {currentLang === 'FR' ? '🇫🇷' : currentLang === 'EN' ? '🇬🇧' : currentLang === 'ES' ? '🇪🇸' : currentLang === 'IT' ? '🇮🇹' : currentLang === 'DE' ? '🇩🇪' : currentLang === 'JA' ? '🇯🇵' : currentLang === 'PT' ? '🇵🇹' : '🇨🇳'}
             </span>
+            <span data-testid="app-lang-indicator" style={{ fontSize: '11px', fontWeight: '800' }}>
+              {currentLang}
+            </span>
           </button>
         </div>
       </div>

@@ -372,6 +372,9 @@ export const AppHeader = React.memo(({
             <span className="flex-shrink-0" style={{ fontSize: '13px' }}>
               {getFlagEmoji(currentLang)}
             </span>
+            <span data-testid="app-lang-indicator" className="flex-shrink-0" style={{ fontSize: '11px', fontWeight: '800' }}>
+              {currentLang}
+            </span>
           </button>
         </div>
       </div>

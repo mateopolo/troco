@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1791385760.6626165,
-    "seen": 1791391018.7044249,
-    "ast_hash": "f91d2f1ec0f9fea5840fe93a653f9051",
+    "mtime": 1792016854.978032,
+    "seen": 1792017084.4028509,
+    "ast_hash": "fc2a0464d56d42f3eb4ce93c860c9385",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -1608,9 +1608,9 @@
     "semantic_hash": "13264a4b85deea61c5a1efa095076a52"
   },
   "src/features/profile/ProfileFeature.jsx": {
-    "mtime": 1792010692.2168853,
-    "seen": 1792010931.2304025,
-    "ast_hash": "f89c8421f94c4840d0d46c76c4c38c26",
+    "mtime": 1792016815.9092565,
+    "seen": 1792017084.5062084,
+    "ast_hash": "44310097b8e5813ce9b4a0b6d65367c6",
     "semantic_hash": ""
   },
   "src/features/profile/index.js": {
@@ -1656,9 +1656,9 @@
     "semantic_hash": "4926324f68f3279d958d045ad78b9b25"
   },
   "src/hooks/useAppAuth.js": {
-    "mtime": 1790709251.99135,
-    "seen": 1790709729.8873796,
-    "ast_hash": "14e2794db96105cf3db7e18e65814b1b",
+    "mtime": 1792016888.3796005,
+    "seen": 1792017084.5083768,
+    "ast_hash": "9b7a274878de0679748d8e2efc555f1a",
     "semantic_hash": ""
   },
   "src/hooks/useAppModals.js": {
@@ -1980,10 +1980,10 @@
     "semantic_hash": ""
   },
   "src/utils/displayName.js": {
-    "mtime": 1789740245.3294632,
-    "seen": 1790594464.2384334,
-    "ast_hash": "fa60f4b950750acc372c33fa809a8407",
-    "semantic_hash": "fa60f4b950750acc372c33fa809a8407"
+    "mtime": 1792016985.691911,
+    "seen": 1792017084.526453,
+    "ast_hash": "cbaaba002d4b9e91829e06c63a6fb8e8",
+    "semantic_hash": ""
   },
   "src/utils/downloadUtils.js": {
     "mtime": 1789770924.9902935,
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1792010838.8417168,
-    "seen": 1792010931.260504,
-    "ast_hash": "16295c28415d3d6e31e79e2cd314d339",
+    "mtime": 1792017000.6946127,
+    "seen": 1792017084.5416052,
+    "ast_hash": "19cf9cd1e06375c57037d6473355f359",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1792010895.4719696,
-    "seen": 1792010931.2609184,
-    "ast_hash": "a13661290c6563f53c52a7a2a31c3af2",
+    "mtime": 1792016964.888222,
+    "seen": 1792017084.542124,
+    "ast_hash": "8cf573a8ec595f6b735af23dacce6f38",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2826,9 +2826,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useAuthSession.js": {
-    "mtime": 1790779467.7568123,
-    "seen": 1790780460.3488164,
-    "ast_hash": "377bcc7f04b8744080f1899b7d083bbe",
+    "mtime": 1792016872.6434388,
+    "seen": 1792017084.508886,
+    "ast_hash": "4c949a5f70226a1ee88419d0d5565eaa",
     "semantic_hash": ""
   },
   "src/hooks/useFeedListings.js": {
@@ -3759,6 +3759,18 @@
     "mtime": 1792015060.8884063,
     "seen": 1792015389.7532165,
     "ast_hash": "74927248e46d1fa1fc17701c2cf86ab1",
+    "semantic_hash": ""
+  },
+  "tests/unit/displayName.test.js": {
+    "mtime": 1792016900.8897007,
+    "seen": 1792017084.539269,
+    "ast_hash": "9d6a111a60a0e70557e3e4d443575fee",
+    "semantic_hash": ""
+  },
+  "docs/E2E-REPORT-2026-10-14-v2.md": {
+    "mtime": 1792015900.6221213,
+    "seen": 1792017084.5428813,
+    "ast_hash": "f7a4ae3933a324683737237a7b2b476b",
     "semantic_hash": ""
   }
 }

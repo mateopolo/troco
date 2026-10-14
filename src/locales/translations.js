@@ -3172,7 +3172,9 @@ export const translations = {
     securePaymentHeader: "SICHERE ZAHLUNG",
     all: "Alle",
     slogan: "Freiheit des Tausches & Gegenseitige Hilfe",
-    explorer: "Entdecken",
+    explorer: "Erkunden",
+    explore: "Erkunden",
+    search: "Suche",
     messages: "Nachrichten",
     post: "Inserieren",
     profile: "Profil",
@@ -5476,6 +5478,32 @@ export const localizeReview = (text, lang) => {
 };
 
 
-// Aliases JP -> JA et CN -> ZH
+// Aliases JP -> JA, CN -> ZH et variantes régionales (DE-de, etc.)
 translations.JP = translations.JA;
 translations.CN = translations.ZH;
+translations['de'] = translations.DE;
+translations['de-de'] = translations.DE;
+translations['DE-de'] = translations.DE;
+translations['DE-DE'] = translations.DE;
+
+// Fallback garanti vers le français (FR) si une clé est indéfinie dans DE (ou autre langue secondaire)
+const createLanguageFallbackProxy = (targetDict, fallbackDict) => {
+  if (!targetDict || typeof targetDict !== 'object') return targetDict;
+  return new Proxy(targetDict, {
+    get(target, prop) {
+      if (typeof prop === 'string' && prop in target && target[prop] !== undefined) {
+        return target[prop];
+      }
+      if (typeof prop === 'string' && fallbackDict && prop in fallbackDict) {
+        return fallbackDict[prop];
+      }
+      return target[prop];
+    }
+  });
+};
+
+Object.keys(translations).forEach((lang) => {
+  if (lang !== 'FR' && translations[lang] && typeof translations[lang] === 'object') {
+    translations[lang] = createLanguageFallbackProxy(translations[lang], translations.FR);
+  }
+});
