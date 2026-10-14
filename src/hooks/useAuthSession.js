@@ -212,11 +212,15 @@ export const useAuthSession = ({ onLogoutCleanup, activeTab } = {}) => {
 
             const isUnsplashPlaceholder = typeof data.avatar === 'string' && data.avatar.includes('unsplash.com');
             const resolvedAvatar = (firebaseUser.photoURL && (!data.avatar || isUnsplashPlaceholder)) ? firebaseUser.photoURL : (data.avatar || firebaseUser.photoURL || '');
+            const resolvedDisplayName = firebaseUser.displayName || data.displayName || data.name || 'Membre Troco';
             const resolvedName = (firebaseUser.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) ? firebaseUser.displayName : (data.name || firebaseUser.displayName || 'Membre Troco');
 
             const updatesToSync = {};
             if (firebaseUser.photoURL && (!data.avatar || isUnsplashPlaceholder)) {
               updatesToSync.avatar = firebaseUser.photoURL;
+            }
+            if (firebaseUser.displayName && (!data.displayName || data.displayName === 'Membre Troco' || data.displayName === 'Utilisateur Troco')) {
+              updatesToSync.displayName = firebaseUser.displayName;
             }
             if (firebaseUser.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) {
               updatesToSync.name = firebaseUser.displayName;
@@ -258,6 +262,7 @@ export const useAuthSession = ({ onLogoutCleanup, activeTab } = {}) => {
                 euroBalance: newEuros !== null ? newEuros : (data.euroBalance ?? prev?.euroBalance ?? 0),
                 trocoTokens: newTokens !== null ? newTokens : (data.trocoTokens ?? prev?.trocoTokens ?? 10),
                 cguAcceptedAt: data.cguAcceptedAt || prev?.cguAcceptedAt || null,
+                displayName: resolvedDisplayName,
                 name: resolvedName,
                 avatar: resolvedAvatar,
                 onboardingCompleted: true,

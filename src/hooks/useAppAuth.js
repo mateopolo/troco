@@ -125,12 +125,16 @@ export const useAppAuth = () => {
             // Détection et synchronisation de la photo de profil native Gmail / Auth
             const isUnsplashPlaceholder = typeof data.avatar === 'string' && data.avatar.includes('unsplash.com');
             const resolvedAvatar = (user.photoURL && (!data.avatar || isUnsplashPlaceholder)) ? user.photoURL : (data.avatar || user.photoURL || '');
+            const resolvedDisplayName = user.displayName || data.displayName || data.name || 'Membre Troco';
             const resolvedName = (user.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) ? user.displayName : (data.name || user.displayName || 'Membre Troco');
 
             // Synchronisation vers Firestore si la photo ou les CGU/onboarding manquent
             const updatesToSync = {};
             if (user.photoURL && (!data.avatar || isUnsplashPlaceholder)) {
               updatesToSync.avatar = user.photoURL;
+            }
+            if (user.displayName && (!data.displayName || data.displayName === 'Membre Troco' || data.displayName === 'Utilisateur Troco')) {
+              updatesToSync.displayName = user.displayName;
             }
             if (user.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) {
               updatesToSync.name = user.displayName;
@@ -162,6 +166,7 @@ export const useAppAuth = () => {
               welcomeBonusClaimed: isWelcomeClaimed || Boolean(prev?.welcomeBonusClaimed),
               uid: user.uid,
               email: user.email || data.email || prev.email,
+              displayName: resolvedDisplayName,
               name: resolvedName,
               avatar: resolvedAvatar,
               ...(isGodAdmin ? { isAdmin: true, role: 'admin' } : {}),

@@ -876,6 +876,11 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
 - [x] `[E2E-02]` — Rapport E2E complet généré (`docs/E2E-REPORT-2026-10-14.md`)
 - [x] `[E2E-03]` — Rapport E2E v2 post-Firebase Emulators (`docs/E2E-REPORT-2026-10-14-v2.md` : 89 PASS / 13 FAIL / 5 BLOCKED / 7 MISSING)
 - [x] `[E2E-04]` — Issues GitHub créées pour les FAIL/MISSING (16 issues #1 à #16 sur mateopolo/troco)
+- [x] `[E2E-FIX-01]` — Résolution de [E2E-FAIL-06] : Synchronisation du nom d'utilisateur dans Profil (Issue #6)
+  - **Fichiers modifiés :** `src/features/profile/ProfileFeature.jsx`, `src/utils/displayName.js`, `src/App.js`, `src/hooks/useAuthSession.js`, `src/hooks/useAppAuth.js`.
+  - **Ordre de résolution strict :** `profile.displayName` (Google Auth) → `profile.name` (Firestore) → `profile.username` (pseudo) → `email.split('@')[0]` humanisé → fallback final "Membre Troco".
+  - **Attribut Playwright :** `data-testid="profile-username"` ajouté sur l'en-tête de nom du profil.
+  - **Tests :** Suite unitaire dédiée créée (`tests/unit/displayName.test.js`), 140/140 tests unitaires verts.
 
 ---
 

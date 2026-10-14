@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * displayName.js — Utilitaire central de noms d'affichage.
  *
@@ -28,6 +26,12 @@ export const isTechnicalId = (value) => {
   return false;
 };
 
+export const isGenericPlaceholder = (value) => {
+  if (typeof value !== 'string') return true;
+  const trimmed = value.trim();
+  return /^(null|undefined|utilisateur\s*troco|membre\s*troco|anonymous|anonyme|user)$/i.test(trimmed);
+};
+
 /** Retourne le premier nom "humain" valable, sinon une chaîne vide. */
 export const getHumanName = (...candidates) => {
   for (const candidate of candidates) {
@@ -35,10 +39,7 @@ export const getHumanName = (...candidates) => {
     const trimmed = candidate.trim();
     if (!trimmed) continue;
     if (isTechnicalId(trimmed)) continue;
-    if (/^(null|undefined|utilisateur\s*troco|anonymous|anonyme)$/i.test(trimmed) && trimmed.length < 20) {
-      // "Utilisateur Troco" reste acceptable comme nom par défaut explicite
-      if (!/^utilisateur troco$/i.test(trimmed)) continue;
-    }
+    if (isGenericPlaceholder(trimmed)) continue;
     return trimmed;
   }
   return '';
@@ -46,23 +47,43 @@ export const getHumanName = (...candidates) => {
 
 /**
  * Nom d'affichage résolu à partir d'un objet profil.
- * Ordre : name → displayName → username → email-prefix → "Utilisateur".
+ * Ordre de résolution strict :
+ * 1. profile.displayName (Google Auth)
+ * 2. profile.name (Firestore)
+ * 3. profile.username (pseudo)
+ * 4. Fallback : profile.email?.split('@')[0] humanisé
+ * 5. Fallback final : "Membre Troco"
  */
 export const getDisplayName = (user, t) => {
-  if (!user || typeof user !== 'object') return (t && t('common.user', 'Utilisateur')) || 'Utilisateur';
-  const fallbackLabel = (t && t('common.user', 'Utilisateur')) || 'Utilisateur';
-  return (
-    getHumanName(user.name, user.displayName, user.user, user.fullName) ||
-    getHumanName(user.username) ||
-    humanizeEmailPrefix((user.email || '').split('@')[0]) ||
-    fallbackLabel
-  );
+  const fallbackLabel = (t && t('common.user', 'Membre Troco')) || 'Membre Troco';
+  if (!user || typeof user !== 'object') return fallbackLabel;
+
+  // 1. profile.displayName (Google Auth)
+  const displayName = getHumanName(user.displayName);
+  if (displayName) return displayName;
+
+  // 2. profile.name (Firestore)
+  const name = getHumanName(user.name, user.user, user.fullName);
+  if (name) return name;
+
+  // 3. profile.username (pseudo)
+  const cleanUsername = typeof user.username === 'string' ? user.username.replace(/^@+/, '').trim() : '';
+  const username = getHumanName(cleanUsername);
+  if (username) return username;
+
+  // 4. Fallback : profile.email?.split('@')[0] humanisé
+  const emailPrefix = humanizeEmailPrefix((user.email || '').split('@')[0]);
+  if (emailPrefix) return emailPrefix;
+
+  // 5. Fallback final : "Membre Troco"
+  return fallbackLabel;
 };
 
 /** Handle @username affichable : dérivé du nom réel, jamais de l'UID. */
 export const getDisplayUsername = (user, t) => {
   if (!user || typeof user !== 'object') return '@membre';
-  const base = getHumanName(user.username) || getHumanName(user.name, user.displayName);
+  const cleanUsername = typeof user.username === 'string' ? user.username.replace(/^@+/, '').trim() : '';
+  const base = getHumanName(cleanUsername) || getHumanName(user.displayName, user.name);
   if (base) return `@${slugifyUsername(base)}`;
   const emailPrefix = (user.email || '').split('@')[0];
   if (emailPrefix && !isTechnicalId(emailPrefix)) return `@${slugifyUsername(emailPrefix)}`;
@@ -110,7 +131,7 @@ export const buildUsernameHandle = (base = '', seed = '') => {
  * libellé humain. À utiliser sur TOUT nom affiché dans l'UI (chat, titres,
  * mentions, listes de conversations).
  */
-export const safeName = (value, fallback = 'Utilisateur') => {
+export const safeName = (value, fallback = 'Membre Troco') => {
   const human = getHumanName(value);
   return human || fallback;
 };
@@ -118,15 +139,16 @@ export const safeName = (value, fallback = 'Utilisateur') => {
 /** Nom Google → nom de profil Firestore ("Jean Dupont"), avec fallback email. */
 export const deriveDisplayName = (firebaseUser = {}) => {
   const googleName = (firebaseUser.displayName || '').trim();
-  if (googleName && !isTechnicalId(googleName)) return googleName;
+  if (googleName && !isTechnicalId(googleName) && !isGenericPlaceholder(googleName)) return googleName;
   const emailPrefix = (firebaseUser.email || '').split('@')[0] || '';
   const humanized = humanizeEmailPrefix(emailPrefix);
   if (humanized) return humanized;
   return 'Membre Troco';
 };
 
-export default {
+const displayNameUtils = {
   isTechnicalId,
+  isGenericPlaceholder,
   getHumanName,
   getDisplayName,
   getDisplayUsername,
@@ -136,3 +158,5 @@ export default {
   deriveDisplayName,
   safeName,
 };
+
+export default displayNameUtils;

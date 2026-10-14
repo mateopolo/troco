@@ -1640,4 +1640,39 @@ Composants sécurisés :
   - [#15](https://github.com/mateopolo/troco/issues/15) : `[E2E-MISSING-02]` Regroupement cartographique (clustering) des annonces Leaflet
   - [#16](https://github.com/mateopolo/troco/issues/16) : `[E2E-MISSING-03]` Restauration du Splash Screen CRT rétro optionnel via ?splash=1
 
+---
+
+## 28. PROMPT 9 — FIX #1 : Synchronisation du nom d'utilisateur dans Profil (E2E-FAIL-06)
+
+### 28.1. Problématique & Analyse
+- **Bug ciblé :** `[E2E-FAIL-06]` — Affichage et synchronisation du nom d'utilisateur dans la vue Profil ([Issue #6](https://github.com/mateopolo/troco/issues/6)).
+- **Symptôme :** Le test E2E (`e2e/full-audit.spec.js:414`) attendait le nom réel du compte ou du displayName de Firestore ('Alexandre Troco'). L'affichage dans `ProfileFeature.jsx` tombait sur un fallback générique ('Membre Troco' ou initiales erronées) au lieu du vrai nom.
+- **Cause racine :**
+  1. `ProfileFeature.jsx` lisait directement `profile.name` sans utiliser le helper de résolution hiérarchique `getDisplayName(profile)`.
+  2. `src/utils/displayName.js` priorisait `name` avant `displayName` et considérait les libellés génériques ("Membre Troco") comme des noms valides plutôt que de basculer vers le pseudo ou l'email.
+  3. L'écouteur `onSnapshot` dans `App.js`, `useAuthSession.js` et `useAppAuth.js` ne garantissait pas la propagation systématique du `displayName` de Firebase Auth dans le profil utilisateur local et Firestore.
+  4. L'élément de titre du profil n'avait pas de sélecteur `data-testid="profile-username"` dédié pour l'automatisation Playwright.
+
+### 28.2. Correctifs Appliqués
+1. **Ordre de résolution strict dans `src/utils/displayName.js` :**
+   - 1. `profile.displayName` (Google Auth / Auth provider)
+   - 2. `profile.name` (Firestore / profil utilisateur)
+   - 3. `profile.username` (pseudo / handle sans `@`)
+   - 4. Fallback : `profile.email?.split('@')[0]` humanisé (ex: `alexandre.troco` → `Alexandre Troco`)
+   - 5. Fallback final : `"Membre Troco"`
+   - Exclusion stricte des identifiants techniques (UID Firebase) et des placeholders génériques (`isGenericPlaceholder`).
+2. **Refactorisation de `src/features/profile/ProfileFeature.jsx` :**
+   - Importation et utilisation de `getDisplayName(profile, t)` pour l'en-tête du nom, le titre `MobileHeader`, le `ReviewsSection`, l'alt et les initiales de l'avatar.
+   - Ajout de l'attribut `data-testid="profile-username"` sur le titre `<h3>` du profil.
+   - Initialisation sécurisée du brouillon d'édition (`handleStartEdit`) avec le nom résolu `getDisplayName`.
+3. **Synchronisation temps réel dans `src/App.js`, `src/hooks/useAuthSession.js` et `src/hooks/useAppAuth.js` :**
+   - Détection et injection systématique de `resolvedDisplayName` dans l'état local `profile` (`setProfile`).
+   - Synchronisation automatique vers le document Firestore (`updatesToSync.displayName = firebaseUser.displayName`).
+   - Initialisation dans le template par défaut `defaultUserDoc`.
+4. **Validation des tests :**
+   - Création de la suite de tests unitaires `tests/unit/displayName.test.js` (8 tests couvrant l'ordre de priorité, les fallbacks et la détection d'UID techniques).
+   - Exécution de Vitest : 14/14 suites unitaires passées (140/140 tests verts).
+   - Compilation de production : `npm run build` validé avec succès (Exit Code 0).
+
+
 

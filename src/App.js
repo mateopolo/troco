@@ -934,12 +934,16 @@ export default function App() {
             // Détection et synchronisation de la photo de profil native Gmail / Auth
             const isUnsplashPlaceholder = typeof data.avatar === 'string' && data.avatar.includes('unsplash.com');
             const resolvedAvatar = (firebaseUser.photoURL && (!data.avatar || isUnsplashPlaceholder)) ? firebaseUser.photoURL : (data.avatar || firebaseUser.photoURL || '');
+            const resolvedDisplayName = firebaseUser.displayName || data.displayName || data.name || 'Membre Troco';
             const resolvedName = (firebaseUser.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) ? firebaseUser.displayName : (data.name || firebaseUser.displayName || 'Membre Troco');
 
-            // Synchronisation vers Firestore si la photo ou l'onboarding manquent
+            // Synchronisation vers Firestore si la photo, le nom ou l'onboarding manquent
             const updatesToSync = {};
             if (firebaseUser.photoURL && (!data.avatar || isUnsplashPlaceholder)) {
               updatesToSync.avatar = firebaseUser.photoURL;
+            }
+            if (firebaseUser.displayName && (!data.displayName || data.displayName === 'Membre Troco' || data.displayName === 'Utilisateur Troco')) {
+              updatesToSync.displayName = firebaseUser.displayName;
             }
             if (firebaseUser.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) {
               updatesToSync.name = firebaseUser.displayName;
@@ -986,6 +990,7 @@ export default function App() {
                 euroBalance: newEuros !== null ? newEuros : (data.euroBalance ?? prev?.euroBalance ?? 0),
                 trocoTokens: newTokens !== null ? newTokens : (data.trocoTokens ?? prev?.trocoTokens ?? 10),
                 cguAcceptedAt: data.cguAcceptedAt || prev?.cguAcceptedAt || null,
+                displayName: resolvedDisplayName,
                 name: resolvedName,
                 avatar: resolvedAvatar,
                 onboardingCompleted: true,
@@ -1024,6 +1029,7 @@ export default function App() {
             } catch (_) { }
             const defaultUserDoc = {
               uid: uid,
+              displayName: firebaseUser.displayName || '',
               name: firebaseUser.displayName || firebaseUser.email?.split('@')[0].toUpperCase() || 'Utilisateur Troco',
               username: '@' + (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, ''),
               email: firebaseUser.email || '',

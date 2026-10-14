@@ -52,6 +52,7 @@ import {
 import { getFlagEmoji } from '../../utils/flagUtils';
 import { SocialLinksDisplay, SocialLinksEditor } from '../../components/UserProfile';
 import { useUserRealStats, sanitizeUserWithDynamicStats } from '../../services/userStatsService';
+import { getDisplayName, getDisplayUsername } from '../../utils/displayName';
 
 function ProfileFeature({
   profile = {},
@@ -169,7 +170,12 @@ function ProfileFeature({
   };
 
   const handleStartEdit = () => {
-    if (setProfileDraft) setProfileDraft({ ...profile });
+    if (setProfileDraft) {
+      setProfileDraft({
+        ...profile,
+        name: profileDraft?.name || profile?.name || getDisplayName(profile, t) || '',
+      });
+    }
     if (setIsEditingProfile) setIsEditingProfile(true);
   };
 
@@ -271,7 +277,7 @@ function ProfileFeature({
       {isMobile && (
         <div style={{ margin: '-22px -22px 18px -22px' }}>
           <MobileHeader
-            title={isEditingProfile ? "Modifier le profil" : (profile.name || "Mon Profil")}
+            title={isEditingProfile ? "Modifier le profil" : (getDisplayName(profile, t) || "Mon Profil")}
             subtitle={profile.username || "@troco"}
             onBack={() => {
               if (isEditingProfile) {
@@ -298,7 +304,7 @@ function ProfileFeature({
             return avatarUrl && typeof avatarUrl === 'string' && avatarUrl.trim() !== '' ? (
               <img
                 src={avatarUrl}
-                alt={profile?.name || 'Profil'}
+                alt={getDisplayName(profile, t)}
                 width={size}
                 height={size}
                 style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--accent-primary)', boxShadow: 'var(--shadow-card)', transition: 'all 0.3s ease' }}
@@ -322,7 +328,7 @@ function ProfileFeature({
                   userSelect: 'none',
                 }}
               >
-                {profile?.name?.[0]?.toUpperCase() || '?'}
+                {(getDisplayName(profile, t) || '?')[0]?.toUpperCase() || '?'}
               </div>
             );
           })()}
@@ -372,11 +378,15 @@ function ProfileFeature({
               </span>
             )}
           </div>
-          <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-main)', letterSpacing: '-0.01em', wordBreak: 'break-word' }}>
-            {isEditingProfile ? profileDraft.name : profile.name}
+          <h3
+            data-testid="profile-username"
+            className="font-editorial-heading"
+            style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-main)', letterSpacing: '-0.01em', wordBreak: 'break-word' }}
+          >
+            {isEditingProfile ? profileDraft.name : getDisplayName(profile, t)}
           </h3>
           <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)', marginTop: '2px' }}>
-            {isEditingProfile ? (profileDraft.username || '@user') : (profile.username || '@mateopolo')}
+            {isEditingProfile ? (profileDraft.username || '@user') : (profile.username || getDisplayUsername(profile, t))}
           </div>
         </div>
       </div>
@@ -1332,7 +1342,7 @@ function ProfileFeature({
       {/* SECTION AVIS ET ÉVALUATIONS EN BAS DU PROFIL */}
       <ReviewsSection
         profileUid={profile?.uid || auth?.currentUser?.uid}
-        ownerName={profile?.name || auth?.currentUser?.displayName || 'Propriétaire'}
+        ownerName={getDisplayName(profile, t) || auth?.currentUser?.displayName || 'Propriétaire'}
         currentUser={auth?.currentUser}
         darkMode={darkMode}
         t={t}
