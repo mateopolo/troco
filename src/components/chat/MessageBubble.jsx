@@ -18,10 +18,15 @@ export default function MessageBubble({ message = {}, isMe = false }) {
     return <AudioMessage message={message} />;
   }
 
-  if (message.imageUrl) {
+  if (message.imageUrl && typeof message.imageUrl === 'string' && message.imageUrl.trim() !== '') {
     return (
       <div className="p-2">
-        <img src={message.imageUrl} alt={message.fileName || 'Image partagée'} className="max-w-xs rounded-lg" />
+        <img
+          src={message.imageUrl}
+          alt={message.fileName || 'Image partagée'}
+          className="max-w-xs rounded-lg"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
         <DownloadButton url={message.imageUrl} filename={message.fileName || 'image'} />
       </div>
     );

@@ -453,11 +453,34 @@ export default function WebRTCCallOverlay({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
               <div style={{ position: 'relative', width: '32px', height: '32px', flexShrink: 0 }}>
-                <img
-                  src={partnerAvatar}
-                  alt={partnerName}
-                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                />
+                {partnerAvatar && typeof partnerAvatar === 'string' && partnerAvatar.trim() !== '' ? (
+                  <img
+                    src={partnerAvatar}
+                    alt={partnerName || 'Partenaire'}
+                    width={32}
+                    height={32}
+                    style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-primary)',
+                      color: '#FFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '700',
+                      fontSize: '12px',
+                      userSelect: 'none',
+                    }}
+                  >
+                    {partnerName?.[0]?.toUpperCase() || '?'}
+                  </div>
+                )}
                 <div style={{
                   position: 'absolute',
                   bottom: '0px',
@@ -555,19 +578,43 @@ export default function WebRTCCallOverlay({
               textAlign: 'center',
             }}>
               <div style={{ position: 'relative', width: '128px', height: '128px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img
-                  src={partnerAvatar}
-                  alt=""
-                  style={{
-                    width: '128px',
-                    height: '128px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: 'none',
-                    boxShadow: '0 20px 48px rgba(0,0,0,0.65)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  }}
-                />
+                {partnerAvatar && typeof partnerAvatar === 'string' && partnerAvatar.trim() !== '' ? (
+                  <img
+                    src={partnerAvatar}
+                    alt={partnerName || 'Partenaire'}
+                    width={128}
+                    height={128}
+                    style={{
+                      width: '128px',
+                      height: '128px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: 'none',
+                      boxShadow: '0 20px 48px rgba(0,0,0,0.65)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '128px',
+                      height: '128px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-primary)',
+                      color: '#FFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '800',
+                      fontSize: '48px',
+                      boxShadow: '0 20px 48px rgba(0,0,0,0.65)',
+                      userSelect: 'none',
+                    }}
+                  >
+                    {partnerName?.[0]?.toUpperCase() || '?'}
+                  </div>
+                )}
               </div>
 
               {callState.ringing && (

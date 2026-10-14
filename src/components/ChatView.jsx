@@ -1233,10 +1233,12 @@ function ChatView({
               title={!activeChatObj?.isGroup ? `Voir le profil public de ${activePartnerName}` : undefined}
             >
               <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
-                {activePartnerAvatar ? (
+                {activePartnerAvatar && typeof activePartnerAvatar === 'string' && activePartnerAvatar.trim() !== '' ? (
                   <img
                     src={activePartnerAvatar}
                     alt={activePartnerName || 'Avatar'}
+                    width={36}
+                    height={36}
                     style={{
                       width: '36px',
                       height: '36px',
@@ -1245,6 +1247,7 @@ function ChatView({
                       border: '2px solid var(--accent-primary)',
                       boxShadow: 'var(--shadow-accent)'
                     }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 ) : (
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: activeChatObj?.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: activeChatObj?.isGroup ? '17px' : '14px', boxShadow: 'var(--shadow-accent)' }}>
@@ -2408,11 +2411,13 @@ function ChatView({
                         {(() => {
                           const resolvedMsgAvatar = msg.senderAvatar || (msg.senderId && getCachedUserProfile(msg.senderId)?.avatar) || (partnerProfileDoc?.uid === msg.senderId ? partnerProfileDoc?.avatar : '') || '';
                           const resolvedMsgName = msg.senderName || activePartnerName || 'Avatar';
-                          return resolvedMsgAvatar ? (
+                          return resolvedMsgAvatar && typeof resolvedMsgAvatar === 'string' && resolvedMsgAvatar.trim() !== '' ? (
                             <img
                               src={resolvedMsgAvatar}
                               alt={resolvedMsgName}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              width={28}
+                              height={28}
+                              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', display: 'block' }}
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           ) : (
@@ -2478,12 +2483,13 @@ function ChatView({
                       )}
 
                       {/* IMAGE OU CAPTURE DE TABLEAU BLANC */}
-                      {(msg?.imageUrl || msg?.type === 'image' || msg?.kind === 'image') && (
+                      {Boolean(msg?.imageUrl && typeof msg.imageUrl === 'string' && msg.imageUrl.trim() !== '') && (
                         <div style={{ borderRadius: '12px', overflow: 'hidden', marginBottom: '6px', maxWidth: '320px' }}>
                           <img
-                            src={msg?.imageUrl || ''}
+                            src={msg.imageUrl}
                             alt="Capture tableau blanc"
                             style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         </div>
                       )}
@@ -3164,11 +3170,14 @@ function ChatView({
                             <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: chat.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: chat.isGroup ? '18px' : '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative', overflow: 'hidden' }}>
                               {chat.isGroup ? (
                                 '👥'
-                              ) : itemPartnerAvatar ? (
+                              ) : itemPartnerAvatar && typeof itemPartnerAvatar === 'string' && itemPartnerAvatar.trim() !== '' ? (
                                 <img
                                   src={itemPartnerAvatar}
                                   alt={itemPartnerName || 'Avatar'}
+                                  width={42}
+                                  height={42}
                                   style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                 />
                               ) : (
                                 (itemPartnerName && !isGenericName(itemPartnerName) && !isRawUid(itemPartnerName)) ? itemPartnerName[0].toUpperCase() : 'T'

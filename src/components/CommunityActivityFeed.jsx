@@ -98,13 +98,20 @@ export default function CommunityActivityFeed({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {currentUser?.photoURL || currentUser?.avatar ? (
-            <img
-              src={currentUser.photoURL || currentUser.avatar}
-              alt={currentUser?.displayName || currentUser?.name || (t('member') || 'Membre')}
-              style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)' }}
-            />
-          ) : (
+          {(() => {
+            const userAvatar = (currentUser?.photoURL || currentUser?.avatar || '');
+            const userName = currentUser?.displayName || currentUser?.name || (t('member') || 'Membre');
+            const size = 38;
+            return userAvatar && typeof userAvatar === 'string' && userAvatar.trim() !== '' ? (
+              <img
+                src={userAvatar}
+                alt={userName}
+                width={size}
+                height={size}
+                style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)' }}
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : (
             <div
               style={{
                 width: '38px',
@@ -119,9 +126,10 @@ export default function CommunityActivityFeed({
                 fontSize: '14px',
               }}
             >
-              {(currentUser?.displayName || currentUser?.name || 'M')[0].toUpperCase()}
+              {userName?.[0]?.toUpperCase() || '?'}
             </div>
-          )}
+            );
+          })()}
           <div style={{ flex: 1 }}>
             <form onSubmit={handlePostStatus} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
@@ -256,13 +264,43 @@ export default function CommunityActivityFeed({
               {/* EN-TÊTE : AVATARS, NOMS, ICÔNE TYPE */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  {/* AVATAR ACTEUR */}
-                  <img
-                    src={act.actor?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
-                    alt={act.actor?.name || t('membre') || t('member') || 'Membre'}
-                    onClick={() => act.actor && onOpenProfile?.(act.actor)}
-                    style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', cursor: 'pointer', border: '1px solid var(--border-color)' }}
-                  />
+                  {(() => {
+                    const actorAvatar = act.actor?.avatar;
+                    const actorName = act.actor?.name || t('membre') || t('member') || 'Membre';
+                    const size = 36;
+                    return actorAvatar && typeof actorAvatar === 'string' && actorAvatar.trim() !== '' ? (
+                      <img
+                        src={actorAvatar}
+                        alt={actorName}
+                        width={size}
+                        height={size}
+                        onClick={() => act.actor && onOpenProfile?.(act.actor)}
+                        style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer', border: '1px solid var(--border-color)' }}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div
+                        onClick={() => act.actor && onOpenProfile?.(act.actor)}
+                        style={{
+                          width: `${size}px`,
+                          height: `${size}px`,
+                          borderRadius: '50%',
+                          backgroundColor: 'var(--accent-primary)',
+                          color: '#FFF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: '700',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          border: '1px solid var(--border-color)',
+                          userSelect: 'none',
+                        }}
+                      >
+                        {actorName?.[0]?.toUpperCase() || '?'}
+                      </div>
+                    );
+                  })()}
 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', fontSize: '13px' }}>

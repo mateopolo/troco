@@ -414,9 +414,9 @@
     "semantic_hash": "85564af780a6a97f33237992586cc30f"
   },
   "src/components/AdminPanel.jsx": {
-    "mtime": 1790691653.2339766,
-    "seen": 1790692041.9585133,
-    "ast_hash": "6a55f328a8f788793f1e1b4f0163f36d",
+    "mtime": 1791999317.8477404,
+    "seen": 1791999678.6824732,
+    "ast_hash": "c7a261182ea718bdd637e9d09e84441c",
     "semantic_hash": ""
   },
   "src/components/AnimatedBalances.jsx": {
@@ -1458,10 +1458,10 @@
     "semantic_hash": "211427648d45c44080af5bbee53c2292"
   },
   "src/features/admin/AdminDashboard.jsx": {
-    "mtime": 1790178643.1506784,
-    "seen": 1790594464.23832,
-    "ast_hash": "f63c54a23a0e513643d07d515ba22455",
-    "semantic_hash": "f63c54a23a0e513643d07d515ba22455"
+    "mtime": 1791999474.8188312,
+    "seen": 1791999678.7391026,
+    "ast_hash": "b285bff66da94569b177c48658431a54",
+    "semantic_hash": ""
   },
   "src/features/admin/index.js": {
     "mtime": 1787972442.7161877,
@@ -1608,9 +1608,9 @@
     "semantic_hash": "13264a4b85deea61c5a1efa095076a52"
   },
   "src/features/profile/ProfileFeature.jsx": {
-    "mtime": 1791390327.2398458,
-    "seen": 1791391018.801208,
-    "ast_hash": "76d0c28558637ab0738c6e0aae19293b",
+    "mtime": 1791999284.2502892,
+    "seen": 1791999678.7458541,
+    "ast_hash": "8de641f4eca04d2497a97c46ad5215c7",
     "semantic_hash": ""
   },
   "src/features/profile/index.js": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791976694.3483808,
-    "seen": 1791976738.6767442,
-    "ast_hash": "9023432aea4cf80e5b0f7074b4941029",
+    "mtime": 1791999647.5656486,
+    "seen": 1791999678.7791626,
+    "ast_hash": "d91ed58fae2159cec3839c87a070dbbb",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1791976704.6400046,
-    "seen": 1791976738.6773393,
-    "ast_hash": "bb84e58821c5113ce3cb39b7e8f9109a",
+    "mtime": 1791999631.6260643,
+    "seen": 1791999678.7796407,
+    "ast_hash": "03b51097ccc1c1d02b31c3a9a55042cc",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2796,9 +2796,9 @@
     "semantic_hash": ""
   },
   "src/components/AppModalsOrchestrator.jsx": {
-    "mtime": 1791324712.6956017,
-    "seen": 1791325748.144553,
-    "ast_hash": "234fdc6950ca56c17ef669828176a101",
+    "mtime": 1791999376.4621985,
+    "seen": 1791999678.6828992,
+    "ast_hash": "ef5c51daac10f5808a7fcca7afeb7ec5",
     "semantic_hash": ""
   },
   "src/components/AppOverlays.jsx": {

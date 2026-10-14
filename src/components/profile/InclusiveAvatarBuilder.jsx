@@ -175,7 +175,7 @@ export default function InclusiveAvatarBuilder({ currentAvatar, onSelectAvatar, 
                   }}
                   title={p.name}
                 >
-                  <img src={pUrl} alt={p.name} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                  <img src={pUrl} alt={p.name} width={34} height={34} style={{ width: '100%', height: '100%', borderRadius: '50%' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                 </button>
               );
             })}

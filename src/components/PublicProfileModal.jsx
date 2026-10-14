@@ -263,7 +263,8 @@ export default function PublicProfileModal({
   const userName = (!rawDisplayName || isRawUid(rawDisplayName) || isGenericName(rawDisplayName))
     ? (targetUser?.name && !isGenericName(targetUser.name) && !isRawUid(targetUser.name) ? targetUser.name : (targetUser?.displayName || ''))
     : rawDisplayName;
-  const avatar = resolved.photoURL || resolved.avatar || targetUser?.photoURL || targetUser?.avatar || '';
+  const rawAvatar = resolved.photoURL || resolved.avatar || targetUser?.photoURL || targetUser?.avatar || '';
+  const avatar = typeof rawAvatar === 'string' ? rawAvatar.trim() : '';
   const isKycVerified = Boolean(resolved.kycVerified ?? targetUser?.kycVerified ?? false);
   const username = resolved.username || targetUser?.username || (userName ? `@${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '');
   const location = resolved.location || targetUser?.location || '';

@@ -292,11 +292,40 @@ export default function ProfileFeature({
           style={{ position: "relative", display: "inline-block", cursor: isEditingProfile ? "pointer" : "default", flexShrink: 0 }}
           onClick={() => isEditingProfile && profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click()}
         >
-          <img
-            src={isEditingProfile ? profileDraft.avatar : profile.avatar}
-            alt={profile.name}
-            style={{ width: "88px", height: "88px", borderRadius: "50%", objectFit: "cover", border: "3px solid var(--accent-primary)", boxShadow: "var(--shadow-card)", transition: "all 0.3s ease" }}
-          />
+          {(() => {
+            const avatarUrl = isEditingProfile ? profileDraft?.avatar : profile?.avatar;
+            const size = 88;
+            return avatarUrl && typeof avatarUrl === 'string' && avatarUrl.trim() !== '' ? (
+              <img
+                src={avatarUrl}
+                alt={profile?.name || 'Profil'}
+                width={size}
+                height={size}
+                style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--accent-primary)', boxShadow: 'var(--shadow-card)', transition: 'all 0.3s ease' }}
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#FFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: '700',
+                  fontSize: '32px',
+                  border: '3px solid var(--accent-primary)',
+                  boxShadow: 'var(--shadow-card)',
+                  userSelect: 'none',
+                }}
+              >
+                {profile?.name?.[0]?.toUpperCase() || '?'}
+              </div>
+            );
+          })()}
           {isEditingProfile && (
             <button
               type="button"

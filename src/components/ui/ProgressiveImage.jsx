@@ -123,7 +123,7 @@ export function ProgressiveImage({
       </div>
 
       {/* 2. IMAGE HAUTE DÉFINITION PROGRESSIVE */}
-      {!hasError ? (
+      {!hasError && typeof currentSrc === 'string' && currentSrc.trim() !== '' ? (
         <img
           ref={imgRef}
           src={currentSrc}

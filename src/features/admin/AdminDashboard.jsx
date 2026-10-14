@@ -1415,11 +1415,39 @@ export default function AdminDashboard({
                           {/* Utilisateur info */}
                           <td style={{ padding: '14px 18px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <img
-                                src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                                alt={`Avatar de ${user.name || 'Utilisateur'}`}
-                                style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-                              />
+                              {(() => {
+                                const userAvatar = user.avatar && typeof user.avatar === 'string' && user.avatar.trim() !== '' ? user.avatar.trim() : '';
+                                const size = 36;
+                                return userAvatar ? (
+                                  <img
+                                    src={userAvatar}
+                                    alt={`Avatar de ${user.name || 'Utilisateur'}`}
+                                    width={size}
+                                    height={size}
+                                    style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover' }}
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: `${size}px`,
+                                      height: `${size}px`,
+                                      borderRadius: '50%',
+                                      backgroundColor: 'var(--accent-primary)',
+                                      color: '#FFF',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontWeight: '700',
+                                      fontSize: '13px',
+                                      flexShrink: 0,
+                                      userSelect: 'none',
+                                    }}
+                                  >
+                                    {user.name?.[0]?.toUpperCase() || '?'}
+                                  </div>
+                                );
+                              })()}
                               <div>
                                 <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   {user.name || 'Sans nom'}

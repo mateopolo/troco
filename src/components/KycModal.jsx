@@ -676,11 +676,39 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     gap: '12px',
                     textAlign: 'left'
                   }}>
-                    <img
-                      src={profile?.avatar || selfiePreview}
-                      alt="avatar"
-                      style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #9CAF88' }}
-                    />
+                    {(() => {
+                      const avatarUrl = (profile?.avatar || selfiePreview || '');
+                      const rawAvatar = typeof avatarUrl === 'string' && avatarUrl.trim() !== '' ? avatarUrl.trim() : '';
+                      const size = 48;
+                      return rawAvatar ? (
+                        <img
+                          src={rawAvatar}
+                          alt={profile?.name || 'Avatar'}
+                          width={size}
+                          height={size}
+                          style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover', border: '2px solid #9CAF88' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: `${size}px`,
+                            height: `${size}px`,
+                            borderRadius: '50%',
+                            backgroundColor: '#9CAF88',
+                            color: '#FFF',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '700',
+                            fontSize: '18px',
+                            userSelect: 'none',
+                          }}
+                        >
+                          {profile?.name?.[0]?.toUpperCase() || '?'}
+                        </div>
+                      );
+                    })()}
                     <div>
                       <div style={{ fontSize: '14px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {profile?.name}

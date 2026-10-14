@@ -172,12 +172,25 @@ export default function ProfileView({
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
             <div style={{ position: 'relative' }}>
               <div style={{ width: '96px', height: '96px', borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--accent-primary)', boxShadow: 'var(--shadow-accent)' }}>
-                <ProgressiveImage
-                  src={isEditingProfile ? (profileDraft?.avatar || profile?.avatar) : (profile?.avatar || '')}
-                  alt={profile?.name || 'Profil'}
-                  style={{ width: '100%', height: '100%' }}
-                  imgStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+                {(() => {
+                  const avatarUrl = isEditingProfile ? (profileDraft?.avatar || profile?.avatar) : profile?.avatar;
+                  const name = profile?.name || 'Profil';
+                  const size = 96;
+                  return avatarUrl && typeof avatarUrl === 'string' && avatarUrl.trim() !== '' ? (
+                    <img
+                      src={avatarUrl}
+                      alt={name}
+                      width={size}
+                      height={size}
+                      style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', backgroundColor: 'var(--accent-primary)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '32px' }}>
+                      {name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                  );
+                })()}
               </div>
 
               {isEditingProfile && (

@@ -477,21 +477,49 @@ export default function GlobalLiveChat({
               }}
             >
               {/* AVATAR CLIQUABLE */}
-              <img
-                src={msg.avatar}
-                alt={msg.author}
-                onClick={() => onOpenProfile?.(msg)}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  border: isUrgent ? '2px solid #EF4444' : '1.5px solid var(--border-color)',
-                }}
-                title={`Voir le profil de ${msg.author}`}
-              />
+              {msg.avatar && typeof msg.avatar === 'string' && msg.avatar.trim() !== '' ? (
+                <img
+                  src={msg.avatar}
+                  alt={msg.author}
+                  width={32}
+                  height={32}
+                  onClick={() => onOpenProfile?.(msg)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    border: isUrgent ? '2px solid #EF4444' : '1.5px solid var(--border-color)',
+                  }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  title={`Voir le profil de ${msg.author}`}
+                />
+              ) : (
+                <div
+                  onClick={() => onOpenProfile?.(msg)}
+                  title={`Voir le profil de ${msg.author}`}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent-primary)',
+                    color: '#FFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '700',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    border: isUrgent ? '2px solid #EF4444' : '1.5px solid var(--border-color)',
+                    userSelect: 'none',
+                  }}
+                >
+                  {msg.author?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
 
               {/* CORPS DU MESSAGE */}
               <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>

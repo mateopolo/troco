@@ -446,17 +446,41 @@ export default function OnboardingWizardModal({
                 marginBottom: '16px',
               }}>
                 <div style={{ position: 'relative' }}>
-                  <img
-                    src={avatar}
-                    alt="Avatar"
-                    style={{
-                      width: '72px',
-                      height: '72px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '2px solid var(--accent-primary)',
-                    }}
-                  />
+                  {avatar && typeof avatar === 'string' && avatar.trim() !== '' ? (
+                    <img
+                      src={avatar}
+                      alt={name || 'Avatar'}
+                      width={72}
+                      height={72}
+                      style={{
+                        width: '72px',
+                        height: '72px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2px solid var(--accent-primary)',
+                      }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '72px',
+                        height: '72px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--accent-primary)',
+                        color: '#FFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '700',
+                        fontSize: '26px',
+                        border: '2px solid var(--accent-primary)',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                  )}
                   <button
                     onClick={() => fileInputRef.current && fileInputRef.current.click()}
                     style={{

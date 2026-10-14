@@ -1389,3 +1389,62 @@ Bien que Firestore refuse les opérations d'écriture grâce aux règles serveur
 #### 21.3. Validation
 - `npm run build` : Compilé avec succès (Exit Code 0, aucun warning bloquant).
 - `npx vitest run` : 20 suites de tests, 218/218 tests réussis (100% au vert).
+
+---
+
+### 22. Résolution des Avatars Brisés & Éradication des Images `src=""` (2026-10-14)
+
+#### 22.1. Contexte & Problème Identifié
+Lors des audits de performance et campagnes E2E (Anomalie #5 de `docs/E2E-REPORT-2026-10-14.md`), des balises `<img src="" />` étaient générées lorsque le profil ou le document utilisateur ne renseignait pas d'avatar ou contenait une chaîne vide ou blanche. Cela provoquait 7 erreurs console bloquantes (« empty string passed to src attribute ») et un affichage d'image brisée.
+
+#### 22.2. Solution & Pattern Universel Appliqué
+Un pattern de rendu résilient a été généralisé sur l'ensemble des composants d'avatars et d'images utilisateur :
+```jsx
+{avatar && typeof avatar === 'string' && avatar.trim() !== '' ? (
+  <img
+    src={avatar}
+    alt={name}
+    width={size}
+    height={size}
+    style={{ borderRadius: '50%', objectFit: 'cover' }}
+    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+  />
+) : (
+  <div
+    style={{
+      width: `${size}px`,
+      height: `${size}px`,
+      borderRadius: '50%',
+      backgroundColor: 'var(--accent-primary)',
+      color: '#FFF',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: '700',
+    }}
+  >
+    {name?.[0]?.toUpperCase() || '?'}
+  </div>
+)}
+```
+Composants sécurisés :
+- `src/features/profile/ProfileFeature.jsx` : avatar d'en-tête de profil.
+- `src/components/ProfileView.jsx` : avatar principal et gestion d'upload.
+- `src/components/FeedCardItem.jsx` : avatar de l'auteur de chaque carte annonce.
+- `src/components/ChatView.jsx` : avatar du partenaire actif en header, bulles de messages reçus et liste des conversations.
+- `src/components/common/Avatar.jsx` : composant atomique Avatar renforcé contre les `src` vides.
+- `src/components/PublicProfileModal.jsx` : avatar public avec badge en ligne.
+- `src/components/ui/ProgressiveImage.jsx` : verrouillage strict au niveau de la balise `img` contre tout `currentSrc` vide ou blanc.
+- `src/components/GlobalLiveChat.jsx` : avatar cliquable de chaque message en direct.
+- `src/components/CommunityActivityFeed.jsx` : statut membre et avatars de flux d'activité.
+- `src/features/call/WebRTCCallOverlay.jsx` : affichage mini et plein écran du partenaire en appel.
+- `src/components/ListingDetailModal.jsx` : avatar de l'auteur de l'annonce détaillée.
+- `src/components/UserProfile.jsx` : avatar profil et mode édition.
+- `src/components/OnboardingWizardModal.jsx` : avatar wizard onboarding.
+- `src/components/AdminPanel.jsx` & `src/features/admin/AdminDashboard.jsx` & `src/features/admin/AdminCommunityTab.jsx` : listes d'utilisateurs et messages admin.
+- `src/components/chat/MessageBubble.jsx` & `src/components/FeedInteractions.jsx` & `src/features/post/PostListingFeature.jsx` & `src/features/auth/AuthScreen.jsx`.
+
+#### 22.3. Validation
+- `npm run build` : Exit Code 0.
+- `npx vitest run` : 20 fichiers de test, 218/218 tests réussis (100% au vert).
+- Élimination intégrale des erreurs console relatives à `src=""`.

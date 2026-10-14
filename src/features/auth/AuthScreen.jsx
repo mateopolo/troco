@@ -990,7 +990,7 @@ export default function AuthScreen({
                         transform: signupAvatar === av ? 'scale(1.1)' : 'scale(1)',
                       }}
                     >
-                      <img src={av} alt={`Option d'avatar numéro ${idx + 1}`} style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }} />
+                      <img src={av} alt={`Option d'avatar numéro ${idx + 1}`} width={42} height={42} style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     </button>
                   ))}
                 </div>

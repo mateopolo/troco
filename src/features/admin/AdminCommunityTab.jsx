@@ -260,11 +260,41 @@ export default function AdminCommunityTab({
                 {/* En-tête auteur & métadonnées */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <img
-                      src={msg.avatar || msg.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                      alt={`Avatar de ${msg.author || 'Auteur anonyme'}`}
-                      style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover' }}
-                    />
+                    {(() => {
+                      const msgAvatar = (msg.avatar || msg.authorAvatar || '');
+                      const rawAvatar = typeof msgAvatar === 'string' && msgAvatar.trim() !== '' ? msgAvatar.trim() : '';
+                      const authorName = msg.author || 'Auteur anonyme';
+                      const size = 34;
+                      return rawAvatar ? (
+                        <img
+                          src={rawAvatar}
+                          alt={`Avatar de ${authorName}`}
+                          width={size}
+                          height={size}
+                          style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: `${size}px`,
+                            height: `${size}px`,
+                            borderRadius: '50%',
+                            backgroundColor: 'var(--accent-primary)',
+                            color: '#FFF',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '700',
+                            fontSize: '13px',
+                            flexShrink: 0,
+                            userSelect: 'none',
+                          }}
+                        >
+                          {authorName?.[0]?.toUpperCase() || '?'}
+                        </div>
+                      );
+                    })()}
                     <div>
                       <div style={{ fontWeight: '800', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>{msg.author || 'Auteur anonyme'}</span>

@@ -678,11 +678,38 @@ export default function UserProfile({
                 backgroundColor: '#FFFFFF',
               }}
             >
-              <img
-                src={isEditing ? (draft.avatar || profile.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=TrocoUser&skinColor=d08b5b&hairColor=2c1b18') : (profile.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=TrocoUser&skinColor=d08b5b&hairColor=2c1b18')}
-                alt={profile.name || 'Profil'}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+              {(() => {
+                const draftAvatar = isEditing ? (draft.avatar || profile.avatar) : profile.avatar;
+                const avatarUrl = draftAvatar && typeof draftAvatar === 'string' && draftAvatar.trim() !== '' ? draftAvatar.trim() : '';
+                const name = profile.name || 'Profil';
+                return avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={name}
+                    width={110}
+                    height={110}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'var(--accent-primary)',
+                      color: '#FFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '700',
+                      fontSize: '36px',
+                      userSelect: 'none',
+                    }}
+                  >
+                    {name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

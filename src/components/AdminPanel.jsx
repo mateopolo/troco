@@ -648,11 +648,39 @@ export default function AdminPanel({
                     >
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                          <img
-                            src={u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'}
-                            alt={u.name}
-                            style={{ width: '46px', height: '46px', borderRadius: '50%', objectFit: 'cover' }}
-                          />
+                          {(() => {
+                            const uAvatar = u.avatar && typeof u.avatar === 'string' && u.avatar.trim() !== '' ? u.avatar.trim() : '';
+                            const size = 46;
+                            return uAvatar ? (
+                              <img
+                                src={uAvatar}
+                                alt={u.name || 'Utilisateur'}
+                                width={size}
+                                height={size}
+                                style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover' }}
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: `${size}px`,
+                                  height: `${size}px`,
+                                  borderRadius: '50%',
+                                  backgroundColor: 'var(--accent-primary)',
+                                  color: '#FFF',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: '700',
+                                  fontSize: '16px',
+                                  flexShrink: 0,
+                                  userSelect: 'none',
+                                }}
+                              >
+                                {u.name?.[0]?.toUpperCase() || '?'}
+                              </div>
+                            );
+                          })()}
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: '14px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-main)' }}>
                               {u.name || 'Utilisateur'}

@@ -639,23 +639,47 @@ function FeedCardItem({
             style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: 'var(--text-main)', cursor: (item.authorUid || onAuthorProfileClick) ? 'pointer' : 'default', textDecoration: 'none' }}
           >
             <div style={{ position: 'relative', width: '24px', height: '24px', flexShrink: 0 }}>
-              <ProgressiveImage
-                src={
-                  // Priorité 1 : avatar stocké dans l'annonce Firestore (authorAvatar)
-                  // Priorité 2 : avatar du profil si c'est notre propre annonce
-                  // Priorité 3 : getAuthorAvatar helper
-                  // Priorité 4 : avatar générique
+              {(() => {
+                const authorAvatar =
                   item.authorAvatar ||
                   item.avatar ||
                   item.authorPhotoURL ||
                   ((profile?.name && item.author === profile.name) ? (profile?.avatar || '') : '') ||
                   (typeof getAuthorAvatar === 'function' ? getAuthorAvatar(item.author) : '') ||
-                  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
-                }
-                alt={item.author || 'Auteur'}
-                style={{ width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border-color)', overflow: 'hidden' }}
-                imgStyle={{ borderRadius: '50%', objectFit: 'cover' }}
-              />
+                  '';
+                const authorName = item.author || (typeof t === 'function' ? t('defaultAuthor') : 'Membre Troco');
+                const size = 24;
+                return authorAvatar && typeof authorAvatar === 'string' && authorAvatar.trim() !== '' ? (
+                  <img
+                    src={authorAvatar}
+                    alt={authorName}
+                    width={size}
+                    height={size}
+                    style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)', display: 'block' }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: `${size}px`,
+                      height: `${size}px`,
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-primary)',
+                      color: '#FFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '700',
+                      fontSize: '11px',
+                      border: '1px solid var(--border-color)',
+                      flexShrink: 0,
+                      userSelect: 'none',
+                    }}
+                  >
+                    {authorName?.[0]?.toUpperCase() || '?'}
+                  </div>
+                );
+              })()}
               <span
                 data-testid="online-badge-dot"
                 title={isOnline ? (typeof t === 'function' ? t('online_status') : 'En ligne') : (typeof t === 'function' ? t('offline_status') : 'Hors ligne')}

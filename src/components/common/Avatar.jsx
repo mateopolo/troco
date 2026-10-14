@@ -31,12 +31,13 @@ export default function Avatar({
   style = {},
   alt = '',
 }) {
-  const [imgSrc, setImgSrc] = useState(src || null);
+  const isNonEmptyString = (str) => typeof str === 'string' && str.trim() !== '';
+  const [imgSrc, setImgSrc] = useState(isNonEmptyString(src) ? src.trim() : null);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    if (src) {
-      setImgSrc(src);
+    if (isNonEmptyString(src)) {
+      setImgSrc(src.trim());
       setHasError(false);
       return;
     }
@@ -44,15 +45,19 @@ export default function Avatar({
     if (uid) {
       let isMounted = true;
       usersPublicService.getPublicProfile(uid).then((publicData) => {
-        if (isMounted && publicData?.avatar) {
-          setImgSrc(publicData.avatar);
+        if (isMounted && isNonEmptyString(publicData?.avatar)) {
+          setImgSrc(publicData.avatar.trim());
           setHasError(false);
+        } else if (isMounted) {
+          setImgSrc(null);
         }
       });
       return () => {
         isMounted = false;
       };
     }
+
+    setImgSrc(null);
   }, [uid, src]);
 
   const initials = getInitials(name);
@@ -76,16 +81,19 @@ export default function Avatar({
     ...style,
   };
 
-  if (imgSrc && !hasError) {
+  if (isNonEmptyString(imgSrc) && !hasError) {
     return (
       <div className={`troco-avatar ${className}`} style={containerStyle}>
         <img
           src={imgSrc}
           alt={alt || name || 'Avatar'}
+          width={size}
+          height={size}
           onError={() => setHasError(true)}
           style={{
             width: '100%',
             height: '100%',
+            borderRadius: '50%',
             objectFit: 'cover',
           }}
         />

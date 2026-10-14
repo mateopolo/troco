@@ -541,7 +541,42 @@ export default function ListingDetailModal({
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
-            <img src={listing.authorProfile?.avatar || listing.avatar || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="%239CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'} alt={listing.authorProfile?.name || listing.author || 'Auteur'} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
+            {(() => {
+              const rawAvatar = listing.authorProfile?.avatar || listing.avatar || '';
+              const authorAvatar = typeof rawAvatar === 'string' ? rawAvatar.trim() : '';
+              const authorName = listing.authorProfile?.name || listing.author || 'Membre Troco';
+              const size = 56;
+              return authorAvatar ? (
+                <img
+                  src={authorAvatar}
+                  alt={authorName}
+                  width={size}
+                  height={size}
+                  style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent-primary)',
+                    color: '#FFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '700',
+                    fontSize: '22px',
+                    border: '2px solid #E8DDD3',
+                    flexShrink: 0,
+                    userSelect: 'none',
+                  }}
+                >
+                  {authorName?.[0]?.toUpperCase() || '?'}
+                </div>
+              );
+            })()}
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{listing.authorProfile?.name || listing.author || 'Membre Troco'}</div>
               <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(listing.authorProfile?.bio || listing.bio || '', currentLang, isDetailShowingOriginal)}</div>

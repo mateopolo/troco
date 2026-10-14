@@ -125,7 +125,13 @@ export default function FeedInteractions({
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                <img src={mobileListingActionTarget.image} alt={mobileListingActionTarget.title} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover' }} />
+                {mobileListingActionTarget.image && typeof mobileListingActionTarget.image === 'string' && mobileListingActionTarget.image.trim() !== '' ? (
+                  <img src={mobileListingActionTarget.image} alt={mobileListingActionTarget.title || 'Annonce'} width={48} height={48} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                ) : (
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'var(--accent-primary)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '18px', flexShrink: 0 }}>
+                    {mobileListingActionTarget.title?.[0]?.toUpperCase() || '📦'}
+                  </div>
+                )}
                 <div style={{ minWidth: 0 }}>
                   <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '16px', color: darkMode ? '#FAF7F2' : '#3D3530', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {mobileListingActionTarget.title}
