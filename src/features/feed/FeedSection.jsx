@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 import FeedCardItem from '../../components/FeedCardItem';
 import SponsoredFeedCard from '../../components/SponsoredFeedCard';
+import { SkeletonCard } from '../../components/SkeletonLoader';
 import { subscribeTranslations } from '../../utils/translator';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PullToRefresh } from '../../components/ui/PullToRefresh';
@@ -384,6 +385,19 @@ export function FeedSection({
         </div>
 
         {filteredListings.length === 0 ? (
+          (listings === null || listings === undefined) ? (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(290px, 1fr))',
+                gap: isMobile ? '16px' : '24px',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}
+            >
+              <SkeletonCard count={6} />
+            </div>
+          ) : (
           <div style={{ width: '100%', padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
             <EmptyState
               icon={<Search size={30} strokeWidth={2.2} />}
@@ -419,6 +433,7 @@ export function FeedSection({
               )}
             />
           </div>
+          )
         ) : (
           <>
             <motion.div
@@ -450,6 +465,7 @@ export function FeedSection({
                 <React.Fragment key={item.id}>
                   <FeedCardItem
                     item={item}
+                    index={idx}
                     darkMode={darkMode}
                     hoveredCardId={hoveredCardId}
                     setHoveredCardId={setHoveredCardId}

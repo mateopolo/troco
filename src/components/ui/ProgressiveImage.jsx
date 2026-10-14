@@ -31,6 +31,11 @@ export function ProgressiveImage({
   fallbackSrc,
   objectFit = 'cover',
   loading = 'lazy',
+  decoding = 'async',
+  fetchPriority = 'auto',
+  width = 320,
+  height = 180,
+  aspectRatio = '16/9',
   draggable = false,
   onLoad,
   onError,
@@ -81,7 +86,8 @@ export function ProgressiveImage({
       style={{
         position: 'relative',
         overflow: 'hidden',
-        backgroundColor: 'var(--bg-subtle, rgba(200, 200, 200, 0.15))',
+        backgroundColor: 'var(--bg-subtle, #E2E8F0)',
+        aspectRatio: aspectRatio || '16/9',
         ...style,
       }}
       {...rest}
@@ -94,6 +100,7 @@ export function ProgressiveImage({
           inset: 0,
           width: '100%',
           height: '100%',
+          aspectRatio: aspectRatio || '16/9',
           opacity: isLoaded ? 0 : 1,
           transition: `opacity ${duration}s cubic-bezier(0.16, 1, 0.3, 1)`,
           backgroundImage: placeholderSrc ? `url("${placeholderSrc}")` : 'none',
@@ -128,7 +135,11 @@ export function ProgressiveImage({
           ref={imgRef}
           src={currentSrc}
           alt={alt}
+          width={width}
+          height={height}
           loading={loading}
+          decoding={decoding}
+          fetchPriority={fetchPriority}
           draggable={draggable}
           onLoad={handleImageLoad}
           onError={handleImageError}
@@ -137,6 +148,7 @@ export function ProgressiveImage({
             inset: 0,
             width: '100%',
             height: '100%',
+            aspectRatio: aspectRatio || '16/9',
             objectFit: objectFit,
             opacity: isLoaded ? 1 : 0,
             filter: isLoaded ? 'none' : `blur(${blurRadius / 2}px)`,

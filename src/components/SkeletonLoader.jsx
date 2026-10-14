@@ -4,7 +4,7 @@ import TrocoLogo3D from './common/TrocoLogo3D';
 // ─── ATOM PARTAGÉ ────────────────────────────────────────────────────────────
 // Bloc shimmer réutilisable (jamais de position fixed)
 function Shimmer({ style = {} }) {
-  return <div className="skeleton-shimmer" style={{ borderRadius: 8, ...style }} />;
+  return <div className="skeleton-shimmer" style={{ borderRadius: 8, backgroundColor: 'var(--bg-subtle, #E2E8F0)', ...style }} />;
 }
 
 // ─── CARD FANTÔME ────────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@ export function SkeletonCard({ count = 1 }) {
           key={index}
           className="skeleton-card"
           style={{
-            borderRadius: '18px',
+            borderRadius: '24px',
             border: '1px solid var(--border-color)',
             backgroundColor: 'var(--bg-card)',
             padding: '16px',
@@ -25,10 +25,12 @@ export function SkeletonCard({ count = 1 }) {
             gap: '12px',
             boxShadow: 'var(--shadow-card)',
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            minHeight: '380px',
+            boxSizing: 'border-box'
           }}
         >
-          <Shimmer style={{ width: '100%', height: '180px', borderRadius: 14, marginBottom: 4 }} />
+          <Shimmer style={{ width: '100%', height: '180px', aspectRatio: '16/9', borderRadius: 16, marginBottom: 4 }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Shimmer style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0 }} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -54,7 +56,7 @@ export function SkeletonCard({ count = 1 }) {
 // ─── GRILLE FANTÔME ──────────────────────────────────────────────────────────
 export function SkeletonGrid({ count = 6 }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', width: '100%' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
       <SkeletonCard count={count} />
     </div>
   );
@@ -122,7 +124,7 @@ export function SkeletonFeedLayout() {
               overflow: 'hidden',
             }}
           >
-            <Shimmer style={{ width: '100%', height: 175, borderRadius: 14 }} />
+            <Shimmer style={{ width: '100%', height: 180, aspectRatio: '16/9', borderRadius: 16 }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Shimmer style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0 }} />
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>

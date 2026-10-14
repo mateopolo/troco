@@ -19,6 +19,7 @@ const defaultGetListingDisplayContent = (item, targetLang, forceOriginal = false
 
 export default function ListingCard({
   item,
+  index = 0,
   darkMode = false,
   hoveredCardId,
   setHoveredCardId = () => {},
@@ -180,7 +181,7 @@ export default function ListingCard({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ position: 'relative', height: '200px', width: '100%', backgroundColor: 'var(--bg-subtle)', overflow: 'hidden', touchAction: 'pan-y' }}
+        style={{ position: 'relative', height: '200px', width: '100%', aspectRatio: '16/9', backgroundColor: 'var(--bg-subtle, #E2E8F0)', overflow: 'hidden', touchAction: 'pan-y' }}
       >
         {/* SUPERPOSITION DES IMAGES DE LA GALERIE AVEC CROSSFADE & ZOOM SUBTIL */}
         {effectiveGallery.map((imgSrc, idx) => {
@@ -190,12 +191,18 @@ export default function ListingCard({
               key={idx}
               src={imgSrc}
               alt={`${displayContent.title || item.title || 'Annonce'} - Photo ${idx + 1}`}
+              width="320"
+              height="180"
+              loading={index < 3 && idx === 0 ? 'eager' : 'lazy'}
+              decoding="async"
+              fetchPriority={index < 3 && idx === 0 ? 'high' : 'auto'}
               onError={(e) => { e.target.src = safeGetFallbackImage(item.category, item.title); }}
               style={{
                 position: 'absolute',
                 inset: 0,
                 width: '100%',
                 height: '100%',
+                aspectRatio: '16/9',
                 objectFit: 'cover',
                 opacity: isActive ? 1 : 0,
                 transform: isActive && isHovered ? 'scale(1.06)' : 'scale(1)',
@@ -462,7 +469,11 @@ export default function ListingCard({
                 safeGetAuthorAvatar(item.author)
               }
               alt={item.author}
-              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)' }}
+              width="24"
+              height="24"
+              loading="lazy"
+              decoding="async"
+              style={{ width: '24px', height: '24px', aspectRatio: '1/1', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)' }}
             />
             {item.author}
           </span>

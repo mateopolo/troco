@@ -16,6 +16,7 @@ import { getListingDisplayContent as helperGetListingDisplayContent } from '../u
 
 function FeedCardItem({
   item,
+  index = 0,
   darkMode,
   hoveredCardId,
   setHoveredCardId,
@@ -319,7 +320,7 @@ function FeedCardItem({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className="ken-burns"
-        style={{ position: 'relative', height: '200px', width: '100%', backgroundColor: 'var(--bg-subtle)', overflow: 'hidden', touchAction: 'pan-y' }}
+        style={{ position: 'relative', height: '200px', width: '100%', aspectRatio: '16/9', backgroundColor: 'var(--bg-subtle, #E2E8F0)', overflow: 'hidden', touchAction: 'pan-y' }}
       >
         {gallery.map((imgSrc, idx) => {
           const isActive = idx === currentSlideIndex;
@@ -329,6 +330,12 @@ function FeedCardItem({
               src={imgSrc}
               fallbackSrc={typeof getFallbackImage === 'function' ? getFallbackImage(item.category, item.title) : ''}
               alt={item.title}
+              width={320}
+              height={180}
+              aspectRatio="16/9"
+              loading={index < 3 && idx === 0 ? 'eager' : 'lazy'}
+              fetchPriority={index < 3 && idx === 0 ? 'high' : 'auto'}
+              decoding="async"
               draggable={false}
               className="ken-burns-img"
               style={{
@@ -336,6 +343,7 @@ function FeedCardItem({
                 inset: 0,
                 width: '100%',
                 height: '100%',
+                aspectRatio: '16/9',
                 opacity: isActive ? 1 : 0,
                 transition: 'opacity 0.4s ease, transform 900ms var(--ease-quiet)',
                 transform: isHovered && isActive ? 'scale(1.05)' : (isActive ? 'scale(1)' : 'scale(1.02)'),
@@ -347,6 +355,7 @@ function FeedCardItem({
               }}
               imgStyle={{
                 objectFit: 'cover',
+                aspectRatio: '16/9',
               }}
             />
           );
@@ -655,7 +664,9 @@ function FeedCardItem({
                     alt={authorName}
                     width={size}
                     height={size}
-                    style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)', display: 'block' }}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ width: `${size}px`, height: `${size}px`, aspectRatio: '1/1', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)', display: 'block' }}
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 ) : (
@@ -743,6 +754,7 @@ const areFeedCardPropsEqual = (previous, next) => {
   const nextItem = next.item;
 
   if (previousItem?.id !== nextItem?.id) return false;
+  if (previous.index !== next.index) return false;
   if (previousItem?.status !== nextItem?.status) return false;
   if (previousItem?.isBoosted !== nextItem?.isBoosted) return false;
   if (previousItem?.urgent !== nextItem?.urgent) return false;

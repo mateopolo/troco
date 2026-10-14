@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import FeedCardItem from '../components/FeedCardItem';
 import SponsoredFeedCard from '../components/SponsoredFeedCard';
+import { SkeletonCard } from '../components/SkeletonLoader';
 import PullToRefresh from '../components/ui/PullToRefresh';
 import { EmptyState } from '../components/ui/EmptyState';
 import TranslatedText from '../components/common/TranslatedText';
@@ -552,53 +553,67 @@ export default function FeedRoute({
                   transition: 'opacity 150ms ease',
                 }}
               >
-                {(filteredListings || []).map((item, index) => {
-                  if (item.isSponsored) {
+                {(!filteredListings || filteredListings.length === 0) ? (
+                  (listings === null || listings === undefined) ? (
+                    <SkeletonCard count={6} />
+                  ) : (
+                    <div style={{ gridColumn: '1 / -1', width: '100%', padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
+                      <EmptyState
+                        icon={<Search size={30} strokeWidth={2.2} />}
+                        title="Aucune annonce ne correspond à ta recherche"
+                        description="Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces de la communauté Troco."
+                      />
+                    </div>
+                  )
+                ) : (
+                  filteredListings.map((item, index) => {
+                    if (item.isSponsored) {
+                      return (
+                        <div key={item.id ?? `feed-sponsored-${index}`} className="feed-card-virtualized">
+                          <SponsoredFeedCard
+                            index={index}
+                            darkMode={darkMode}
+                            currentLang={currentLang}
+                            t={t}
+                            onOpenBoostModal={() => {
+                              const myListing = (listings || []).find(l => l.author === profile?.name) || (listings && listings[0]);
+                              setBoostingListing(myListing);
+                              setIsBoostModalOpen(true);
+                            }}
+                            onOpenBusinessOffer={() => {
+                              setIsCguViewerOpen(true);
+                            }}
+                            onClaimBonus={(amount) => {
+                              const bonusVal = typeof amount === 'number' ? amount : (amount?.amount || 2.0);
+                              setProfile(prev => ({
+                                ...prev,
+                                euroBalance: Number((prev.euroBalance + bonusVal).toFixed(2))
+                              }));
+                              playApplePaySound();
+                              setSaveMessage(`🎁 Bonus partenaire crédité : +${bonusVal}€ sur votre solde !`);
+                              safeTimeout(() => setSaveMessage(''), 6000);
+                            }}
+                          />
+                        </div>
+                      );
+                    }
+
+                    const authorProfile = item?.authorProfile || {
+                      name: item?.author || 'Membre Troco',
+                      avatar: item?.authorAvatar || item?.avatar || item?.authorPhotoURL || '',
+                      bio: item?.bio || '',
+                      location: item?.location || 'Paris',
+                      uid: item?.authorUid || null,
+                    };
+
+                    const shouldInjectSponsor = (index + 1) % 6 === 0;
+
                     return (
-                      <div key={item.id ?? `feed-sponsored-${index}`} className="feed-card-virtualized">
-                        <SponsoredFeedCard
-                          index={index}
-                          darkMode={darkMode}
-                          currentLang={currentLang}
-                          t={t}
-                          onOpenBoostModal={() => {
-                            const myListing = (listings || []).find(l => l.author === profile?.name) || (listings && listings[0]);
-                            setBoostingListing(myListing);
-                            setIsBoostModalOpen(true);
-                          }}
-                          onOpenBusinessOffer={() => {
-                            setIsCguViewerOpen(true);
-                          }}
-                          onClaimBonus={(amount) => {
-                            const bonusVal = typeof amount === 'number' ? amount : (amount?.amount || 2.0);
-                            setProfile(prev => ({
-                              ...prev,
-                              euroBalance: Number((prev.euroBalance + bonusVal).toFixed(2))
-                            }));
-                            playApplePaySound();
-                            setSaveMessage(`🎁 Bonus partenaire crédité : +${bonusVal}€ sur votre solde !`);
-                            safeTimeout(() => setSaveMessage(''), 6000);
-                          }}
-                        />
-                      </div>
-                    );
-                  }
-
-                  const authorProfile = item?.authorProfile || {
-                    name: item?.author || 'Membre Troco',
-                    avatar: item?.authorAvatar || item?.avatar || item?.authorPhotoURL || '',
-                    bio: item?.bio || '',
-                    location: item?.location || 'Paris',
-                    uid: item?.authorUid || null,
-                  };
-
-                  const shouldInjectSponsor = (index + 1) % 6 === 0;
-
-                  return (
-                    <React.Fragment key={item.id ?? `feed-item-${index}`}>
-                      <div className="feed-card-virtualized">
-                        <FeedCardItem
-                          item={item}
+                      <React.Fragment key={item.id ?? `feed-item-${index}`}>
+                        <div className="feed-card-virtualized">
+                          <FeedCardItem
+                            item={item}
+                            index={index}
                           darkMode={darkMode}
                           hoveredCardId={hoveredCardId}
                           setHoveredCardId={setHoveredCardId}
@@ -677,7 +692,7 @@ export default function FeedRoute({
                       )}
                     </React.Fragment>
                   );
-                })}
+                }))}
               </motion.div>
 
               {/* SENTINELLE OBSERVER POUR AUTO INFINITE SCROLL */}

@@ -256,7 +256,7 @@ export default function FeedView({
           {isLoading && realtimeListings.length === 0 ? (
             <SkeletonCard count={6} />
           ) : (
-            displayListings.map(item => (
+            displayListings.map((item, index) => (
               <motion.div
                 key={item.id}
                 variants={{
@@ -279,6 +279,7 @@ export default function FeedView({
               >
                 <ListingCard
                   item={item}
+                  index={index}
                   handleOpenListing={handleOpenListing}
                   handleStartDiscussion={handleStartDiscussion}
                   currentLang={currentLang}

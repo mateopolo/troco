@@ -1,17 +1,17 @@
 # Graph Report - TROCO  (2026-10-14)
 
 ## Corpus Check
-- 516 files · ~1,820,638 words
+- 516 files · ~1,819,735 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: .diff 7, (none) 3, .css 2)
 
 ## Summary
-- 4124 nodes · 7999 edges · 410 communities (384 shown, 26 thin omitted)
-- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 498 edges (avg confidence: 0.94)
+- 4129 nodes · 8014 edges · 414 communities (385 shown, 29 thin omitted)
+- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 502 edges (avg confidence: 0.94)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `33aae785`
+- Built from commit: `735ad510`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -28,12 +28,12 @@
 - firestoreService.js
 - C. FUITES DE MÉMOIRE (LEAKS) : HOOKS MAL FERMÉS & RESSOURCES NON DÉTRUITES
 - Phase143Accessibility.test.js
-- admin/useGlobalContent.js
+- AdminDashboard.jsx
 - moderationBlacklist.js
 - PostListingFeature.jsx
 - Communities (178 total, 17 thin omitted)
 - SECTION 4 — CHECKLIST OPÉRATIONNELLE POUR LE FONDATEUR
-- pricingService.js
+- PaymentModal.jsx
 - AppModalsOrchestrator.jsx
 - 5. FICHIERS DANS LE MAUVAIS DOSSIER
 - dependencies
@@ -44,7 +44,7 @@
 - checkRateLimit.ts
 - package.json
 - ref_fs
-- react
+- @testing-library/react
 - B. CARTOGRAPHIE DÉTAILLÉE PAR DOSSIER
 - ⚡ TROCO — AUDIT PROFOND DES PERFORMANCES, MÉMOIRE & RE-RENDERS (QA ARCHITECTURE)
 - functions/package.json
@@ -66,7 +66,7 @@
 - logger.js
 - 🟡 NIVEAU 2 — FACILE (1h - 3h)
 - 3. Matrice des Droits par Collection
-- useAccountActions.js
+- storage.js
 - ref_firebase_admin
 - ⚡ TROCO — AUDIT PROFOND DES PERFORMANCES, MÉMOIRE & RE-RENDERS (QA ARCHITECTURE)
 - serviceWorkerRegistration.js
@@ -76,7 +76,7 @@
 - 🔄 CHANGELOG TECHNIQUE — Septembre 2026
 - fix-logger-imports.js
 - setup-logger-v2.js
-- CloudOfficeSuiteModal.jsx
+- consentManager.js
 - src/TrocoSlides.jsx
 - 3. Procédure Opérationnelle Étape par Étape
 - services/audioService.js
@@ -84,7 +84,7 @@
 - fix-remaining-imports.js
 - B.4 — Fiches opérationnelles détaillées (objet, requêtes, SLA, automatisation)
 - TrocoLogo3D.jsx
-- parseAndTranslateDynamicText
+- subscribeTranslations
 - 🧠 TROCO — CONTEXTE TECHNIQUE & ARCHITECTURE ABSOLUE (CONTEXT.md)
 - 🗓️ ROADMAP DES 7 PROCHAINS JOURS (2026-10-07 À 2026-10-13)
 - TROCO — CODEBASE BIBLE
@@ -93,15 +93,15 @@
 - fix-logger-placement.js
 - migrate-users-public.js
 - remove-all-logger-imports.js
-- 5.2 Réception d'un Message
+- 5.1 Envoi d'un Message
 - useLanguage
-- FeedCardItem.jsx
+- audioService
 - archived-2026-10-06/AUDIT-STRUCTURE.md
-- displayName.js
+- ⚙️ 3. ÉTAT ACTUEL DES FONCTIONNALITÉS (CE QUI FONCTIONNE)
 - 2. Matrice de Tests Manuels & Résultats
 - 2. 🎯 Clés Ajoutées lors de l'Étape 4 (Ratissage Final)
-- ChatView.jsx
-- subscribeTranslations
+- AppHeader.jsx
+- FeedRoute.jsx
 - audioUtils.js
 - AUDIT-00 — Rapport d'Audit Complet Chat & WebRTC Post-HOTFIX-07
 - 15. JOUR 1 : PURGE FINANCIÈRE, PURGE TOTALE DES PERSONAS DÉMO ET TUTORIEL INTERACTIF IA
@@ -143,20 +143,20 @@
 - 📜 LIVRE BLANC & SYNTHÈSE HISTORIQUE — PROJET TROCO
 - Step C — Recommandations d'infrastructure email
 - 2. Résultats des Scanners
-- WebRTCCallOverlay.jsx
+- translator.js
 - archived-2026-10-06/README.md
 - 16. SPLASH SCREEN PREMIUM CRT + DITHER 1-BIT & ESTHÉTIQUE RETRO HOME (UX-04 & UX-05)
 - OnboardingWizardModal.jsx
 - SkeletonLoader.jsx
 - 🚀 Cahier des Charges & Contexte Technique : Troco International (v2.0)
-- ⚙️ 3. ÉTAT ACTUEL DES FONCTIONNALITÉS (CE QUI FONCTIONNE)
+- 📋 SECTION 2 — AUDIT CHAT / MESSAGERIE
 - 2. Résultats des Scanners
 - B.6 — Fiches opérationnelles — adresses P2 et arbitrages de convention
 - devDependencies
-- 5.1 Envoi d'un Message
-- MessageBubble.jsx
-- translator.js
-- 🔴 CE QUI EST CASSÉ
+- FilterDrawer.jsx
+- voiceStorageService.js
+- translationsData.js
+- FeedView.jsx
 - geocodingNominatim.js
 - 🦄 AUDIT OPÉRATIONNEL COMPLET — TROCO
 - 4. LA PHASE INGÉNIERIE COMPLEXE (WebRTC & P2P Escrow)
@@ -168,8 +168,8 @@
 - Rapport d'Incident & Correctif — HOTFIX-01 : Modale Troco Plus Bloquée
 - 17. Résolution I18N Complète : Namespace Live, Notifications de Transfert, Cartes Workspace & Placeholders
 - LanguageSelectModal.jsx
-- GlobalLiveChat
-- Répartition détaillée par dossier
+- CommunityHubSection.jsx
+- 📋 SECTION 3 — AUDIT WEBRTC / APPELS
 - Rapport d'Incident & Correctif — HOTFIX-02 : Envois Multiples Mobile & Sync Desktop
 - messageIdempotency.js
 - Rapport d'Incident & Correctif — HOTFIX-04 : Réparation Appels WebRTC
@@ -184,9 +184,9 @@
 - SECTION 2 — ORGANIGRAMME & PLAN DE RECRUTEMENT
 - Audits archivés
 - 5. ROADMAP STRATÉGIQUE & PROCHAINES ÉTAPES
-- 22. Résolution des Avatars Brisés & Éradication des Images `src=""` (2026-10-14)
+- migrate-orphan-listings.js
 - 5. ROADMAP STRATÉGIQUE & PROCHAINES ÉTAPES
-- 🛡️ 4. RÈGLES DE SÉCURITÉ, BASE DE DONNÉES & CORS
+- PWAInstallBanner.jsx
 - 8. Paiements & Transactions
 - 17. Comment tester manuellement
 - rules/graphify.md
@@ -198,7 +198,7 @@
 - cors.json
 - docs/captures/firestore-schema-snapshot.json
 - docs/logs/cloud-functions-sample.json
-- useChatManager.js
+- ChatView.jsx
 - e2e/critical-path.spec.js
 - firebase.json
 - 3. LA PHASE D'ÉLÉVATION (Design System & Motion)
@@ -206,7 +206,7 @@
 - firestore.indexes.json
 - functions/package.json
 - functions/src/admin/deleteListingAsAdmin.ts
-- Phase128FinancialAtomicEngineAndCustomTip.test.js
+- 📋 SECTION 7 — SYNTHÈSE, RISQUES & ACTIONS PRIORITAIRES
 - functions/src/admin/resetUserSafely.ts
 - src_components_layout_index_appbottomnav
 - src_components_layout_index_appheader
@@ -407,15 +407,15 @@
 - 📋 Procédure de Test P0-FIN-03 : Séparation cancelCheckout / applyCheckout
 - 2. LA PHASE DE FONDATION (Les Débuts et le Monolithe)
 - useFirestoreHealth
-- registerAudioContext
+- useChatManager.js
 - CORS-SETUP.md
-- useAdminGuard
-- 23. PROMPT 3 — i18n : theme.dark_mode + Déduplication des Clés editProfile
-- 24. PROMPT 4 — CORS ipapi.co : Proxy Cloud Function (getCurrencyFromIP)
+- contentModeration.js
+- 💰 ROADMAP FINANCE & CONFORMITÉ
+- isLowEndDevice
+- Fichiers modifiés par catégorie
 - B. HOTSPOTS DE RENDU (WHITEBOARD & CHAT) : REACT STATE THRASHING & SATURATION RAM ACTIVE
-- B. HOTSPOTS DE RENDU (WHITEBOARD & CHAT) : REACT STATE THRASHING & SATURATION RAM ACTIVE
-- lucide-react
-- PhotoGrid.jsx
+- modalBackdrop.js
+- react
 - cookies-policy-es.js
 - cookies-policy-it.js
 - cookies-policy-zh.js
@@ -425,6 +425,10 @@
 - privacy-policy-en.js
 - privacy-policy-zh.js
 - refund-policy-de.js
+- 📋 SECTION 2 — AUDIT CHAT / MESSAGERIE
+- extends
+- reportWebVitals.js
+- CategoryModal.jsx
 
 ## God Nodes (most connected - your core abstractions)
 1. `react` - 235 edges
@@ -435,8 +439,8 @@
 6. `logger` - 84 edges
 7. `firebase` - 76 edges
 8. `@testing-library/react` - 73 edges
-9. `App()` - 62 edges
-10. `🟢 NIVEAU 1 — QUICK WINS (15min - 1h)` - 62 edges
+9. `🟢 NIVEAU 1 — QUICK WINS (15min - 1h)` - 63 edges
+10. `App()` - 62 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `🔴 P0-b — `privacy@troco.fr` — Demandes RGPD` --references--> `sendDeletionEmail()`  [INFERRED]
@@ -453,11 +457,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (410 total, 26 thin omitted)
+## Communities (414 total, 29 thin omitted)
 
 ### Community 0 - "useAuthSession.js"
 Cohesion: 0.14
-Nodes (16): zustand, TrocoLogo(), AuthContext, AuthProvider(), AuthScreen(), useAppAuth(), useAuthSession(), playWelcomeGiftFanfare() (+8 more)
+Nodes (17): TrocoLogo(), AuthContext, AuthProvider(), AuthScreen(), useAccountActions(), useAppAuth(), useAuthSession(), playWelcomeGiftFanfare() (+9 more)
 
 ### Community 1 - "LegalRoutes.jsx"
 Cohesion: 0.16
@@ -468,8 +472,8 @@ Cohesion: 0.08
 Nodes (28): Blocked, CONSOLE, expectAnyVisible(), fs, goTab(), { LOG_DIR, seedSession, attachCollectors, shot, installVitals }, META, Missing (+20 more)
 
 ### Community 3 - "CollaborativeWhiteboardModal.jsx"
-Cohesion: 0.08
-Nodes (25): Community 94 - "🟡 NIVEAU 2 — FACILE (1h - 3h)", Community 94 - "🟡 NIVEAU 2 — FACILE (1h - 3h)", [x] [FAC-01] — Création du hook `useConfirm()` et de la modale `<ConfirmDialog />`, ChatHeader(), ALL_SHAPE_TYPES, BG_PRESETS, CollaborativeWhiteboardModal(), CURATED_PALETTE (+17 more)
+Cohesion: 0.11
+Nodes (17): ALL_SHAPE_TYPES, BG_PRESETS, CollaborativeWhiteboardModal(), CURATED_PALETTE, SHAPE_OPTIONS, STICKY_COLORS, ErrorBoundary, fetchWorkspaceVersions() (+9 more)
 
 ### Community 4 - "src/index.ts"
 Cohesion: 0.08
@@ -477,11 +481,11 @@ Nodes (27): handleRestoreAccount(), CurrencyFromIPResponse, handleGetCurrencyFro
 
 ### Community 5 - "Communities (200 total, 37 thin omitted)"
 Cohesion: 0.01
-Nodes (158): Communities (200 total, 37 thin omitted), Community 0 - "react", Community 100 - "TROCO — CODEBASE BIBLE", Community 101 - "Step B — PRODUIT & UX", Community 102 - "SECTION 4 — CHECKLIST OPÉRATIONNELLE POUR LE FONDATEUR", Community 103 - "B.4 — Fiches opérationnelles détaillées (objet, requêtes, SLA, automatisation)", Community 104 - "geocodingNominatim.js", Community 105 - "2. Matrice de Tests Manuels & Résultats" (+150 more)
+Nodes (159): Communities (200 total, 37 thin omitted), Community 0 - "react", Community 100 - "TROCO — CODEBASE BIBLE", Community 101 - "Step B — PRODUIT & UX", Community 102 - "SECTION 4 — CHECKLIST OPÉRATIONNELLE POUR LE FONDATEUR", Community 103 - "B.4 — Fiches opérationnelles détaillées (objet, requêtes, SLA, automatisation)", Community 104 - "geocodingNominatim.js", Community 105 - "2. Matrice de Tests Manuels & Résultats" (+151 more)
 
 ### Community 6 - "ListingCard.jsx"
-Cohesion: 0.19
-Nodes (6): defaultGetListingDisplayContent(), localizeLocation(), localizeTags(), translations, src_utils_mediautils_getfallbackimage, src_utils_mediautils_getsuggestedmedia
+Cohesion: 0.13
+Nodes (12): defaultGetListingDisplayContent(), localizeLocation(), localizeTags(), translations, DEFAULT_POST_IMAGE, fallbackCategoryImages, getFallbackImage(), getSuggestedImage() (+4 more)
 
 ### Community 7 - "ThemeContext.jsx"
 Cohesion: 0.11
@@ -492,28 +496,28 @@ Cohesion: 0.18
 Nodes (28): DeleteListingAsAdminRequest, DeleteListingAsAdminResponse, handleDeleteListingAsAdmin(), handleResetUserSafely(), ResetUserSafelyRequest, ResetUserSafelyResponse, handleResolveReport(), ResolveReportRequest (+20 more)
 
 ### Community 9 - "firestoreService.js"
-Cohesion: 0.15
-Nodes (7): ngeohash, createListing(), subscribeToListings(), subscribeToListingsByGeohash(), encodeGeohash(), getGeohashPrecisionForRadius(), getGeohashQueryBounds()
+Cohesion: 0.14
+Nodes (8): ngeohash, createListing(), sendPostCallTip(), subscribeToListings(), subscribeToListingsByGeohash(), encodeGeohash(), getGeohashPrecisionForRadius(), getGeohashQueryBounds()
 
 ### Community 10 - "C. FUITES DE MÉMOIRE (LEAKS) : HOOKS MAL FERMÉS & RESSOURCES NON DÉTRUITES"
 Cohesion: 0.13
 Nodes (14): 1. `CloudOfficeSuiteModal.jsx` : Dépendance `docContent` dans le listener Firestore (Fuite critique), 1. La faille du seuil Mobile (`isMobile = window.innerWidth < 768`) et l'exécution du Canvas 4K sur iPad & iPhone Paysage, 2. L'asphyxie du GPU par sur-empilement de filtres `backdrop-filter: blur(...)` (122 occurrences), 2. `useWebRTC.js` : Écoute universelle sans filtre sur la totalité de la collection `calls`, 3. Absence de virtualisation du Feed et décodage massif d'images en RAM, 3. `useChatManager.js` : Instanciation en boucle et non libérée de `AudioContext`, 4. `FeedView.jsx` : Redondance de listener sur `listings` et import synchrone de Leaflet, A. DIAGNOSTIC DU CRASH AU DÉMARRAGE : SATURATION VRAM AU PREMIER CHARGEMENT (+6 more)
 
 ### Community 11 - "Phase143Accessibility.test.js"
-Cohesion: 0.16
-Nodes (8): CreateProjectGroupModal(), PROJECT_CATEGORIES, SUGGESTED_MEMBERS, NotificationPill(), Portal(), dismissDynamicIslandNotification(), notificationService, showDynamicIslandNotification()
+Cohesion: 0.15
+Nodes (9): CreateProjectGroupModal(), PROJECT_CATEGORIES, SUGGESTED_MEMBERS, NotificationPill(), Portal(), playPop(), dismissDynamicIslandNotification(), notificationService (+1 more)
 
-### Community 12 - "admin/useGlobalContent.js"
-Cohesion: 0.67
-Nodes (4): DEFAULT_GLOBAL_CONTENT, updateGlobalContent(), useAllGlobalContent(), useGlobalContent()
+### Community 12 - "AdminDashboard.jsx"
+Cohesion: 0.21
+Nodes (12): 21.2. Mesures & Gardes Appliquées, 3.11 Rendre Effectives les Suppressions Administrateur dans Community, [x] [P0-SEC-01] — Protection administrateur par Custom Claims vérifiés & Masquage UI des boutons de modération, AdminPanel(), AdminChatsTab(), AdminCommunityTab(), AdminDashboard(), DEFAULT_GLOBAL_CONTENT (+4 more)
 
 ### Community 13 - "moderationBlacklist.js"
 Cohesion: 0.08
 Nodes (26): ACADEMIC_FRAUD_CHEATING_TERMS, ADULT_SEXUAL_EXPLOITATION_TERMS, ALL_FORBIDDEN_TERMS, ANIMAL_CRUELTY_POACHING_TERMS, BOTS_SPAM_CYBERCRIME_TERMS, COUNTERFEIT_GOODS_TERMS, DANGEROUS_CULTS_EXTREMISM_TERMS, DRUGS_NARCOTICS_TERMS (+18 more)
 
 ### Community 14 - "PostListingFeature.jsx"
-Cohesion: 0.18
-Nodes (17): calculateListingInvoice(), generateInvoiceRef(), InvoiceCalculator(), compressImage(), PhotoGrid, PostListingFeature(), sanitizeForFirestore(), VideoEditorModal (+9 more)
+Cohesion: 0.29
+Nodes (12): calculateListingInvoice(), generateInvoiceRef(), InvoiceCalculator(), compressImage(), PhotoGrid, PostListingFeature(), sanitizeForFirestore(), VideoEditorModal (+4 more)
 
 ### Community 15 - "Communities (178 total, 17 thin omitted)"
 Cohesion: 0.01
@@ -523,25 +527,25 @@ Nodes (155): Communities (178 total, 17 thin omitted), Community 0 - "react", Co
 Cohesion: 0.10
 Nodes (25): 5.2 — Stratégie de tests (état actuel → standard fintech), 5.3 — Brief pour le CTO / Lead Developer freelance (90 premiers jours), A.3 — RGPD : registre des traitements, DPO, mentions légales, consentements, Annexe A — Modèle de registre des traitements RGPD, Business : ouvrir compte bancaire pro, statut juridique, assurance, Communication : kit média, réseaux sociaux, page presse, Conformité : DPO, registre RGPD, mentions légales, CGU, Emails : créer et configurer les adresses P0 en premier (+17 more)
 
-### Community 17 - "pricingService.js"
-Cohesion: 0.08
-Nodes (34): 🔄 7. UNIFICATION DES SERVICES EN DOUBLE (CLEANUP-05 — 2026-10-06), CookieBanner(), detectCardBrand(), isValidLuhn(), PaymentModal(), PrivacyCenterModal(), audioService, CONSENT_TIMESTAMP_KEY (+26 more)
+### Community 17 - "PaymentModal.jsx"
+Cohesion: 0.13
+Nodes (27): 24.1. Problématiques & Contexte, 24.2. Actions & Corrections Réalisées, 24.3. Validation, 24. PROMPT 4 — CORS ipapi.co : Proxy Cloud Function (getCurrencyFromIP), 🔄 7. UNIFICATION DES SERVICES EN DOUBLE (CLEANUP-05 — 2026-10-06), detectCardBrand(), isValidLuhn(), PaymentModal() (+19 more)
 
 ### Community 18 - "AppModalsOrchestrator.jsx"
-Cohesion: 0.10
+Cohesion: 0.13
 Nodes (23): AdminDashboard, AppModalsOrchestrator(), BoostListingModal, CallFeature, CategoryPickerModal, CguConsentModal, CguModal, CounterOfferModal (+15 more)
 
 ### Community 19 - "5. FICHIERS DANS LE MAUVAIS DOSSIER"
-Cohesion: 0.08
-Nodes (37): 3.6 Neutralisation de la Boucle Infinie (Bonus Financier & Modale CGU) & Restauration Messagerie, 5.1 Architecture des Modales avec `UniversalModal.jsx`, 5. FICHIERS DANS LE MAUVAIS DOSSIER, `ChatView` ([`src/components/ChatView.jsx`](file:///c:/Users/mateo/Desktop/TROCO/src/components/ChatView.jsx)), 2. Empilement des Fenêtres (Stacking Contexts & Portals), 3. Poids du Bundle & Code-Splitting, Détail des 5 Chantiers Prioritaires :, E. PLAN D'ACTION & ROADMAP DE STABILISATION (+29 more)
+Cohesion: 0.09
+Nodes (35): 3.6 Neutralisation de la Boucle Infinie (Bonus Financier & Modale CGU) & Restauration Messagerie, 5.1 Architecture des Modales avec `UniversalModal.jsx`, 5.2 Personnalisation & Thèmes (`ThemeContext.jsx`), 🎨 5. DESIGN SYSTEM, MODALES & ACCESSIBILITÉ, 5. FICHIERS DANS LE MAUVAIS DOSSIER, 2. Empilement des Fenêtres (Stacking Contexts & Portals), Détail des 5 Chantiers Prioritaires :, E. PLAN D'ACTION & ROADMAP DE STABILISATION (+27 more)
 
 ### Community 20 - "dependencies"
 Cohesion: 0.10
 Nodes (21): dependencies, clsx, firebase, framer-motion, leaflet, lucide-react, motion, ngeohash (+13 more)
 
 ### Community 21 - "AUDIT-00 — Rapport d'Audit Complet Chat & WebRTC Post-HOTFIX-07"
-Cohesion: 0.09
-Nodes (22): Actions Correctives Prioritaires, Annexes, AUDIT-00 — Rapport d'Audit Complet Chat & WebRTC Post-HOTFIX-07, Métadonnées, 📋 SECTION 3 — AUDIT WEBRTC / APPELS, 📋 SECTION 4 — AUDIT FIRESTORE RULES, 📋 SECTION 5 — AUDIT CLOUD FUNCTIONS, 📋 SECTION 6 — AUDIT RÉGRESSIONS GLOBALES (+14 more)
+Cohesion: 0.11
+Nodes (17): Annexes, AUDIT-00 — Rapport d'Audit Complet Chat & WebRTC Post-HOTFIX-07, Métadonnées, 📋 SECTION 3 — AUDIT WEBRTC / APPELS, 📋 SECTION 4 — AUDIT FIRESTORE RULES, 📋 SECTION 5 — AUDIT CLOUD FUNCTIONS, 📋 SECTION 6 — AUDIT RÉGRESSIONS GLOBALES, Étape 3.1 — Structure des données Firestore Signaling (+9 more)
 
 ### Community 22 - "legal/index.js"
 Cohesion: 0.07
@@ -549,31 +553,31 @@ Nodes (23): cookiesPolicyDe, cookiesPolicyEn, cookiesPolicyFr, cookiesPolicyJa, 
 
 ### Community 23 - "B. CARTOGRAPHIE DÉTAILLÉE PAR DOSSIER"
 Cohesion: 0.10
-Nodes (19): 1. Duplications de Code et Fichiers Redondants, 1. Flux Zustand vs React Context, 1. Hotspots de Re-renders (Monolithes Applicatifs), 1. Stores Zustand (`src/stores/`), 2. Contextes React (`src/contexts/`), 2. Cycle de Vie des Écouteurs Firestore (`onSnapshot`), 2. Synchronisation Firebase Temps Réel, 3. Conflits d'État : Local vs Zustand vs Firestore (+11 more)
+Nodes (20): 1. Duplications de Code et Fichiers Redondants, 1. Flux Zustand vs React Context, 1. Hotspots de Re-renders (Monolithes Applicatifs), 1. Stores Zustand (`src/stores/`), 2. Contextes React (`src/contexts/`), 2. Cycle de Vie des Écouteurs Firestore (`onSnapshot`), 2. Synchronisation Firebase Temps Réel, 3. Conflits d'État : Local vs Zustand vs Firestore (+12 more)
 
 ### Community 24 - "6.1 Lancer un Appel"
-Cohesion: 0.08
-Nodes (25): 6.1 Lancer un Appel, 6.2 Recevoir un Appel, 6.3 Échange de Signalisation (SDP & Candidats ICE), 6.4 Fin d'Appel & Raccrochage, 6.5 Composants UI Dédiés, 6.6 Points Sensibles & Vulnérabilités WebRTC, 6. Appels WebRTC — CARTE COMPLÈTE, Actions Déclenchées à l'Interception (+17 more)
+Cohesion: 0.10
+Nodes (21): 6.1 Lancer un Appel, 6.2 Recevoir un Appel, 6.3 Échange de Signalisation (SDP & Candidats ICE), 6.4 Fin d'Appel & Raccrochage, 6.6 Points Sensibles & Vulnérabilités WebRTC, 6. Appels WebRTC — CARTE COMPLÈTE, Actions Déclenchées à l'Interception, Buffer d'Attente ICE (Trickle ICE) (+13 more)
 
 ### Community 25 - "checkRateLimit.ts"
 Cohesion: 0.29
 Nodes (7): checkRateLimit, CheckRateLimitData, CheckRateLimitResponse, handleCheckRateLimit(), getWindowStart(), RATE_LIMITS, RateLimitConfig
 
 ### Community 26 - "package.json"
-Cohesion: 0.09
-Nodes (20): browserslist, development, production, eslintConfig, extends, firebase-admin, firebase-functions, vitest (+12 more)
+Cohesion: 0.13
+Nodes (14): browserslist, development, production, firebase-admin, firebase-functions, vitest, name, private (+6 more)
 
 ### Community 27 - "ref_fs"
-Cohesion: 0.14
-Nodes (12): ref_fs, ref_path, admin, bootstrapAdmin(), fs, initializeAdminSDK(), path, firestoreFetch() (+4 more)
+Cohesion: 0.20
+Nodes (7): ref_fs, ref_path, admin, bootstrapAdmin(), fs, initializeAdminSDK(), path
 
-### Community 28 - "react"
-Cohesion: 0.13
-Nodes (16): [x] [I18N-05] — Réactivité UGC du Feed & Traduction CloudOfficeSuite (7 langues), react, @testing-library/jest-dom, @testing-library/react, CloudOfficeSuiteModal(), defaultDoc, extractSnippet(), NotesModal() (+8 more)
+### Community 28 - "@testing-library/react"
+Cohesion: 0.10
+Nodes (28): [x] [I18N-05] — Réactivité UGC du Feed & Traduction CloudOfficeSuite (7 langues), [x] [WP-FIX-01/02/03] — Internationalisation Workspace, Refonte Notes & Barre de Menus Bureau (EditorMenuBar), @testing-library/jest-dom, @testing-library/react, CloudOfficeSuiteModal(), CloudOfficeSuiteModalContent(), DEFAULT_SHEET_DATA, DEFAULT_SLIDES (+20 more)
 
 ### Community 29 - "B. CARTOGRAPHIE DÉTAILLÉE PAR DOSSIER"
-Cohesion: 0.11
-Nodes (17): 1. Flux Zustand vs React Context, 1. Hotspots de Re-renders (Monolithes Applicatifs), 1. Stores Zustand (`src/stores/`), 2. Contextes React (`src/contexts/`), 2. Cycle de Vie des Écouteurs Firestore (`onSnapshot`), 2. Synchronisation Firebase Temps Réel, 3. Hooks Métier (`src/hooks/`), 4. Services Applicatifs (`src/services/`) (+9 more)
+Cohesion: 0.10
+Nodes (20): 1. Duplications de Code et Fichiers Redondants, 1. Flux Zustand vs React Context, 1. Hotspots de Re-renders (Monolithes Applicatifs), 1. Stores Zustand (`src/stores/`), 2. Contextes React (`src/contexts/`), 2. Cycle de Vie des Écouteurs Firestore (`onSnapshot`), 2. Synchronisation Firebase Temps Réel, 3. Conflits d'État : Local vs Zustand vs Firestore (+12 more)
 
 ### Community 30 - "⚡ TROCO — AUDIT PROFOND DES PERFORMANCES, MÉMOIRE & RE-RENDERS (QA ARCHITECTURE)"
 Cohesion: 0.12
@@ -604,16 +608,16 @@ Cohesion: 0.13
 Nodes (14): 1. `CloudOfficeSuiteModal.jsx` : Dépendance `docContent` dans le listener Firestore (Fuite critique), 1. La faille du seuil Mobile (`isMobile = window.innerWidth < 768`) et l'exécution du Canvas 4K sur iPad & iPhone Paysage, 2. L'asphyxie du GPU par sur-empilement de filtres `backdrop-filter: blur(...)` (122 occurrences), 2. `useWebRTC.js` : Écoute universelle sans filtre sur la totalité de la collection `calls`, 3. Absence de virtualisation du Feed et décodage massif d'images en RAM, 3. `useChatManager.js` : Instanciation en boucle et non libérée de `AudioContext`, 4. `FeedView.jsx` : Redondance de listener sur `listings` et import synchrone de Leaflet, A. DIAGNOSTIC DU CRASH AU DÉMARRAGE : SATURATION VRAM AU PREMIER CHARGEMENT (+6 more)
 
 ### Community 38 - "haptics.js"
-Cohesion: 0.21
-Nodes (14): MobileHeader(), OfflineBanner(), OfflineScreen(), SwipeableChatItem(), useNetworkStatus(), playPop(), HAPTIC_PATTERNS, hapticError() (+6 more)
+Cohesion: 0.27
+Nodes (12): OfflineBanner(), OfflineScreen(), SwipeableChatItem(), useNetworkStatus(), HAPTIC_PATTERNS, hapticError(), hapticLight(), hapticSuccess() (+4 more)
 
 ### Community 39 - "src/TrocoSheets.jsx"
 Cohesion: 0.26
 Nodes (14): AVAILABLE_FORMULAS, colToLetter(), DEFAULT_CELL_SIZE, evaluateCellValue(), executeFormula(), extractRangeValues(), getCellRef(), parseArguments() (+6 more)
 
 ### Community 40 - "🧪 RAPPORT E2E PLAYWRIGHT — TROCO"
-Cohesion: 0.14
-Nodes (13): 📎 ANNEXES, 🟢 CE QUI FONCTIONNE, ⚠️ CE QUI MANQUE, Fonctionnalité manquante #1 : Compte E2E Firebase réel / émulateurs, Fonctionnalité manquante #2 : Splash Screen (Parcours 15), Fonctionnalité manquante #3 : Magic Link Email, Fonctionnalité manquante #4 : Vidéos et couverture Firefox/WebKit, 📱 MOBILE (+5 more)
+Cohesion: 0.09
+Nodes (22): 📎 ANNEXES, Anomalie #1 : Bouton « Panel Modération » visible pour un non-admin, Anomalie #2 : Clé i18n brute `theme.dark_mode` affichée, Anomalie #3 : Clé dupliquée `editProfile` dans les traductions, Anomalie #4 : Cumulative Layout Shift trop élevé, Anomalie #5 : Avatar de profil cassé (image `src=""`), Anomalie #6 : Erreurs console récurrentes en session authentifiée, Anomalie #7 : INP élevé (+14 more)
 
 ### Community 41 - "compilerOptions"
 Cohesion: 0.15
@@ -621,39 +625,39 @@ Nodes (12): compileOnSave, compilerOptions, esModuleInterop, module, noImplicitR
 
 ### Community 42 - "🟢 NIVEAU 1 — QUICK WINS (15min - 1h)"
 Cohesion: 0.04
-Nodes (49): 🟢 NIVEAU 1 — QUICK WINS (15min - 1h), [ ] [QW-15] — Calcul dynamique et assainissement des statistiques réelles de profil, [x] [API-01] — Élimination des erreurs CORS et 429 via Proxy Cloud Function ipapi.co, [x] [CLEANUP-01] — Purge démo complète (mockData, personas, Unsplash, pubs, DemoModeBanner), [x] [CLEANUP-02] — Fix P1-BUG-11 réel (localStorage feed), [x] [CLEANUP-03] — Purge faux soldes, [x] [CLEANUP-04] — Ménage documentaire complet & consolidation de référence, [x] [CLEANUP-05] — Unification des services en double (audioService, pricingService) (+41 more)
+Nodes (50): 🟢 NIVEAU 1 — QUICK WINS (15min - 1h), [ ] [QW-15] — Calcul dynamique et assainissement des statistiques réelles de profil, [x] [API-01] — Élimination des erreurs CORS et 429 via Proxy Cloud Function ipapi.co, [x] [CLEANUP-01] — Purge démo complète (mockData, personas, Unsplash, pubs, DemoModeBanner), [x] [CLEANUP-02] — Fix P1-BUG-11 réel (localStorage feed), [x] [CLEANUP-03] — Purge faux soldes, [x] [CLEANUP-04] — Ménage documentaire complet & consolidation de référence, [x] [CLEANUP-05] — Unification des services en double (audioService, pricingService) (+42 more)
 
 ### Community 43 - "migrateChatParticipants.ts"
 Cohesion: 0.35
 Nodes (9): executeChatMigration(), isFirebaseUid(), migrateChatParticipants, MigrateChatParticipantsData, MigrateChatParticipantsResult, ChatMigrationReport, createEmptyReport(), formatReportSummary() (+1 more)
 
 ### Community 44 - "users_public.test.js"
-Cohesion: 0.13
-Nodes (13): A.1 — Adresses réellement présentes dans le code de production, A.2 — Adresses techniques / personnelles (dette critique), A.3 — Adresses de test (à ne pas confondre avec la production), A.4 — Infrastructure email : état réel constaté, A.5 — Flux de notification actuel (pour information), Step A — Résultat du scan de la base de code (preuve par grep), @firebase/rules-unit-testing, getContext() (+5 more)
+Cohesion: 0.14
+Nodes (12): A.1 — Adresses réellement présentes dans le code de production, A.2 — Adresses techniques / personnelles (dette critique), A.3 — Adresses de test (à ne pas confondre avec la production), A.4 — Infrastructure email : état réel constaté, A.5 — Flux de notification actuel (pour information), Step A — Résultat du scan de la base de code (preuve par grep), getContext(), rulesContent (+4 more)
 
 ### Community 45 - "ProfileAppearanceCustomizer.jsx"
-Cohesion: 0.17
-Nodes (22): 2. `community` (Onglet "Communauté"), 3.2 Inventaire des Vues Principales, 4. `post` (Onglet "Publier"), 5. `profile` (Onglet "Mon Profil"), accentBackground(), AMBIENCES, buildGradient(), COLOR_NAMES (+14 more)
+Cohesion: 0.23
+Nodes (18): accentBackground(), AMBIENCES, buildGradient(), COLOR_NAMES, FONT_CATEGORIES, getHarmonies(), GRADIENT_PRESETS, hexToHsl() (+10 more)
 
 ### Community 46 - "📊 RAPPORT DE SESSION — 6 & 7 OCTOBRE 2026"
-Cohesion: 0.13
-Nodes (14): 🎯 1. SYNTHÈSE EXÉCUTIVE DES 4 ÉTAPES RÉALISÉES, 📈 2. MÉTRIQUES AVANT / APRÈS, 📂 3. INVENTAIRE DES FICHIERS, 🔍 4. AUDIT DE VÉRITÉ DES TÂCHES COCHÉES DANS LE MASTER_AUDIT, 🎯 5. CE QUI RESTE À FAIRE (INVENTAIRE PRIORISÉ), 💡 6. RECOMMANDATIONS POUR LES PROCHAINES SESSIONS, A. Fichiers Créés, B. Fichiers Modifiés (+6 more)
+Cohesion: 0.14
+Nodes (13): 🎯 1. SYNTHÈSE EXÉCUTIVE DES 4 ÉTAPES RÉALISÉES, 📈 2. MÉTRIQUES AVANT / APRÈS, 📂 3. INVENTAIRE DES FICHIERS, 🎯 5. CE QUI RESTE À FAIRE (INVENTAIRE PRIORISÉ), 💡 6. RECOMMANDATIONS POUR LES PROCHAINES SESSIONS, A. Fichiers Créés, B. Fichiers Modifiés, C. Fichiers Archivés / Déplacés (+5 more)
 
 ### Community 47 - "logger.js"
-Cohesion: 0.10
-Nodes (32): firebase, AVAILABLE_LANGUAGES, BG_STYLES, FONT_COLORS, FONT_SIZES, REPORT_REASONS, langMap, AdminChatsTab() (+24 more)
+Cohesion: 0.12
+Nodes (24): firebase, COMPLIMENT_TAGS, REPORT_REASONS, langMap, defaultDoc, SPONSORED_PARTNERS, UI_STRINGS, app (+16 more)
 
 ### Community 48 - "🟡 NIVEAU 2 — FACILE (1h - 3h)"
-Cohesion: 0.18
-Nodes (11): 🟡 NIVEAU 2 — FACILE (1h - 3h), [x] [FAC-02] — Intégration du composant `PullToRefresh` sur la vue Feed, [x] [FAC-04] — Color picker complet (HEX/RGB/HSL) dans le tableau blanc, [x] [FAC-06] — Mode sombre automatique système + horaire, [x] [FAC-08] — Harmonisation accessibilité a11y (ARIA, contrastes WCAG AA, focus-visible), [x] [FAC-09] — Correction du bug d'avatar inversé dans les DMs, [x] [P0-FIN-03] — Séparation stricte du bouton annuler et de la validation dans le checkout, [x] [P0-SEC-02] — Découplage RGPD des profils publics via la collection `users_public` (+3 more)
+Cohesion: 0.15
+Nodes (13): 🟡 NIVEAU 2 — FACILE (1h - 3h), [x] [FAC-01] — Création du hook `useConfirm()` et de la modale `<ConfirmDialog />`, [x] [FAC-02] — Intégration du composant `PullToRefresh` sur la vue Feed, [x] [FAC-04] — Color picker complet (HEX/RGB/HSL) dans le tableau blanc, [x] [FAC-06] — Mode sombre automatique système + horaire, [x] [FAC-08] — Harmonisation accessibilité a11y (ARIA, contrastes WCAG AA, focus-visible), [x] [FAC-09] — Correction du bug d'avatar inversé dans les DMs, [x] [FAC-10] — Suppression effective des messages Community par l'administrateur et Firestore rules (+5 more)
 
 ### Community 49 - "3. Matrice des Droits par Collection"
 Cohesion: 0.12
 Nodes (16): 1. Philosophie & Principes Fondamentaux, 2. Fonctions Helper Réutilisables, 3. Matrice des Droits par Collection, 4. Exécution des Tests Unitaires, 🎁 `campaigns/{campaignId}`, 💬 `chats/{chatId}`, Déploiement en production, Lancement des tests avec l'émulateur Firebase (+8 more)
 
-### Community 50 - "useAccountActions.js"
-Cohesion: 0.17
-Nodes (15): useAccountActions(), gdprService, src_utils_audioservice_playwelcomegiftfanfare, clearTrocoLocalStorage(), flush, flushAll(), flushKey(), get() (+7 more)
+### Community 50 - "storage.js"
+Cohesion: 0.29
+Nodes (11): flush, flushAll(), flushKey(), get(), pendingValues, remove(), setDebounced(), setSync() (+3 more)
 
 ### Community 51 - "ref_firebase_admin"
 Cohesion: 0.38
@@ -668,20 +672,20 @@ Cohesion: 0.44
 Nodes (9): applyServiceWorkerUpdate(), checkValidServiceWorker(), handleUpdateFound(), isLocalhost, register(), registerValidSW(), setupPeriodicUpdates(), showUpdateToast() (+1 more)
 
 ### Community 54 - "App.js"
-Cohesion: 0.10
-Nodes (33): 🌐 10. RATISSAGE FINAL i18n & AUDIT MULTILINGUE (ÉTAPE 4 — 2026-10-06), 15.2. Suppression Complète des Annonces & Personas Démo, 5.1 — Plan de migration technique (ordre strict, anti-régression), [x] [I18N-06] — Ratissage final i18n & Couverture Multilingue 100% (7 langues), [x] [QW-14] — Requête `fetchListingsPaginated` simplifiée sans index composite requis, [x] [TDIF-01] — Refonte architecturale modulaire complète : Découpage de `src/App.js` en routes & hooks, App(), Footer (+25 more)
+Cohesion: 0.12
+Nodes (26): 5.1 — Plan de migration technique (ordre strict, anti-régression), 🔍 4. AUDIT DE VÉRITÉ DES TÂCHES COCHÉES DANS LE MASTER_AUDIT, [x] [CLEANUP-06] — Extraction des modales secondaires dans ModalOrchestrator.jsx et découpage d'App.js, [x] [QW-14] — Requête `fetchListingsPaginated` simplifiée sans index composite requis, App(), Footer, pageTransitionConfig, pageTransitionVariants (+18 more)
 
 ### Community 55 - "ProfileFeature.jsx"
-Cohesion: 0.15
-Nodes (21): DesignStudioModal(), HAIR_COLORS, HAIR_STYLES, INCLUSIVE_PRESETS, InclusiveAvatarBuilder(), SKIN_TONES, ProfileView(), formatReviewDate() (+13 more)
+Cohesion: 0.17
+Nodes (23): MobileHeader(), DesignStudioModal(), HAIR_COLORS, HAIR_STYLES, INCLUSIVE_PRESETS, InclusiveAvatarBuilder(), SKIN_TONES, ProfileView() (+15 more)
 
 ### Community 56 - "@playwright/test"
 Cohesion: 0.22
 Nodes (3): { test, expect }, { defineConfig, devices }, @playwright/test
 
 ### Community 57 - "🔄 CHANGELOG TECHNIQUE — Septembre 2026"
-Cohesion: 0.09
-Nodes (23): 3.10 Cause Racine du Bug d'Avatar Inversé dans les Messages Directs, 3.12 Fusion des Annonces Orphelines vers le Compte Réel Google Auth & Suppression du Compte Factice, 3.13 Traduction Exhaustive des Éléments d'Interface Hardcodés (7 Langues : FR, EN, ES, IT, DE, JA, ZH), 3.15 Nettoyage Intégral des Avertissements de la Console Navigateur, 3.16 Correction des Permissions Firestore pour la Mise à Jour du Solde Utilisateur, 3.17 Résolution des Erreurs de Compilation & Linting Bloquant le Build Vercel, 3.18 Résolution Complète des 9 Tâches Critiques (PROMPT 13), 3.19 Uniformisation des Boutons Header & Refonte Conteneur Modales Juridiques (+15 more)
+Cohesion: 0.08
+Nodes (24): 3.10 Cause Racine du Bug d'Avatar Inversé dans les Messages Directs, 3.12 Fusion des Annonces Orphelines vers le Compte Réel Google Auth & Suppression du Compte Factice, 3.13 Traduction Exhaustive des Éléments d'Interface Hardcodés (7 Langues : FR, EN, ES, IT, DE, JA, ZH), 3.15 Nettoyage Intégral des Avertissements de la Console Navigateur, 3.16 Correction des Permissions Firestore pour la Mise à Jour du Solde Utilisateur, 3.17 Résolution des Erreurs de Compilation & Linting Bloquant le Build Vercel, 3.18 Résolution Complète des 9 Tâches Critiques (PROMPT 13), 3.19 Uniformisation des Boutons Header & Refonte Conteneur Modales Juridiques (+16 more)
 
 ### Community 58 - "fix-logger-imports.js"
 Cohesion: 0.31
@@ -691,9 +695,9 @@ Nodes (8): fixLoggerImport(), fs, getRelativePath(), LOGGER_PATH, main(), path, 
 Cohesion: 0.31
 Nodes (8): calculateLoggerPath(), EXCLUDE_FILES, fs, main(), path, processFile(), SRC_DIR, walkDir()
 
-### Community 60 - "CloudOfficeSuiteModal.jsx"
-Cohesion: 0.17
-Nodes (17): [x] [WP-FIX-01/02/03] — Internationalisation Workspace, Refonte Notes & Barre de Menus Bureau (EditorMenuBar), CloudOfficeSuiteModalContent(), DEFAULT_SHEET_DATA, DEFAULT_SLIDES, defaultDoc, evaluateCellFormula(), getColLetter(), getSlideBackgroundStyle() (+9 more)
+### Community 60 - "consentManager.js"
+Cohesion: 0.28
+Nodes (13): CookieBanner(), PrivacyCenterModal(), CONSENT_TIMESTAMP_KEY, COOKIE_CONSENT_KEY, DEFAULT_STRICT_SETTINGS, getConsentStatus(), getPrivacySettings(), isTrackerAllowed() (+5 more)
 
 ### Community 61 - "src/TrocoSlides.jsx"
 Cohesion: 0.33
@@ -704,8 +708,8 @@ Cohesion: 0.13
 Nodes (14): 1. Contexte & Enjeu de Sécurité, 1. Rollback rapide inline, 2. Architecture Technique de la Migration, 2. Restauration complète depuis le bucket, 3. Procédure Opérationnelle Étape par Étape, 4. Procédure de Rollback, Composants mis en place :, Guide de Migration des Participants de Chat — [VERIF-02] (+6 more)
 
 ### Community 63 - "services/audioService.js"
-Cohesion: 0.14
-Nodes (13): 11.2 Contextes React (`src/contexts/`), 11. État global (Zustand + Contexts), [x] [CLEANUP-06] — Extraction des modales secondaires dans ModalOrchestrator.jsx et découpage d'App.js, AppBottomNav, useAppModals(), useUserReporting(), ICE_CONFIG, useWebRTC() (+5 more)
+Cohesion: 0.16
+Nodes (11): 11.2 Contextes React (`src/contexts/`), AppBottomNav, LEGAL_TABS, MAIN_TABS, useUserReporting(), ICE_CONFIG, useWebRTC(), playSwoosh() (+3 more)
 
 ### Community 64 - "fix-all-logger-imports.js"
 Cohesion: 0.36
@@ -723,13 +727,13 @@ Nodes (9): B.4 — Fiches opérationnelles détaillées (objet, requêtes, SLA, 
 Cohesion: 0.40
 Nodes (7): AppLoadingScreen(), TrocoLogo3D, adjustHex(), hexToRgb(), normalizeHex(), parseGradientColors(), TrocoLogo3D()
 
-### Community 68 - "parseAndTranslateDynamicText"
-Cohesion: 0.19
-Nodes (23): 🌐 12. CORRECTION DU COURT-CIRCUIT DE TRADUCTION DES ANNONCES DÉMO & BANNIÈRE ADMIN (2026-10-07), 🌐 14. CORRECTION DÉFINITIVE : ALIGNEMENT DU PIPELINE DU FEED SUR CHAT/COMMUNITY (2026-10-07), 19. Campagne E2E Playwright complète (2026-10-14), 3. DÉTECTION DES DOUBLONS SUSPECTS, 3. DÉTECTION DES DOUBLONS SUSPECTS, [x] [FAC-03] — Badge de présence "En ligne" temps réel, [x] [I18N-10] — Correction du bouton "Voir l'original" dans le détail, [x] [I18N-11] — Alignement du pipeline feed sur ChatRoute (+15 more)
+### Community 68 - "subscribeTranslations"
+Cohesion: 0.14
+Nodes (40): 🌐 12. CORRECTION DU COURT-CIRCUIT DE TRADUCTION DES ANNONCES DÉMO & BANNIÈRE ADMIN (2026-10-07), 🌐 13. CORRECTION DU PIPELINE DE TRADUCTION DU FEED & RÉINTÉGRATION DE L'ANNONCE SPONSORISÉE (2026-10-07), 🌐 14. CORRECTION DÉFINITIVE : ALIGNEMENT DU PIPELINE DU FEED SUR CHAT/COMMUNITY (2026-10-07), 19. Campagne E2E Playwright complète (2026-10-14), 21.1. Vulnérabilité Résolue, 21.3. Validation, 21. Sécurité — Masquage & Verrouillage du Panel Modération / Administration aux Non-Admins (2026-10-14), 22.1. Contexte & Problème Identifié (+32 more)
 
 ### Community 69 - "🧠 TROCO — CONTEXTE TECHNIQUE & ARCHITECTURE ABSOLUE (CONTEXT.md)"
-Cohesion: 0.12
-Nodes (17): 🏁 11. BILAN FINAL DE SESSION & ROADMAP DE CONTINUATION (ÉTAPE 5 — 2026-10-06 / 2026-10-07), 1.1 Qu'est-ce que Troco ?, 1.2 Stack Technologique Exhaustive, 🎯 1. VISION DU PRODUIT & STACK TECHNIQUE, 📂 2. ARCHITECTURE DES DOSSIERS & FICHIERS CLÉS, 5.1 Architecture des Modales & Masquage Dynamique de la BottomNav (UX-01), 5.2 Personnalisation & Thèmes (`ThemeContext.jsx`), 🏛️ 5. DESIGN SYSTEM & ARCHITECTURE D'INTERFACE (+9 more)
+Cohesion: 0.10
+Nodes (21): 🏁 11. BILAN FINAL DE SESSION & ROADMAP DE CONTINUATION (ÉTAPE 5 — 2026-10-06 / 2026-10-07), 1.1 Qu'est-ce que Troco ?, 1.2 Stack Technologique Exhaustive, 🎯 1. VISION DU PRODUIT & STACK TECHNIQUE, 23.1. Problématiques & Contexte, 23.2. Actions & Corrections Réalisées, 23.3. Validation, 23. PROMPT 3 — i18n : theme.dark_mode + Déduplication des Clés editProfile (+13 more)
 
 ### Community 70 - "🗓️ ROADMAP DES 7 PROCHAINS JOURS (2026-10-07 À 2026-10-13)"
 Cohesion: 0.25
@@ -740,7 +744,7 @@ Cohesion: 0.11
 Nodes (17): 12.1 Architecture de Traduction, 12.2 Langues Supportées (7 Langues), 12.3 Chaînes Françaises Hardcodées, 12. i18n / Langues, 13. Points chauds (hotspots) — TOP 10, 14. Dettes techniques connues, 15. Historique récent (30 derniers commits), 18. Ce qui N'EXISTE PAS (pour éviter les erreurs) (+9 more)
 
 ### Community 72 - "ChatSection.jsx"
-Cohesion: 0.48
+Cohesion: 0.19
 Nodes (3): ChatSection, pageTransitionConfig, pageTransitionVariants
 
 ### Community 73 - "fix-imports.js"
@@ -759,21 +763,21 @@ Nodes (6): admin, extractPublicFields(), fs, initializeAdminSDK(), path, runMigr
 Cohesion: 0.38
 Nodes (6): fs, main(), path, removeLoggerImports(), SRC_DIR, walkDir()
 
-### Community 77 - "5.2 Réception d'un Message"
-Cohesion: 0.15
-Nodes (13): 5.2 Réception d'un Message, 5.3 Structure Firestore, 5.5 Points Sensibles & Vulnérabilités Connues, 5. Chat / Messagerie — CARTE COMPLÈTE, Algorithme de Génération de `chatId`, Chemin : `chats/{chatId}/messages/{msgId}`, Dépendances du `useEffect`, Emplacement de la Souscription (+5 more)
+### Community 77 - "5.1 Envoi d'un Message"
+Cohesion: 0.10
+Nodes (20): 5.1 Envoi d'un Message, 5.2 Réception d'un Message, 5.3 Structure Firestore, 5.5 Points Sensibles & Vulnérabilités Connues, 5. Chat / Messagerie — CARTE COMPLÈTE, Ajout Optimiste Local, Algorithme de Génération de `chatId`, Champs Écrits dans le Document de Message (+12 more)
 
 ### Community 78 - "useLanguage"
-Cohesion: 0.14
-Nodes (19): God Nodes (most connected - your core abstractions), Suggested Questions, God Nodes (most connected - your core abstractions), Suggested Questions, ref_prop_types, Footer(), BoostListingModal(), CategoryPickerModal() (+11 more)
+Cohesion: 0.15
+Nodes (19): God Nodes (most connected - your core abstractions), Suggested Questions, God Nodes (most connected - your core abstractions), Suggested Questions, ref_prop_types, BoostListingModal(), CheckoutModal(), EmailLinkPromptModal() (+11 more)
 
 ### Community 80 - "archived-2026-10-06/AUDIT-STRUCTURE.md"
-Cohesion: 0.17
-Nodes (11): 10. QUESTION FINALE, 2. LISTE NOIRE DES NOMS ABERRANTS, 4. FICHIERS ORPHELINS (JAMAIS IMPORTÉS), 6. PROPOSITION D'ARBORESCENCE CIBLE, 7. RISQUES IDENTIFIÉS & FICHIERS CRITIQUES, 8. PLAN DE NETTOYAGE PROPOSÉ (ORDRE RECOMMANDÉ), 9. MÉTRIQUES D'IMPACT, 🌊 Vague 1 — Renommage uniquement (Zéro déplacement de dossier) (+3 more)
+Cohesion: 0.12
+Nodes (17): 10. QUESTION FINALE, 1. INVENTAIRE BRUT, 2. LISTE NOIRE DES NOMS ABERRANTS, 4. FICHIERS ORPHELINS (JAMAIS IMPORTÉS), 6. PROPOSITION D'ARBORESCENCE CIBLE, 7. RISQUES IDENTIFIÉS & FICHIERS CRITIQUES, 8. PLAN DE NETTOYAGE PROPOSÉ (ORDRE RECOMMANDÉ), 9. MÉTRIQUES D'IMPACT (+9 more)
 
-### Community 81 - "displayName.js"
-Cohesion: 0.40
-Nodes (10): 3.4 Onboarding Utilisateur & Règle d'Or des Identifiants (`displayName.js`), buildUsernameHandle(), deriveDisplayName(), getDisplayName(), getDisplayUsername(), getHumanName(), humanizeEmailPrefix(), isTechnicalId() (+2 more)
+### Community 81 - "⚙️ 3. ÉTAT ACTUEL DES FONCTIONNALITÉS (CE QUI FONCTIONNE)"
+Cohesion: 0.23
+Nodes (15): 3.3 Appels Vidéo WebRTC & Signalisation P2P (`useWebRTC.js`), 3.4 Onboarding Utilisateur & Règle d'Or des Identifiants (`displayName.js`), 3.5 Sécurisation des Hooks Firestore (Feed & Chats) & Persistance Session, 3.7 Résolution de la Boucle d'Onboarding & Synchronisation Photo/Nom Gmail vers Firestore, 3.9 Affichage des Drapeaux Emojis (Unicode Regional Indicator Symbols), ⚙️ 3. ÉTAT ACTUEL DES FONCTIONNALITÉS (CE QUI FONCTIONNE), buildUsernameHandle(), deriveDisplayName() (+7 more)
 
 ### Community 82 - "2. Matrice de Tests Manuels & Résultats"
 Cohesion: 0.15
@@ -783,25 +787,25 @@ Nodes (12): 1. Objectif de la Vérification, 2. Matrice de Tests Manuels & Résu
 Cohesion: 0.17
 Nodes (11): 1. 📊 Tableau de Couverture par Langue, 2. 🎯 Clés Ajoutées lors de l'Étape 4 (Ratissage Final), 3. 🔍 Inventaire des Chaînes Résiduelles & Cas Particuliers, 4. 📋 Liste Complète des 698 Clés de Traduction, 5. 🛠️ Recommandations & Bonnes Pratiques pour les Futures Évolutions, A. Écran de Compte Banni / Suspendu (`src/components/AppModalsOrchestrator.jsx`), 🌐 AUDIT COMPLET DE COUVERTURE i18n — TROCO, B. Menu d'Actions & Gestion Mobile (`src/components/FeedInteractions.jsx`, `src/App.js`) (+3 more)
 
-### Community 84 - "ChatView.jsx"
-Cohesion: 0.19
-Nodes (15): [x] [P2-PERF-01] — Hook de temporisation sécurisé `useSafeTimeout` anti-fuite mémoire, ChatView(), CloudOfficeSuiteModal, CollaborativeWhiteboard, CreateProjectGroupModal, ProjectRewardsModal, ProjectWorkspaceToolsModal, SharedDocumentModal (+7 more)
+### Community 84 - "AppHeader.jsx"
+Cohesion: 0.34
+Nodes (7): AnimatedEuroBalance(), AnimatedTokenBalance(), TrocoLogoNativeSvg(), AppHeader, CURRENCY_CONFIG_BY_LANG, formatTokenCount(), getCurrencySymbol()
 
-### Community 85 - "subscribeTranslations"
-Cohesion: 0.19
-Nodes (14): 🌐 13. CORRECTION DU PIPELINE DE TRADUCTION DU FEED & RÉINTÉGRATION DE L'ANNONCE SPONSORISÉE (2026-10-07), TRANSLATED_TEXT_CACHE, TranslatedText(), CommunityActivityFeed(), INITIAL_ACTIVITIES, SPONSORED_PARTNERS, SponsoredFeedCard(), UI_STRINGS (+6 more)
+### Community 85 - "FeedRoute.jsx"
+Cohesion: 0.25
+Nodes (10): Community 94 - "🟡 NIVEAU 2 — FACILE (1h - 3h)", [x] [P2-PERF-01] — Hook de temporisation sécurisé `useSafeTimeout` anti-fuite mémoire, [x] [TDIF-01] — Refonte architecturale modulaire complète : Découpage de `src/App.js` en routes & hooks, SponsoredFeedCard(), EmptyState(), PullToRefresh(), FeedSection(), useSafeTimeout() (+2 more)
 
 ### Community 86 - "audioUtils.js"
 Cohesion: 0.83
 Nodes (3): encodeWav(), optimizeAudioFile(), writeAscii()
 
 ### Community 87 - "AUDIT-00 — Rapport d'Audit Complet Chat & WebRTC Post-HOTFIX-07"
-Cohesion: 0.09
-Nodes (21): Annexes, AUDIT-00 — Rapport d'Audit Complet Chat & WebRTC Post-HOTFIX-07, 🔴 CRITIQUE — Chat & WebRTC, 🟢 FAIBLE — Utils, styles, configs, Fichiers modifiés par catégorie, 🟡 MOYENNE — Composants UI & Routes, Métadonnées, 📋 SECTION 3 — AUDIT WEBRTC / APPELS (+13 more)
+Cohesion: 0.17
+Nodes (11): Annexes, AUDIT-00 — Rapport d'Audit Complet Chat & WebRTC Post-HOTFIX-07, Métadonnées, 📋 SECTION 4 — AUDIT FIRESTORE RULES, 📋 SECTION 5 — AUDIT CLOUD FUNCTIONS, 📋 SECTION 6 — AUDIT RÉGRESSIONS GLOBALES, Étape 4.1 — Lecture complète de `firestore.rules`, Étape 4.2 — Détection des trous de sécurité (+3 more)
 
 ### Community 88 - "15. JOUR 1 : PURGE FINANCIÈRE, PURGE TOTALE DES PERSONAS DÉMO ET TUTORIEL INTERACTIF IA"
-Cohesion: 0.40
-Nodes (5): 15.1. Purge des Faux Soldes dans `getListingDetail` et `FeedRoute`, 15.3. Création du Tutoriel Interactif IA (`InteractiveTutorial.jsx`), 15.4. Internationalisation Intégrale dans les 7 Langues, 15.5. Validation & Non-Régression, 15. JOUR 1 : PURGE FINANCIÈRE, PURGE TOTALE DES PERSONAS DÉMO ET TUTORIEL INTERACTIF IA
+Cohesion: 0.33
+Nodes (6): 15.1. Purge des Faux Soldes dans `getListingDetail` et `FeedRoute`, 15.2. Suppression Complète des Annonces & Personas Démo, 15.3. Création du Tutoriel Interactif IA (`InteractiveTutorial.jsx`), 15.4. Internationalisation Intégrale dans les 7 Langues, 15.5. Validation & Non-Régression, 15. JOUR 1 : PURGE FINANCIÈRE, PURGE TOTALE DES PERSONAS DÉMO ET TUTORIEL INTERACTIF IA
 
 ### Community 94 - "Phase122MotionPrimitivesTextEffect.test.js"
 Cohesion: 0.24
@@ -812,8 +816,8 @@ Cohesion: 0.12
 Nodes (16): [ ] [MOY-01] — Remplacement de `localStorage` synchrone dans les listeners par IndexedDB, [ ] [MOY-02] — Extraction du feed d'annonces hors de `App.js` vers `useListingsFeed.js`, [ ] [MOY-03] — Extraction du chronomètre d'appel vers `useCallTimer.js`, [ ] [MOY-04] — Extraction des notifications transactionnelles vers `useTransactionNotifications.js`, [ ] [MOY-05] — Widget réengagement "Mes deals en cours" en tête du Feed, [ ] [MOY-06] — Exportation native des documents Troco Office Suite (.pdf, .docx, .xlsx), [ ] [MOY-07] — Double validation bilatérale pour le troc pur sans monnaie, 🟠 NIVEAU 3 — MOYEN (3h - 1 jour) (+8 more)
 
 ### Community 96 - "firestore.rules.test.js"
-Cohesion: 0.20
-Nodes (5): rulesContent, RuleSimulator, rulesPath, simulatedDb, testClient
+Cohesion: 0.18
+Nodes (6): @firebase/rules-unit-testing, rulesContent, RuleSimulator, rulesPath, simulatedDb, testClient
 
 ### Community 97 - "🧪 Guide des Tests — Troco"
 Cohesion: 0.15
@@ -824,24 +828,20 @@ Cohesion: 0.15
 Nodes (13): B.5 — Fiches opérationnelles — adresses P1, 🟠 P1-a — `contact@troco.fr` — Contact général et aiguillage, 🟠 P1-b — `legal@troco.fr` — Affaires juridiques et autorités, 🟠 P1-c — `compliance@troco.fr` — Conformité réglementaire, AML et sanctions, 🟠 P1-d — `payments@troco.fr` — Opérations wallet, PSP et KYC, 🟠 P1-e — `billing@troco.fr` — Facturation et remboursements, 🟠 P1-g — `fraud@troco.fr` — Fraude et transactions suspectes, 🟠 P1-h — `press@troco.fr` — Presse et médias (+5 more)
 
 ### Community 100 - "ChatInputBar"
-Cohesion: 0.18
-Nodes (15): 3. `chat` (Onglet "Messages"), 5.4 Composants UI du Chat, Affichage et Disparition du Spinner "Pending", `ChatInputBar` ([`src/components/chat/ChatInputBar.jsx`](file:///c:/Users/mateo/Desktop/TROCO/src/components/chat/ChatInputBar.jsx)), `ChatSection` ([`src/features/chat/ChatSection.jsx`](file:///c:/Users/mateo/Desktop/TROCO/src/features/chat/ChatSection.jsx)), Community 15 - "ChatSection.jsx", Community 72 - "messageIdempotency.js", Community 72 - "messageIdempotency.js" (+7 more)
+Cohesion: 0.16
+Nodes (15): 2. `community` (Onglet "Communauté"), 3.2 Inventaire des Vues Principales, 3. `chat` (Onglet "Messages"), 4. `post` (Onglet "Publier"), 5.4 Composants UI du Chat, 5. `profile` (Onglet "Mon Profil"), Affichage et Disparition du Spinner "Pending", `ChatInputBar` ([`src/components/chat/ChatInputBar.jsx`](file:///c:/Users/mateo/Desktop/TROCO/src/components/chat/ChatInputBar.jsx)) (+7 more)
 
 ### Community 101 - "getFlagEmoji"
 Cohesion: 0.37
 Nodes (9): countryCodeToFlagEmoji(), getFlagEmoji(), getLanguageFlag, getLanguageNativeName(), isoToRegionalIndicator, LANG_TO_COUNTRY_CODE, getLanguageFlag(), getLanguageNativeName() (+1 more)
-
-### Community 102 - "ref_vitest"
-Cohesion: 0.14
-Nodes (8): ref_babel_core, ref_vitest, checkIsOnline(), presenceRegistry, subscribeToUid(), unsubscribeFromUid(), useUserPresence(), mockDocSnap
 
 ### Community 103 - "adminService.js"
 Cohesion: 0.47
 Nodes (13): 🟠 HAUTE — Cloud Functions & Firestore Rules, 10. Cloud Functions — Inventaire, 🟠 HAUTE — Cloud Functions & Firestore Rules, A.5 — Journalisation d'audit : traçabilité des actions sensibles, adminService, deleteListingAsAdmin(), formatFunctionError(), migrateUsersPublic() (+5 more)
 
 ### Community 104 - "AppOverlays.jsx"
-Cohesion: 0.32
-Nodes (9): AppOverlays(), GeometricBackground, GeometricBackground(), IOSInstallModal(), listeners, PWAInstallBanner(), PWAInstallProfileCard(), usePWAInstall() (+1 more)
+Cohesion: 0.61
+Nodes (4): AppOverlays(), GeometricBackground, GeometricBackground(), isIosOrTouchDevice()
 
 ### Community 105 - "2. Matrice de Tests Manuels & Résultats"
 Cohesion: 0.15
@@ -896,12 +896,12 @@ Cohesion: 0.25
 Nodes (7): Community Hubs (Navigation), Corpus Check, Graph Freshness, Graph Report - TROCO  (2026-09-28), Import Cycles, Knowledge Gaps, Summary
 
 ### Community 118 - "playBetclicBalanceSound"
-Cohesion: 0.18
-Nodes (18): AnimatedEuroBalance(), AnimatedTokenBalance(), BalanceDisplay(), TrocoLogoNativeSvg(), AppHeader, NotificationsHarness(), TransactionSuccessModal(), safeVibrate() (+10 more)
+Cohesion: 0.14
+Nodes (18): 🌐 10. RATISSAGE FINAL i18n & AUDIT MULTILINGUE (ÉTAPE 4 — 2026-10-06), zustand, BalanceDisplay(), NotificationsHarness(), TransactionSuccessModal(), useDealActions(), safeVibrate(), useGlobalCalls() (+10 more)
 
 ### Community 119 - "framer-motion"
-Cohesion: 0.22
-Nodes (7): framer-motion, SectoralErrorBoundary, pageTransitionConfig, pageTransitions, pageTransitionVariants, PostListingFeature, ProfileFeature
+Cohesion: 0.19
+Nodes (10): framer-motion, SectoralErrorBoundary, CommunityHubSection, CommunityRoute(), pageTransitionConfig, pageTransitions, pageTransitionVariants, PostListingFeature (+2 more)
 
 ### Community 120 - "Élimination des Sessions Fantômes (Ghost Sessions) & Source Unique de Vérité d'Authentification"
 Cohesion: 0.20
@@ -916,8 +916,8 @@ Cohesion: 0.22
 Nodes (8): 1.1. Manifeste et Philosophie de l'Économie Circulaire, 1.2. Le Jeton Troco : L'Unité de Temps Non-Spéculative, 1.3. La Redéfinition de la Valeur Humaine et de la Proximité, 1. GENÈSE ET VISION PRODUIT, 🏆 CONCLUSION, *De l'Idéation Monolithique à l'Infrastructure P2P Fintech & Motion Design de Calibre Mondial*, 📜 LIVRE BLANC & SYNTHÈSE HISTORIQUE — PROJET TROCO, 📑 TABLE DES MATIÈRES
 
 ### Community 123 - "🦄 TROCO — MASTER AUDIT & ROADMAP VIVANTE"
-Cohesion: 0.10
-Nodes (21): Conformité, Court terme (Quick wins produit), 🚀 FONCTIONNALITÉS À AJOUTER, 📅 HISTORIQUE DES SESSIONS, KYC / AML, Long terme (Vision licorne), Moyen terme (Différenciateurs), Paiements (+13 more)
+Cohesion: 0.12
+Nodes (16): Court terme (Quick wins produit), 🚀 FONCTIONNALITÉS À AJOUTER, 📅 HISTORIQUE DES SESSIONS, Long terme (Vision licorne), Moyen terme (Différenciateurs), ⚡ PROBLÈMES DE PERFORMANCE, ⏭️ PROCHAINE ACTION RECOMMANDÉE (Impact max & Quick Win), 🔄 RÈGLE DE MISE À JOUR (+8 more)
 
 ### Community 124 - "Graph Report - TROCO  (2026-09-29)"
 Cohesion: 0.25
@@ -935,9 +935,9 @@ Nodes (8): C.1 — Nom de domaine principal et sous-domaines, C.2 — Convention
 Cohesion: 0.25
 Nodes (7): 1. Contexte & Détection, 2. Résultats des Scanners, 3. Plan d'Action & Statut des Corrections, A. Modales & Overlays (HOTFIX-01), B. Messagerie & Synchronisation (HOTFIX-02), C. Appels WebRTC & Notifications Fantômes (HOTFIX-04 & HOTFIX-05), Rapport de Diagnostic Global Post-Batch 1 & 2 [HOTFIX-00]
 
-### Community 128 - "WebRTCCallOverlay.jsx"
-Cohesion: 0.24
-Nodes (7): Community 112 - "SectoralErrorBoundary", Community 134 - "SectoralErrorBoundary", CallOverlay(), LiveCallSubtitles(), CallFeature(), LiveCallSubtitles, WebRTCCallOverlay()
+### Community 128 - "translator.js"
+Cohesion: 0.10
+Nodes (23): 6.5 Composants UI Dédiés, `CallFeature` (PIP — Picture-in-Picture) ([`src/features/call/CallFeature.jsx`](file:///c:/Users/mateo/Desktop/TROCO/src/features/call/CallFeature.jsx)), `WebRTCCallOverlay` ([`src/features/call/WebRTCCallOverlay.jsx`](file:///c:/Users/mateo/Desktop/TROCO/src/features/call/WebRTCCallOverlay.jsx)), `WebRTCContext` ([`src/contexts/WebRTCContext.jsx`](file:///c:/Users/mateo/Desktop/TROCO/src/contexts/WebRTCContext.jsx)), Community 112 - "SectoralErrorBoundary", Community 134 - "SectoralErrorBoundary", AVAILABLE_LANGUAGES, BG_STYLES (+15 more)
 
 ### Community 129 - "archived-2026-10-06/README.md"
 Cohesion: 0.32
@@ -952,16 +952,16 @@ Cohesion: 0.43
 Nodes (6): ACCOUNT_TYPES, BIO_SUGGESTIONS, DIVERSE_AVATARS, EQUIPMENT_CATEGORIES, SKILL_CATEGORIES, TROCO_CATEGORIES
 
 ### Community 132 - "SkeletonLoader.jsx"
-Cohesion: 0.24
-Nodes (13): 1. `feed` (Onglet "Explorer" — Vue par défaut), FeedView(), InteractiveMapView, ListingCard(), Shimmer(), SkeletonCard(), SkeletonChatLayout(), SkeletonChatList() (+5 more)
+Cohesion: 0.23
+Nodes (14): 25.1. Problématiques & Contexte, 25.2. Actions & Corrections Réalisées, 25.3. Validation Formelle, 25. PROMPT 5 — CLS < 0.1 : Réservation d'espace images + skeleton & optimisation des polices, [x] [PERF-CLS-01] — Réduction du Cumulative Layout Shift (CLS) en dessous de 0.1 (atteint: 0.0004), Shimmer(), SkeletonCard(), SkeletonChatLayout() (+6 more)
 
 ### Community 133 - "🚀 Cahier des Charges & Contexte Technique : Troco International (v2.0)"
 Cohesion: 0.29
 Nodes (6): 🎯 1. Vision Globale du Produit & Statut Actuel, 🌍 2. Spécifications Internationales & i18n (Règle Absolue), 🔒 3. Géolocalisation & Geoprivacy (Sécurité des Données), 🤝 4. Logique de Deal & Négociation Intégrée, 🤖 5. Instructions Strictes pour l'IDE (Workflow IA), 🚀 Cahier des Charges & Contexte Technique : Troco International (v2.0)
 
-### Community 134 - "⚙️ 3. ÉTAT ACTUEL DES FONCTIONNALITÉS (CE QUI FONCTIONNE)"
-Cohesion: 0.17
-Nodes (12): 3.1 Upload Audio Sans Limite & Architecture Résiliente, 3.2 Transcription Vocale & Traduction Dynamique en Temps Réel, 3.3 Appels Vidéo WebRTC & Signalisation P2P (`useWebRTC.js`), 3.5 Sécurisation des Hooks Firestore (Feed & Chats) & Persistance Session, 3.7 Résolution de la Boucle d'Onboarding & Synchronisation Photo/Nom Gmail vers Firestore, 3.9 Affichage des Drapeaux Emojis (Unicode Regional Indicator Symbols), ⚙️ 3. ÉTAT ACTUEL DES FONCTIONNALITÉS (CE QUI FONCTIONNE), 🤖 6. CRITICAL RULES FOR AI AGENTS (Directives Impératives) (+4 more)
+### Community 134 - "📋 SECTION 2 — AUDIT CHAT / MESSAGERIE"
+Cohesion: 0.18
+Nodes (11): 📋 SECTION 2 — AUDIT CHAT / MESSAGERIE, Étape 2.1 — Structure des données Firestore, Étape 2.3 — Composants UI `ChatSection` / `ChatInputBar`, Étape 2.4 — Synchronisation temps réel, Étape 2.5 — Chat de groupe, 🔴 CRITIQUE — Chat & WebRTC, 🟢 FAIBLE — Utils, styles, configs, Fichiers modifiés par catégorie (+3 more)
 
 ### Community 135 - "2. Résultats des Scanners"
 Cohesion: 0.25
@@ -975,21 +975,21 @@ Nodes (9): B.6 — Fiches opérationnelles — adresses P2 et arbitrages de conv
 Cohesion: 0.33
 Nodes (6): devDependencies, firebase-admin, firebase-functions, @firebase/rules-unit-testing, @playwright/test, vitest
 
-### Community 138 - "5.1 Envoi d'un Message"
-Cohesion: 0.29
-Nodes (7): 5.1 Envoi d'un Message, Ajout Optimiste Local, Champs Écrits dans le Document de Message, Collection Firestore Ciblée, Fonction Exacte, Idempotence, Ordre d'Exécution des Opérations
+### Community 138 - "FilterDrawer.jsx"
+Cohesion: 0.31
+Nodes (5): checkIsOnline(), presenceRegistry, subscribeToUid(), useFeedStore, mockDocSnap
 
-### Community 139 - "MessageBubble.jsx"
-Cohesion: 0.47
-Nodes (5): DownloadButton(), AudioMessage(), MessageBubble(), extractFilename(), forceDownload()
+### Community 139 - "voiceStorageService.js"
+Cohesion: 0.17
+Nodes (15): 3.1 Upload Audio Sans Limite & Architecture Résiliente, 🤖 6. CRITICAL RULES FOR AI AGENTS (Directives Impératives), DownloadButton(), AudioMessage(), MessageBubble(), detectSupportedMimeType(), VoiceNoteRecorder(), startRecording() (+7 more)
 
-### Community 140 - "translator.js"
+### Community 140 - "translationsData.js"
 Cohesion: 0.13
-Nodes (20): 3.14 Traduction Automatique et Bascule Dynamique du Contenu Généré par les Utilisateurs (UGC), [x] [I18N-07] — Traduction dynamique des annonces démo, knownCompMap, knownMessageTranslations, knownTitles, localizeLocation(), localizeTags(), knownCompMap (+12 more)
+Nodes (10): knownCompMap, knownMessageTranslations, localizeLocation(), translations, knownCompMap, knownMessageTranslations, knownTitles, secondaryTranslations (+2 more)
 
-### Community 141 - "🔴 CE QUI EST CASSÉ"
-Cohesion: 0.25
-Nodes (8): Anomalie #2 : Clé i18n brute `theme.dark_mode` affichée, Anomalie #3 : Clé dupliquée `editProfile` dans les traductions, Anomalie #4 : Cumulative Layout Shift trop élevé, Anomalie #5 : Avatar de profil cassé (image `src=""`), Anomalie #6 : Erreurs console récurrentes en session authentifiée, Anomalie #7 : INP élevé, 🔴 CE QUI EST CASSÉ, Échecs à confirmer (probable limite du test, non confirmés comme bugs)
+### Community 141 - "FeedView.jsx"
+Cohesion: 0.52
+Nodes (4): 1. `feed` (Onglet "Explorer" — Vue par défaut), FeedView(), InteractiveMapView, ListingCard()
 
 ### Community 142 - "geocodingNominatim.js"
 Cohesion: 0.39
@@ -1031,21 +1031,21 @@ Nodes (7): 17.1. Namespace Live Chat Résolu (`live.*`), 17.2. Notifications de 
 Cohesion: 0.38
 Nodes (5): AVAILABLE_LANGUAGES, LanguageSelectModal(), ACTIVE_ANIMATION_INDEX, ANIMATION_PRESETS, getActiveAnimation()
 
-### Community 153 - "GlobalLiveChat"
-Cohesion: 0.40
-Nodes (6): 3.11 Rendre Effectives les Suppressions Administrateur dans Community, Patch Suppression Administrateur Community & Firestore Rules (commit `fix(admin/community-delete)`), [x] [FAC-10] — Suppression effective des messages Community par l'administrateur et Firestore rules, GlobalLiveChat(), AdminCommunityTab(), validateChatMessage()
+### Community 153 - "CommunityHubSection.jsx"
+Cohesion: 0.53
+Nodes (4): CommunityActivityFeed(), INITIAL_ACTIVITIES, GlobalLiveChat(), CommunityHubSection()
 
-### Community 154 - "Répartition détaillée par dossier"
+### Community 154 - "📋 SECTION 3 — AUDIT WEBRTC / APPELS"
 Cohesion: 0.33
-Nodes (5): 1. INVENTAIRE BRUT, Répartition détaillée par dossier, 1. INVENTAIRE BRUT, Répartition détaillée par dossier, Navbar()
+Nodes (6): 📋 SECTION 3 — AUDIT WEBRTC / APPELS, Étape 3.1 — Structure des données Firestore Signaling, Étape 3.2 — Code source `useWebRTC.js`, Étape 3.3 — Composants UI Call, Étape 3.4 — Notifications "missed call" & Anti-Fantômes, Étape 3.5 — Test mobile ⇄ desktop
 
 ### Community 155 - "Rapport d'Incident & Correctif — HOTFIX-02 : Envois Multiples Mobile & Sync Desktop"
 Cohesion: 0.33
 Nodes (5): 1. Description du Problème, 2. Causes Racines Identifiées, 3. Correctifs Appliqués, 4. Statut & Validation, Rapport d'Incident & Correctif — HOTFIX-02 : Envois Multiples Mobile & Sync Desktop
 
 ### Community 156 - "messageIdempotency.js"
-Cohesion: 0.18
-Nodes (13): 📋 SECTION 2 — AUDIT CHAT / MESSAGERIE, Étape 2.1 — Structure des données Firestore, Étape 2.2 — Code source `useChatManager.js`, Étape 2.3 — Composants UI `ChatSection` / `ChatInputBar`, Étape 2.4 — Synchronisation temps réel, Étape 2.5 — Chat de groupe, Étape 2.2 — Code source `useChatManager.js`, clearIdempotencyCache() (+5 more)
+Cohesion: 0.31
+Nodes (7): Étape 2.2 — Code source `useChatManager.js`, Étape 2.2 — Code source `useChatManager.js`, clearIdempotencyCache(), fastHash(), generateDeterministicMessageId(), inFlightMessages, recentMessageHashes
 
 ### Community 157 - "Rapport d'Incident & Correctif — HOTFIX-04 : Réparation Appels WebRTC"
 Cohesion: 0.33
@@ -1080,8 +1080,8 @@ Cohesion: 0.33
 Nodes (5): 1. Tests Automatisés, 2. Test Manuel en Mode Production, 3. Test Manuel en Mode Démo, Objectif, 📋 Procédure de Test P0-MOD : Cloisonnement Démo & Transparence Éthique
 
 ### Community 165 - "useAppNavigation"
-Cohesion: 0.15
-Nodes (14): 11.1 Stores Zustand (`src/stores/`), 1. `useAuthStore` ([`src/stores/useAuthStore.js`](file:///c:/Users/mateo/Desktop/TROCO/src/stores/useAuthStore.js)), 2. `useChatStore` ([`src/stores/useChatStore.js`](file:///c:/Users/mateo/Desktop/TROCO/src/stores/useChatStore.js)), 3.1 Gestionnaire de Navigation (`useAppNavigation`), 3. Routes & Navigation, 3. `useFeedStore` ([`src/stores/useFeedStore.js`](file:///c:/Users/mateo/Desktop/TROCO/src/stores/useFeedStore.js)), 4. `useUIStore` ([`src/stores/useUIStore.js`](file:///c:/Users/mateo/Desktop/TROCO/src/stores/useUIStore.js)), 5. `useWalletStore` ([`src/stores/useWalletStore.js`](file:///c:/Users/mateo/Desktop/TROCO/src/stores/useWalletStore.js)) (+6 more)
+Cohesion: 0.17
+Nodes (13): 11.1 Stores Zustand (`src/stores/`), 11. État global (Zustand + Contexts), 1. `useAuthStore` ([`src/stores/useAuthStore.js`](file:///c:/Users/mateo/Desktop/TROCO/src/stores/useAuthStore.js)), 2. `useChatStore` ([`src/stores/useChatStore.js`](file:///c:/Users/mateo/Desktop/TROCO/src/stores/useChatStore.js)), 3.1 Gestionnaire de Navigation (`useAppNavigation`), 3. Routes & Navigation, 3. `useFeedStore` ([`src/stores/useFeedStore.js`](file:///c:/Users/mateo/Desktop/TROCO/src/stores/useFeedStore.js)), 4. `useUIStore` ([`src/stores/useUIStore.js`](file:///c:/Users/mateo/Desktop/TROCO/src/stores/useUIStore.js)) (+5 more)
 
 ### Community 166 - "SECTION 2 — ORGANIGRAMME & PLAN DE RECRUTEMENT"
 Cohesion: 0.18
@@ -1095,17 +1095,17 @@ Nodes (3): Audits archivés, Fichiers archivés, Raison de l'archivage
 Cohesion: 0.33
 Nodes (6): 5.1. Découpage Modulaire du Monolithe `App.js` (Domain-Driven Architecture), 5.2. Intégration des Gateways Bancaires Industrielles (Stripe Connect & SEPA Instant), 5.3. PWA de Nouvelle Génération & Mode Déconnecté (IndexedDB Sync), 5.4. Système de Séquestre Avancé (P2P Escrow) & Arbitrage des Litiges, 5.5. Géolocalisation Temps Réel (Radar P2P) & Internationalisation Complète, 5. ROADMAP STRATÉGIQUE & PROCHAINES ÉTAPES
 
-### Community 169 - "22. Résolution des Avatars Brisés & Éradication des Images `src=""` (2026-10-14)"
-Cohesion: 0.50
-Nodes (4): 22.1. Contexte & Problème Identifié, 22.2. Solution & Pattern Universel Appliqué, 22.3. Validation, 22. Résolution des Avatars Brisés & Éradication des Images `src=""` (2026-10-14)
+### Community 169 - "migrate-orphan-listings.js"
+Cohesion: 0.47
+Nodes (5): firestoreFetch(), fs, getAccessToken(), path, runMigration()
 
 ### Community 170 - "5. ROADMAP STRATÉGIQUE & PROCHAINES ÉTAPES"
 Cohesion: 0.33
 Nodes (6): 5.1. Découpage Modulaire du Monolithe `App.js` (Domain-Driven Architecture), 5.2. Intégration des Gateways Bancaires Industrielles (Stripe Connect & SEPA Instant), 5.3. PWA de Nouvelle Génération & Mode Déconnecté (IndexedDB Sync), 5.4. Système de Séquestre Avancé (P2P Escrow) & Arbitrage des Litiges, 5.5. Géolocalisation Temps Réel (Radar P2P) & Internationalisation Complète, 5. ROADMAP STRATÉGIQUE & PROCHAINES ÉTAPES
 
-### Community 171 - "🛡️ 4. RÈGLES DE SÉCURITÉ, BASE DE DONNÉES & CORS"
-Cohesion: 0.50
-Nodes (4): 4.1 Modèle de Données Firestore (Collections Principales), 4.2 Règles de Sécurité Critiques (Principes Zero-Trust), 4.3 Configuration CORS Firebase Storage (`cors.json`), 🛡️ 4. RÈGLES DE SÉCURITÉ, BASE DE DONNÉES & CORS
+### Community 171 - "PWAInstallBanner.jsx"
+Cohesion: 0.60
+Nodes (5): IOSInstallModal(), listeners, PWAInstallBanner(), PWAInstallProfileCard(), usePWAInstall()
 
 ### Community 172 - "8. Paiements & Transactions"
 Cohesion: 0.33
@@ -1143,9 +1143,9 @@ Nodes (5): docs/captures/firestore-schema-snapshot.json, ast_hash, mtime, seen, 
 Cohesion: 0.40
 Nodes (5): docs/logs/cloud-functions-sample.json, ast_hash, mtime, seen, semantic_hash
 
-### Community 183 - "useChatManager.js"
-Cohesion: 0.19
-Nodes (25): 3.8 Mapping UIDs vers Profils Réels, Fiabilisation Messages & Purge Totale des Mocks, Patch Résolution Profil & Discussion (commit `fix(chat/profile)`), PublicProfileModal(), AdminDashboard(), getChatAudioContext(), IMPORTANT: on ne se base JAMAIS sur data.avatar (champ ambigu du doc chats —…, useChatManager(), playSwooshSound() (+17 more)
+### Community 183 - "ChatView.jsx"
+Cohesion: 0.18
+Nodes (27): Patch Résolution Profil & Discussion (commit `fix(chat/profile)`), ChatView(), CloudOfficeSuiteModal, CollaborativeWhiteboard, CreateProjectGroupModal, ProjectRewardsModal, ProjectWorkspaceToolsModal, SharedDocumentModal (+19 more)
 
 ### Community 184 - "e2e/critical-path.spec.js"
 Cohesion: 0.40
@@ -1175,9 +1175,9 @@ Nodes (5): functions/package.json, ast_hash, mtime, seen, semantic_hash
 Cohesion: 0.40
 Nodes (5): functions/src/admin/deleteListingAsAdmin.ts, ast_hash, mtime, seen, semantic_hash
 
-### Community 191 - "Phase128FinancialAtomicEngineAndCustomTip.test.js"
-Cohesion: 0.53
-Nodes (3): TestComponent(), VisioSettlementModal(), sendPostCallTip()
+### Community 191 - "📋 SECTION 7 — SYNTHÈSE, RISQUES & ACTIONS PRIORITAIRES"
+Cohesion: 0.40
+Nodes (5): Actions Correctives Prioritaires, 📋 SECTION 7 — SYNTHÈSE, RISQUES & ACTIONS PRIORITAIRES, Synthèse exécutive, TOP 5 des Points Forts Architecturaux, TOP 5 des Risques Critiques & Recommandations
 
 ### Community 192 - "functions/src/admin/resetUserSafely.ts"
 Cohesion: 0.40
@@ -1960,56 +1960,64 @@ Cohesion: 0.50
 Nodes (4): 2.1. L'Origine et la Montée en Charge du Monolithe `App.js` (9 000+ Lignes), 2.2. Choix Technologiques Socles, 2.3. Modélisation Initiale : Listings, Profils Utilisateurs & Threads de Messagerie, 2. LA PHASE DE FONDATION (Les Débuts et le Monolithe)
 
 ### Community 391 - "useFirestoreHealth"
-Cohesion: 0.11
-Nodes (19): 🔴 CRITIQUE — Chat & WebRTC, 🟢 FAIBLE — Utils, styles, configs, Fichiers modifiés par catégorie, 🟡 MOYENNE — Composants UI & Routes, Community 69 - "useFirestoreHealth", Community 69 - "useFirestoreHealth", 2. Détection Proactive Client via `useFirestoreHealth`, Actions Correctives Prioritaires (+11 more)
+Cohesion: 0.14
+Nodes (15): Community 69 - "useFirestoreHealth", Community 69 - "useFirestoreHealth", 2. Détection Proactive Client via `useFirestoreHealth`, Actions Correctives Prioritaires, 📋 SECTION 7 — SYNTHÈSE, RISQUES & ACTIONS PRIORITAIRES, Synthèse exécutive, TOP 5 des Points Forts Architecturaux, TOP 5 des Risques Critiques & Recommandations (+7 more)
 
-### Community 392 - "registerAudioContext"
-Cohesion: 0.60
-Nodes (4): initGlobalAudioUnlocker(), registerAudioContext(), registeredContexts, unlockAllAudioContexts()
+### Community 392 - "useChatManager.js"
+Cohesion: 0.15
+Nodes (17): 3.8 Mapping UIDs vers Profils Réels, Fiabilisation Messages & Purge Totale des Mocks, 1. Le Tableau Blanc Collaboratif : Ébullition du State sur `onPointerMove` à 120 Hz, 2. Tempête de re-connexion des listeners de Présence Firestore sur le Whiteboard, 3. ChatView : Envois Typing Indicator non debouncés et Re-render permanent, B. HOTSPOTS DE RENDU (WHITEBOARD & CHAT) : REACT STATE THRASHING & SATURATION RAM ACTIVE, TestComponent(), getChatAudioContext(), IMPORTANT: on ne se base JAMAIS sur data.avatar (champ ambigu du doc chats —… (+9 more)
 
-### Community 394 - "useAdminGuard"
-Cohesion: 0.16
-Nodes (12): 21.1. Vulnérabilité Résolue, 21.2. Mesures & Gardes Appliquées, 21.3. Validation, 21. Sécurité — Masquage & Verrouillage du Panel Modération / Administration aux Non-Admins (2026-10-14), Anomalie #1 : Bouton « Panel Modération » visible pour un non-admin, [x] [P0-SEC-01] — Protection administrateur par Custom Claims vérifiés & Masquage UI des boutons de modération, [x] [QW-06] — Éradication de l'adresse Gmail personnelle codée en dur, AdminPanel() (+4 more)
+### Community 395 - "💰 ROADMAP FINANCE & CONFORMITÉ"
+Cohesion: 0.40
+Nodes (5): Conformité, KYC / AML, Paiements, 💰 ROADMAP FINANCE & CONFORMITÉ, Sécurité paiements
 
-### Community 395 - "23. PROMPT 3 — i18n : theme.dark_mode + Déduplication des Clés editProfile"
+### Community 396 - "isLowEndDevice"
 Cohesion: 0.50
-Nodes (4): 23.1. Problématiques & Contexte, 23.2. Actions & Corrections Réalisées, 23.3. Validation, 23. PROMPT 3 — i18n : theme.dark_mode + Déduplication des Clés editProfile
+Nodes (4): ⚡ 9. OPTIMISATIONS PERF & iOS SAFARI (ÉTAPE 3 — 2026-10-06), [x] [PERF-DEVICE-01] — Détection automatique de la qualité de l'appareil, areFeedCardPropsEqual(), isLowEndDevice()
 
-### Community 396 - "24. PROMPT 4 — CORS ipapi.co : Proxy Cloud Function (getCurrencyFromIP)"
+### Community 397 - "Fichiers modifiés par catégorie"
 Cohesion: 0.50
-Nodes (4): 24.1. Problématiques & Contexte, 24.2. Actions & Corrections Réalisées, 24.3. Validation, 24. PROMPT 4 — CORS ipapi.co : Proxy Cloud Function (getCurrencyFromIP)
-
-### Community 397 - "B. HOTSPOTS DE RENDU (WHITEBOARD & CHAT) : REACT STATE THRASHING & SATURATION RAM ACTIVE"
-Cohesion: 0.50
-Nodes (4): 1. Le Tableau Blanc Collaboratif : Ébullition du State sur `onPointerMove` à 120 Hz, 2. Tempête de re-connexion des listeners de Présence Firestore sur le Whiteboard, 3. ChatView : Envois Typing Indicator non debouncés et Re-render permanent, B. HOTSPOTS DE RENDU (WHITEBOARD & CHAT) : REACT STATE THRASHING & SATURATION RAM ACTIVE
+Nodes (4): 🔴 CRITIQUE — Chat & WebRTC, 🟢 FAIBLE — Utils, styles, configs, Fichiers modifiés par catégorie, 🟡 MOYENNE — Composants UI & Routes
 
 ### Community 398 - "B. HOTSPOTS DE RENDU (WHITEBOARD & CHAT) : REACT STATE THRASHING & SATURATION RAM ACTIVE"
 Cohesion: 0.50
 Nodes (4): 1. Le Tableau Blanc Collaboratif : Ébullition du State sur `onPointerMove` à 120 Hz, 2. Tempête de re-connexion des listeners de Présence Firestore sur le Whiteboard, 3. ChatView : Envois Typing Indicator non debouncés et Re-render permanent, B. HOTSPOTS DE RENDU (WHITEBOARD & CHAT) : REACT STATE THRASHING & SATURATION RAM ACTIVE
 
-### Community 399 - "lucide-react"
-Cohesion: 0.24
-Nodes (10): lucide-react, react-dom, DealMessageCard(), COMPLIMENT_TAGS, defaultDoc, extractSnippet(), SharedDocumentModalContent(), BACKDROP_CLASSNAME (+2 more)
+### Community 399 - "modalBackdrop.js"
+Cohesion: 0.42
+Nodes (4): react-dom, BACKDROP_CLASSNAME, BACKDROP_STYLE, modalBackdrop
+
+### Community 400 - "react"
+Cohesion: 0.11
+Nodes (13): lucide-react, react, CallOverlay(), ChatHeader(), DealMessageCard(), ImageEditorModal(), defaultDoc, extractSnippet() (+5 more)
+
+### Community 410 - "📋 SECTION 2 — AUDIT CHAT / MESSAGERIE"
+Cohesion: 0.50
+Nodes (4): 📋 SECTION 2 — AUDIT CHAT / MESSAGERIE, Étape 2.1 — Structure des données Firestore, Étape 2.4 — Synchronisation temps réel, Étape 2.5 — Chat de groupe
+
+### Community 411 - "extends"
+Cohesion: 0.50
+Nodes (4): eslintConfig, extends, react-app, react-app/jest
 
 ## Knowledge Gaps
-- **2111 isolated node(s):** `mtime`, `seen`, `ast_hash`, `semantic_hash`, `mtime` (+2106 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2265 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **26 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **2113 isolated node(s):** `mtime`, `seen`, `ast_hash`, `semantic_hash`, `mtime` (+2108 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2267 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **29 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `react` connect `react` to `WebRTCCallOverlay.jsx`, `useAuthSession.js`, `LegalRoutes.jsx`, `CollaborativeWhiteboardModal.jsx`, `SkeletonLoader.jsx`, `OnboardingWizardModal.jsx`, `ListingCard.jsx`, `ThemeContext.jsx`, `useAdminGuard`, `MessageBubble.jsx`, `Phase143Accessibility.test.js`, `admin/useGlobalContent.js`, `PostListingFeature.jsx`, `lucide-react`, `PhotoGrid.jsx`, `pricingService.js`, `AppModalsOrchestrator.jsx`, `5. FICHIERS DANS LE MAUVAIS DOSSIER`, `LanguageSelectModal.jsx`, `package.json`, `Répartition détaillée par dossier`, `ref_fs`, `CRTSplashAndHomeAesthetics.test.js`, `map/InteractiveMapView.jsx`, `useAppNavigation`, `haptics.js`, `src/TrocoSheets.jsx`, `ProfileAppearanceCustomizer.jsx`, `logger.js`, `useAccountActions.js`, `App.js`, `useChatManager.js`, `ProfileFeature.jsx`, `CloudOfficeSuiteModal.jsx`, `src/TrocoSlides.jsx`, `services/audioService.js`, `Phase128FinancialAtomicEngineAndCustomTip.test.js`, `TrocoLogo3D.jsx`, `parseAndTranslateDynamicText`, `Avatar.jsx`, `ChatSection.jsx`, `useFirestoreHealth.js`, `useLanguage`, `FeedCardItem.jsx`, `displayName.js`, `ChatView.jsx`, `subscribeTranslations`, `Phase122MotionPrimitivesTextEffect.test.js`, `ref_vitest`, `AppOverlays.jsx`, `playBetclicBalanceSound`, `framer-motion`?**
-  _High betweenness centrality (0.109) - this node is a cross-community bridge._
-- **Why does `Communities (200 total, 37 thin omitted)` connect `Communities (200 total, 37 thin omitted)` to `WebRTCCallOverlay.jsx`, `CollaborativeWhiteboardModal.jsx`, `ChatInputBar`, `useAppNavigation`, `useFirestoreHealth`, `RateLimitToast`, `Graph Report - TROCO  (2026-09-29)`?**
-  _High betweenness centrality (0.054) - this node is a cross-community bridge._
-- **Why does `useLanguage()` connect `useLanguage` to `LegalRoutes.jsx`, `CollaborativeWhiteboardModal.jsx`, `ThemeContext.jsx`, `useAdminGuard`, `lucide-react`, `pricingService.js`, `5. FICHIERS DANS LE MAUVAIS DOSSIER`, `GlobalLiveChat`, `react`, `haptics.js`, `logger.js`, `RateLimitToast`, `ProfileFeature.jsx`, `useChatManager.js`, `🔄 CHANGELOG TECHNIQUE — Septembre 2026`, `CloudOfficeSuiteModal.jsx`, `parseAndTranslateDynamicText`, `FeedCardItem.jsx`, `subscribeTranslations`, `playBetclicBalanceSound`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+- **Why does `react` connect `react` to `useAuthSession.js`, `LegalRoutes.jsx`, `translator.js`, `CollaborativeWhiteboardModal.jsx`, `OnboardingWizardModal.jsx`, `SkeletonLoader.jsx`, `ListingCard.jsx`, `ThemeContext.jsx`, `useChatManager.js`, `FilterDrawer.jsx`, `voiceStorageService.js`, `AdminDashboard.jsx`, `Phase143Accessibility.test.js`, `FeedView.jsx`, `modalBackdrop.js`, `PostListingFeature.jsx`, `PaymentModal.jsx`, `AppModalsOrchestrator.jsx`, `translationsData.js`, `LanguageSelectModal.jsx`, `CommunityHubSection.jsx`, `package.json`, `ref_fs`, `@testing-library/react`, `CategoryModal.jsx`, `CRTSplashAndHomeAesthetics.test.js`, `map/InteractiveMapView.jsx`, `haptics.js`, `src/TrocoSheets.jsx`, `PWAInstallBanner.jsx`, `ProfileAppearanceCustomizer.jsx`, `logger.js`, `App.js`, `ChatView.jsx`, `ProfileFeature.jsx`, `consentManager.js`, `src/TrocoSlides.jsx`, `services/audioService.js`, `TrocoLogo3D.jsx`, `subscribeTranslations`, `Avatar.jsx`, `ChatSection.jsx`, `useFirestoreHealth.js`, `useLanguage`, `⚙️ 3. ÉTAT ACTUEL DES FONCTIONNALITÉS (CE QUI FONCTIONNE)`, `AppHeader.jsx`, `FeedRoute.jsx`, `Phase122MotionPrimitivesTextEffect.test.js`, `ChatInputBar`, `ref_vitest`, `AppOverlays.jsx`, `playBetclicBalanceSound`, `framer-motion`?**
+  _High betweenness centrality (0.106) - this node is a cross-community bridge._
+- **Why does `Communities (200 total, 37 thin omitted)` connect `Communities (200 total, 37 thin omitted)` to `translator.js`, `ChatInputBar`, `useAppNavigation`, `useFirestoreHealth`, `RateLimitToast`, `Graph Report - TROCO  (2026-09-29)`?**
+  _High betweenness centrality (0.059) - this node is a cross-community bridge._
+- **Why does `useLanguage()` connect `useLanguage` to `LegalRoutes.jsx`, `CollaborativeWhiteboardModal.jsx`, `ThemeContext.jsx`, `AdminDashboard.jsx`, `translationsData.js`, `modalBackdrop.js`, `PaymentModal.jsx`, `5. FICHIERS DANS LE MAUVAIS DOSSIER`, `CommunityHubSection.jsx`, `@testing-library/react`, `haptics.js`, `logger.js`, `RateLimitToast`, `App.js`, `ProfileFeature.jsx`, `ChatView.jsx`, `🔄 CHANGELOG TECHNIQUE — Septembre 2026`, `consentManager.js`, `subscribeTranslations`, `archived-2026-10-06/AUDIT-STRUCTURE.md`, `AppHeader.jsx`, `FeedRoute.jsx`, `playBetclicBalanceSound`?**
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
 - **Are the 8 inferred relationships involving `useLanguage()` (e.g. with `3.13 Traduction Exhaustive des Éléments d'Interface Hardcodés (7 Langues : FR, EN, ES, IT, DE, JA, ZH)` and `3.17 Résolution des Erreurs de Compilation & Linting Bloquant le Build Vercel`) actually correct?**
   _`useLanguage()` has 8 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `mtime`, `seen`, `ast_hash` to the rest of the system?**
-  _2111 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2113 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `useAuthSession.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.14039408866995073 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.13793103448275862 - nodes in this community are weakly interconnected._
 - **Should `full-audit.spec.js` be split into smaller, more focused modules?**
   _Cohesion score 0.08064516129032258 - nodes in this community are weakly interconnected._
