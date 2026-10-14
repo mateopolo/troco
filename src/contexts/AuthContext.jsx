@@ -108,12 +108,13 @@ export const AuthProvider = ({ children }) => {
         const uid = u.uid;
         const userDocRef = doc(db, 'users', uid);
         const userSnap = await getDoc(userDocRef);
+        let userData;
         if (!userSnap.exists()) {
           const providerName = result.providerId?.replace('.com', '') || 'OAuth';
           const realName = u.displayName || u.email?.split('@')[0] || `Utilisateur ${providerName}`;
           const realUsername = '@' + (u.reloadUserInfo?.screenName || realName).toLowerCase().replace(/[^a-z0-9_]/g, '');
           const realAvatar = u.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
-          const newUserData = {
+          userData = {
             uid,
             name: realName,
             username: realUsername,
@@ -129,8 +130,14 @@ export const AuthProvider = ({ children }) => {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           };
-          await setDoc(userDocRef, newUserData);
+          await setDoc(userDocRef, userData);
+        } else {
+          userData = { ...userSnap.data(), uid };
         }
+        setUser(u);
+        setProfile(userData);
+        setIsAuthenticated(true);
+        setSessionAuthenticated();
       })
       .catch((err) => {
         if (err.code !== 'auth/credential-already-in-use') {
@@ -277,30 +284,20 @@ export const AuthProvider = ({ children }) => {
       }
 
       let result = null;
-      const isMobileOrStandalone = typeof window !== 'undefined' && (
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        window.matchMedia?.('(display-mode: standalone)')?.matches ||
-        window.navigator.standalone
-      );
-
-      // Sur mobile/standalone, privilégier signInWithRedirect pour éviter le blocage COOP et les popups tronquées
-      if (isMobileOrStandalone) {
-        await signInWithRedirect(auth, provider);
-        return;
-      }
-
       try {
         result = await signInWithPopup(auth, provider);
       } catch (popupErr) {
         if (
           popupErr.code === 'auth/popup-blocked' ||
-          popupErr.code === 'auth/cancelled-popup-request' ||
-          popupErr.message?.includes('Cross-Origin-Opener-Policy') ||
-          popupErr.message?.includes('window.close')
+          popupErr.code === 'auth/cancelled-popup-request'
         ) {
-          logger.info('[AuthContext] Bascule vers signInWithRedirect suite à restriction popup/COOP');
-          await signInWithRedirect(auth, provider);
-          return;
+          logger.info('[AuthContext] Popup bloquée par le navigateur, tentative via signInWithRedirect...');
+          try {
+            await signInWithRedirect(auth, provider);
+            return;
+          } catch (redirectErr) {
+            throw redirectErr;
+          }
         }
         throw popupErr;
       }

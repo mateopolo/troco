@@ -64,7 +64,14 @@ export default function AuthScreen({
   const [signupLanguages, setSignupLanguages] = useState(['FR']);
   const [signupSkillInput, setSignupSkillInput] = useState('');
 
-  // Traitement du retour de redirection OAuth
+  // Détection des navigateurs intégrés (WebViews Instagram, TikTok, Facebook, etc.) qui bloquent l'OAuth Google
+  const isInAppBrowser = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+    return /FBAN|FBAV|Instagram|LinkedInApp|Twitter|ByteLocale|musical_ly|Snapchat|Line/i.test(ua);
+  }, []);
+
+  // Traitement du retour de redirection OAuth (en cas de fallback signInWithRedirect)
   useEffect(() => {
     let isMounted = true;
     getRedirectResult(auth)
@@ -74,12 +81,13 @@ export default function AuthScreen({
         const uid = user.uid;
         const userDocRef = doc(db, 'users', uid);
         const userSnap = await getDoc(userDocRef);
+        let userData;
         if (!userSnap.exists()) {
           const providerName = result.providerId?.replace('.com', '') || 'OAuth';
           const realName = user.displayName || user.email?.split('@')[0] || `Utilisateur ${providerName}`;
           const realUsername = '@' + (user.reloadUserInfo?.screenName || realName).toLowerCase().replace(/[^a-z0-9_]/g, '');
           const realAvatar = user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
-          const newUserData = {
+          userData = {
             uid,
             name: realName,
             username: realUsername,
@@ -95,8 +103,14 @@ export default function AuthScreen({
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           };
-          await setDoc(userDocRef, newUserData);
+          await setDoc(userDocRef, userData);
+        } else {
+          userData = { ...userSnap.data(), uid };
         }
+        if (typeof setProfile === 'function') setProfile(userData);
+        if (typeof setProfileDraft === 'function') setProfileDraft(userData);
+        window.localStorage.setItem('troco_user_profile', JSON.stringify(userData));
+        setSessionAuthenticated();
         if (typeof onAuthSuccess === 'function') {
           onAuthSuccess(user);
         } else if (typeof setIsAuthenticated === 'function') {
@@ -106,10 +120,16 @@ export default function AuthScreen({
       .catch((err) => {
         if (err.code !== 'auth/credential-already-in-use') {
           logger.warn('[AuthScreen] getRedirectResult notice:', err);
+          if (err.code === 'auth/unauthorized-domain') {
+            const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'ce domaine';
+            setAuthError(`⚠️ Domaine non autorisé (${currentHost}) dans Firebase Console (Authentication > Paramètres > Domaines autorisés). Ajoutez ce domaine pour vous connecter.`);
+          } else if (err.code && err.code !== 'auth/cancelled-popup-request') {
+            setAuthError(err.message || "Erreur lors de la redirection d'authentification.");
+          }
         }
       });
     return () => { isMounted = false; };
-  }, [onAuthSuccess, setIsAuthenticated]);
+  }, [onAuthSuccess, setIsAuthenticated, setProfile, setProfileDraft]);
 
   // ---- AUTHENTIFICATION PAR TÉLÉPHONE (SMS) ----
   const handleSendSms = async () => {
@@ -216,30 +236,20 @@ export default function AuthScreen({
       }
 
       let result = null;
-      const isMobileOrStandalone = typeof window !== 'undefined' && (
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        window.matchMedia?.('(display-mode: standalone)')?.matches ||
-        window.navigator.standalone
-      );
-
-      // Sur mobile/standalone, privilégier signInWithRedirect pour éviter le blocage COOP et les fenêtres popups tronquées
-      if (isMobileOrStandalone) {
-        await signInWithRedirect(auth, provider);
-        return;
-      }
-
       try {
         result = await signInWithPopup(auth, provider);
       } catch (popupErr) {
         if (
           popupErr.code === 'auth/popup-blocked' ||
-          popupErr.code === 'auth/cancelled-popup-request' ||
-          popupErr.message?.includes('Cross-Origin-Opener-Policy') ||
-          popupErr.message?.includes('window.close')
+          popupErr.code === 'auth/cancelled-popup-request'
         ) {
-          logger.info('[AuthScreen] Bascule vers signInWithRedirect suite à restriction popup/COOP');
-          await signInWithRedirect(auth, provider);
-          return;
+          logger.info('[AuthScreen] Popup bloquée par le navigateur, tentative via signInWithRedirect...');
+          try {
+            await signInWithRedirect(auth, provider);
+            return;
+          } catch (redirectErr) {
+            throw redirectErr;
+          }
         }
         throw popupErr;
       }
@@ -347,7 +357,8 @@ export default function AuthScreen({
       } else if (err.code === 'auth/popup-blocked') {
         setAuthError('⚠️ La fenêtre contextuelle a été bloquée par votre navigateur. Veuillez autoriser les popups pour continuer.');
       } else if (err.code === 'auth/unauthorized-domain') {
-        setAuthError("⚠️ Domaine non autorisé dans Firebase Console (Authentication > Paramètres > Domaines autorisés).");
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'ce domaine';
+        setAuthError(`⚠️ Domaine non autorisé (${currentHost}) dans Firebase Console (Authentication > Paramètres > Domaines autorisés). Ajoutez ce domaine pour vous connecter.`);
       } else if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/configuration-not-found' || err.message?.includes('invalid') || err.message?.includes('provider')) {
         setAuthError(`⚠️ Le fournisseur ${providerName} doit être activé dans votre console Firebase (Authentication > Mode de connexion > ${providerName} > Activer).`);
       } else if (err.code === 'auth/account-exists-with-different-credential') {
@@ -603,6 +614,27 @@ export default function AuthScreen({
         </div>
 
         <div style={{ padding: '0 28px 28px' }}>
+          {isInAppBrowser && (
+            <div style={{
+              marginBottom: '14px',
+              padding: '12px 14px',
+              borderRadius: '12px',
+              backgroundColor: darkMode ? 'rgba(217, 119, 6, 0.2)' : '#FEF3C7',
+              color: darkMode ? '#FDE68A' : '#92400E',
+              fontSize: '12px',
+              lineHeight: 1.5,
+              border: darkMode ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid #FCD34D',
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'flex-start'
+            }}>
+              <span style={{ fontSize: '16px' }}>⚠️</span>
+              <span>
+                <strong>Navigateur intégré détecté :</strong> Google bloque la connexion depuis les applications (Instagram, Facebook, etc.). Pour vous connecter, appuyez sur <strong>•••</strong> en haut à droite puis <strong>« Ouvrir dans Safari/Chrome »</strong>.
+              </span>
+            </div>
+          )}
+
           {authError && (
             <div style={{ marginBottom: '14px', padding: '10px 14px', borderRadius: '12px', backgroundColor: darkMode ? '#2D1B1B' : '#FEF2F2', color: '#DC2626', fontSize: '12px', fontWeight: '600', border: '1px solid #FECACA' }}>
               {authError}
