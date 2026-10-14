@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-14T18:49:17.576Z",
+  "date": "2026-10-14T20:46:31.623Z",
   "meta": {
     "loadMs": null,
     "lcpInitial": null
@@ -38,31 +38,31 @@
   ],
   "perf": {
     "Feed": {
-      "lcp": 2432,
+      "lcp": 2748,
       "cls": 0.0004,
-      "inp": 48,
+      "inp": 104,
       "domNodes": 970
     },
     "Chat": {
-      "lcp": 1368,
-      "cls": 0.0004,
-      "inp": 184,
+      "lcp": 1444,
+      "cls": 0.0078,
+      "inp": 216,
       "domNodes": 232
     },
     "Profil": {
-      "lcp": 1164,
-      "cls": 0.0004,
-      "inp": 160,
+      "lcp": 1456,
+      "cls": 0.008,
+      "inp": 192,
       "domNodes": 457
     },
     "Communauté": {
-      "lcp": 1240,
-      "cls": 0.0072,
-      "inp": 272,
+      "lcp": 1424,
+      "cls": 0.0098,
+      "inp": 264,
       "domNodes": 377
     },
     "memory": {
-      "beforeMB": 21,
+      "beforeMB": 21.1,
       "afterMB": 23.4,
       "deltaMB": 2.4
     }

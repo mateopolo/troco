@@ -53,7 +53,7 @@ import { getFlagEmoji } from '../../utils/flagUtils';
 import { SocialLinksDisplay, SocialLinksEditor } from '../../components/UserProfile';
 import { useUserRealStats, sanitizeUserWithDynamicStats } from '../../services/userStatsService';
 
-export default function ProfileFeature({
+function ProfileFeature({
   profile = {},
   setProfile,
   profileDraft = {},
@@ -1427,3 +1427,5 @@ export default function ProfileFeature({
     </div>
   );
 }
+
+export default React.memo(ProfileFeature);

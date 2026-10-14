@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
 export const ConfirmContext = createContext(null);
 
@@ -55,13 +55,13 @@ export function ConfirmProvider({ children }) {
     }
   }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     confirm,
     isOpen,
     config,
     onConfirm: handleConfirm,
     onCancel: handleCancel,
-  };
+  }), [confirm, isOpen, config, handleConfirm, handleCancel]);
 
   return (
     <ConfirmContext.Provider value={value}>

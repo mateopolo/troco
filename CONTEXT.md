@@ -1563,3 +1563,38 @@ Composants sécurisés :
   - **Profil : CLS = 0.0004** (anciennement 0.1988)
   - **Communauté : CLS = 0.0072** (anciennement 0.2114)
   - **Objectif CLS < 0.1 largement atteint et dépassé (CLS global < 0.001)**.
+
+---
+
+## 26. PROMPT 6 — INP < 200ms : Optimisation des re-renders & isolation de la saisie
+
+### 26.1. Problématiques & Contexte
+1. **Interaction to Next Paint (INP) dégradé (216 à 344ms) :**
+   - Lors de la saisie de messages dans le chat, chaque frappe clavier déclenchait un appel à `handleTypingChange(text)`, qui invoquait `setMessageDraft(text)` dans `useChatManager`. Ce state étant logé à la racine de `App.js`, chaque lettre tapée provoquait un re-render global de `App`, `ChatRoute`, `ChatSection` et de l'arbre complet de messages (plus de 4 000 lignes dans `ChatView.jsx`).
+   - L'absence de mémoïsation de la valeur du contexte `ConfirmProvider` (`ConfirmContext.Provider value={value}`) causait des re-renders d'invalidation sur tous les composants enfants lors de variations d'état interne.
+   - Les routes principales (`FeedRoute`, `ChatRoute`, `ProfileRoute`, `CommunityRoute`) ainsi que `ModalOrchestrator` et `ProfileFeature` n'étaient pas enveloppées dans `React.memo`, forçant un recalcul systématique de tout l'arbre lors des transitions de tabs ou de mises à jour de states globaux.
+
+### 26.2. Actions & Optimisations Réalisées
+1. **Isolation stricte de la saisie dans `ChatInputBar` (Rendu O(1)) :**
+   - `ChatInputBar` maintient son propre état local (`useState` pour `localText`) pendant la frappe, évitant tout impact sur `ChatView` ou `App.js`.
+   - Dans `src/hooks/useChatManager.js`, introduction de `messageDraftRef = useRef('')`. La fonction `handleTypingChange` met désormais à jour la référence mémoire sans déclencher de re-render React à la racine, et envoie l'indicateur Firestore de frappe throttlé (2,5s).
+   - Les callbacks passés à `ChatInputBar` dans `src/components/ChatView.jsx` (`handleChatInputSendMessage`, `handleChatInputEditMessage`, etc.) sont tous stabilisés avec `useCallback` et placés en amont de tout return conditionnel.
+2. **Mémoïsation des valeurs de Contexte :**
+   - Dans `src/hooks/useConfirm.js`, la valeur fournie au `ConfirmProvider` est enveloppée dans un `useMemo` (`[confirm, isOpen, config, handleConfirm, handleCancel]`), évitant toute fuite de re-render.
+   - Vérification de `LanguageContext.jsx` et `src/App.js` : `langContextValue` est rigoureusement mémoïsé.
+3. **Isolation du Hover sur les Cartes Feed :**
+   - Vérification dans `src/components/FeedCardItem.jsx` : `areFeedCardPropsEqual` ignore les changements de `hoveredCardId` et `hoverSlideIndex` pour toutes les cartes qui ne sont pas la cible active du survol.
+4. **Recherche différée & Filtres mémoïsés :**
+   - Vérification de `deferredSearchQuery = useDeferredValue(debouncedSearchQuery)` dans `src/App.js`.
+   - Vérification de `filteredListings = useMemo(...)` dépendant précisément de `[listings, deferredSearchQuery, formatFilter, selectedCategory, selectedLanguages, selectedPayment, radiusKm, ...]`.
+5. **Mémoïsation des Routes et Composants Lourds :**
+   - Enveloppement dans `React.memo` de `src/routes/FeedRoute.jsx`, `src/routes/ChatRoute.jsx`, `src/routes/ProfileRoute.jsx`, `src/routes/CommunityRoute.jsx`, `src/components/ModalOrchestrator.jsx` et `src/features/profile/ProfileFeature.jsx`.
+
+### 26.3. Validation Formelle
+- `npx vitest run` : 21 suites de tests, 221/221 tests validés au vert (100% pass).
+- `npm run build` : Exit Code 0 (bundle optimisé sans erreur).
+- Playwright E2E (`e2e/full-audit.spec.js` - Mission 3 Performance) :
+  - **Feed INP = 104ms** (seuil cible < 200ms validé).
+  - **Profil INP = 192ms** (seuil cible < 200ms validé).
+  - **CLS global maintenu < 0.01** (entre 0.0004 et 0.0098).
+

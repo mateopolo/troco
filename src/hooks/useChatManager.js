@@ -91,6 +91,7 @@ export const useChatManager = ({
   }, [readChats]);
 
   const [messageDraft, setMessageDraft] = useState('');
+  const messageDraftRef = useRef('');
   const [chatThreads, setChatThreads] = useState({});
   const [chatsList, setChatsList] = useState([]);
   const [chatStatusOverrides, setChatStatusOverrides] = useState({});
@@ -809,19 +810,24 @@ export const useChatManager = ({
     };
   }, [selectedChat?.id, selectedChat?.user, profile?.name, profile?.uid, activeTab, auth, db]);
 
-  // ---- GESTION DU TYPING INDICATOR TEMPS RÉEL (DEBOUNCE 2.5S) ----
+  // ---- GESTION DU TYPING INDICATOR TEMPS RÉEL (DEBOUNCE 2.5S - SANS RE-RENDU RACINE) ----
   const typingTimeoutRef = useRef(null);
+  const lastTypingSentRef = useRef(0);
 
-  const handleTypingChange = (text) => {
-    setMessageDraft(text);
+  const handleTypingChange = useCallback((text) => {
+    messageDraftRef.current = text;
     if (!selectedChat?.id || !profile?.name || !db) return;
     const chatId = String(selectedChat.id);
     const userName = profile?.name || 'me';
 
-    if (db) {
-      setDoc(doc(db, 'chats', chatId), {
-        typing: { [userName]: true }
-      }, { merge: true }).catch(() => { });
+    const now = Date.now();
+    if (text && now - lastTypingSentRef.current > 2000) {
+      lastTypingSentRef.current = now;
+      if (db) {
+        setDoc(doc(db, 'chats', chatId), {
+          typing: { [userName]: true }
+        }, { merge: true }).catch(() => { });
+      }
     }
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -832,7 +838,7 @@ export const useChatManager = ({
         }, { merge: true }).catch(() => { });
       }
     }, 2500);
-  };
+  }, [selectedChat?.id, profile?.name, db]);
 
   // ---- ENVOI DE MESSAGE (TEXTE OU PAYLOAD OBJET PERSONNALISÉ / WHITEBOARD) ----
   const handleSendMessage = async (customPayload = null) => {
@@ -962,7 +968,7 @@ export const useChatManager = ({
 
       const text = (typeof customPayload === 'string' && customPayload.trim())
         ? customPayload.trim()
-        : messageDraft.trim();
+        : (messageDraftRef.current || messageDraft).trim();
 
       if (!text) return;
 
@@ -1009,6 +1015,7 @@ export const useChatManager = ({
       });
 
       useChatStore.getState().addMessageToThread(chatId, newMessage);
+      messageDraftRef.current = '';
       setMessageDraft('');
 
       setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? { ...c, lastMessage: text, lastSenderName: profile?.name || 'Moi' } : c));

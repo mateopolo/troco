@@ -474,9 +474,9 @@
     "semantic_hash": "5b5e0dfa69a81fd0258025329085373a"
   },
   "src/components/ChatView.jsx": {
-    "mtime": 1792000136.8219326,
-    "seen": 1792000656.3086839,
-    "ast_hash": "17da4fd02e14bcc85f6b2a9826494703",
+    "mtime": 1792010167.3922126,
+    "seen": 1792010931.169788,
+    "ast_hash": "0e0c9ea2c675b7f2e311ce58becda13e",
     "semantic_hash": ""
   },
   "src/components/CloudOfficeSuiteModal.jsx": {
@@ -1608,9 +1608,9 @@
     "semantic_hash": "13264a4b85deea61c5a1efa095076a52"
   },
   "src/features/profile/ProfileFeature.jsx": {
-    "mtime": 1792000056.4365337,
-    "seen": 1792000656.3607736,
-    "ast_hash": "0213d6791492aae323773ecd90e75f86",
+    "mtime": 1792010692.2168853,
+    "seen": 1792010931.2304025,
+    "ast_hash": "f89c8421f94c4840d0d46c76c4c38c26",
     "semantic_hash": ""
   },
   "src/features/profile/index.js": {
@@ -1674,10 +1674,10 @@
     "semantic_hash": "0820653ba76fffc02a9814bf51bf8879"
   },
   "src/hooks/useChatManager.js": {
-    "mtime": 1790178941.2955656,
-    "seen": 1790594464.2383673,
-    "ast_hash": "10f451bb0586e93fe571d22bce33ec0a",
-    "semantic_hash": "10f451bb0586e93fe571d22bce33ec0a"
+    "mtime": 1792004564.7918174,
+    "seen": 1792010931.2331762,
+    "ast_hash": "9c2d788313a15a019273079a9d189a89",
+    "semantic_hash": ""
   },
   "src/hooks/useCheckout.js": {
     "mtime": 1790034298.174892,
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1792003899.6763117,
-    "seen": 1792003937.6755757,
-    "ast_hash": "5519c2e2d8ef2b8c02d1d69d0ef396e3",
+    "mtime": 1792010838.8417168,
+    "seen": 1792010931.260504,
+    "ast_hash": "16295c28415d3d6e31e79e2cd314d339",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1792003899.6692257,
-    "seen": 1792003937.676013,
-    "ast_hash": "a4f25b6876b651b2ada536f50ec31b7c",
+    "mtime": 1792010895.4719696,
+    "seen": 1792010931.2609184,
+    "ast_hash": "a13661290c6563f53c52a7a2a31c3af2",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2712,9 +2712,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useConfirm.js": {
-    "mtime": 1790714008.2438264,
-    "seen": 1790714309.1431673,
-    "ast_hash": "41e84e8a8f9db96ce09f93c8dd04b77b",
+    "mtime": 1792004077.9038093,
+    "seen": 1792010931.2336252,
+    "ast_hash": "97b890c5a78a7f20dd1467d6d1f5e260",
     "semantic_hash": ""
   },
   "tests/unit/ConfirmDialog.test.js": {
@@ -2754,21 +2754,21 @@
     "semantic_hash": ""
   },
   "src/routes/FeedRoute.jsx": {
-    "mtime": 1792003321.8829868,
-    "seen": 1792003937.6532013,
-    "ast_hash": "6bea1e989c1138727b47cbda82d86d36",
+    "mtime": 1792010410.3036602,
+    "seen": 1792010931.238542,
+    "ast_hash": "77257542f53b8bafe2271aa459f014ed",
     "semantic_hash": ""
   },
   "src/routes/ChatRoute.jsx": {
-    "mtime": 1790737207.9693832,
-    "seen": 1790737405.883186,
-    "ast_hash": "a72b370d454ceb58ff005624a0813c67",
+    "mtime": 1792010468.437693,
+    "seen": 1792010931.2385373,
+    "ast_hash": "e46b31eddb1f1debcec2c3ddd670281b",
     "semantic_hash": ""
   },
   "src/routes/CommunityRoute.jsx": {
-    "mtime": 1790737197.7737653,
-    "seen": 1790737405.8831909,
-    "ast_hash": "c656ac1fe5bd3fbdea86f14ab087b746",
+    "mtime": 1792010549.358569,
+    "seen": 1792010931.2385397,
+    "ast_hash": "1a09788ff16db875250e9a4977d1f1a0",
     "semantic_hash": ""
   },
   "src/routes/pageTransitions.js": {
@@ -2784,9 +2784,9 @@
     "semantic_hash": ""
   },
   "src/routes/ProfileRoute.jsx": {
-    "mtime": 1791385776.053596,
-    "seen": 1791391018.8150234,
-    "ast_hash": "ce699b97f361f5b1376184c26cfe3bb7",
+    "mtime": 1792010513.6701272,
+    "seen": 1792010931.238961,
+    "ast_hash": "41560d2843369f5c08b0b095372cec3f",
     "semantic_hash": ""
   },
   "src/routes/LegalRoutes.jsx": {
@@ -3108,9 +3108,9 @@
     "semantic_hash": ""
   },
   "src/components/ModalOrchestrator.jsx": {
-    "mtime": 1791321359.6418226,
-    "seen": 1791322866.094026,
-    "ast_hash": "a87677c8a63a9bc67ccb03d88475a8ab",
+    "mtime": 1792010081.5157454,
+    "seen": 1792010931.177363,
+    "ast_hash": "a73de37c50942475a96952cb220912b5",
     "semantic_hash": ""
   },
   "src/hooks/useDealActions.js": {
@@ -3210,9 +3210,9 @@
     "semantic_hash": ""
   },
   "docs/e2e-logs/results.json": {
-    "mtime": 1792003757.5757318,
-    "seen": 1792003937.571081,
-    "ast_hash": "810a1bf4be33e80feacf386b9b736fdd",
+    "mtime": 1792010791.6231284,
+    "seen": 1792010931.1483622,
+    "ast_hash": "870ebf32f06085a9b078dffc42e2d1cf",
     "semantic_hash": ""
   },
   "e2e/full-audit.spec.js": {
@@ -3336,27 +3336,27 @@
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/M3-Chat.png": {
-    "mtime": 1792003724.064957,
-    "seen": 1792003937.6942532,
-    "ast_hash": "f525214489477d975a014a207a65e2b6",
+    "mtime": 1792010758.7623794,
+    "seen": 1792010931.278456,
+    "ast_hash": "80c2cf688ac084c25f6cc63e33c72587",
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/M3-Communaut\u00e9.png": {
-    "mtime": 1792003736.6115446,
-    "seen": 1792003937.6942565,
-    "ast_hash": "922d04b36062acb9b325c2422a124d4d",
+    "mtime": 1792010771.9328582,
+    "seen": 1792010931.2784588,
+    "ast_hash": "1bb9193c698bd7e2f64acd93a0292182",
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/M3-Feed.png": {
-    "mtime": 1792003717.7173276,
-    "seen": 1792003937.6942587,
-    "ast_hash": "9b9b2d2c5ad64e8c462acf7495a1d1d1",
+    "mtime": 1792010752.2848258,
+    "seen": 1792010931.278461,
+    "ast_hash": "fc804a1bf3e8a0b5e3f9e8d9790ba204",
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/M3-Profil.png": {
-    "mtime": 1792003730.3049664,
-    "seen": 1792003937.6942608,
-    "ast_hash": "53905b89ef13563e58de06726eb21b58",
+    "mtime": 1792010765.3255692,
+    "seen": 1792010931.2784626,
+    "ast_hash": "80375a38d032e56a338453cf60f2758a",
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/M4-chat-reconnect.png": {

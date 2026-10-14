@@ -4,7 +4,7 @@ import { pageTransitionVariants, pageTransitionConfig } from './pageTransitions'
 
 const ProfileFeature = React.lazy(() => import('../features/profile/ProfileFeature'));
 
-export default function ProfileRoute({
+function ProfileRoute({
   profile,
   setProfile,
   profileDraft,
@@ -77,3 +77,5 @@ export default function ProfileRoute({
     </motion.div>
   );
 }
+
+export default React.memo(ProfileRoute);

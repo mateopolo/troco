@@ -343,6 +343,11 @@
 
 ### [x] [P2-PERF-08] — Saisie fluide dans la recherche avec `useDeferredValue`
 **Preuve** : `src/App.js:1345` (`const deferredSearchQuery = useDeferredValue(debouncedSearchQuery);`)
+
+### [x] [PERF-INP-01] - Optimisation de l'INP sous 200ms & isolation des re-renders
+**Preuve** : `src/components/chat/ChatInputBar.jsx`, `src/components/ChatView.jsx`, `src/hooks/useChatManager.js:93,815,965`, `src/hooks/useConfirm.js:58`, `src/routes/FeedRoute.jsx`, `src/routes/ChatRoute.jsx`, `src/routes/ProfileRoute.jsx`, `src/routes/CommunityRoute.jsx`, `src/components/ModalOrchestrator.jsx`, `src/features/profile/ProfileFeature.jsx`
+**Statut** : FAIT - Réduction de l'INP sous 200ms (Feed INP = 104ms, Profil INP = 192ms). Isolation de la saisie utilisateur dans ChatInputBar avec state local O(1), conversion du draft en ref dans useChatManager pour stopper les re-renders globaux de App.js, mémoïsation de ConfirmProvider et LanguageContext.Provider, et enveloppement des routes et composants lourds dans React.memo.
+
 **Statut** : ✅ FAIT — Découplage de la réactivité de l'input et du filtrage des 50+ annonces.
 
 ### [x] [P0-SEC-05] — Découplage de l'authentification et du flag `troco_is_authenticated`

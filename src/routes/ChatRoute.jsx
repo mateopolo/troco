@@ -5,7 +5,7 @@ import { pageTransitionVariants, pageTransitionConfig } from './pageTransitions'
 
 const ChatSection = React.lazy(() => import('../features/chat/ChatSection'));
 
-export default function ChatRoute({
+function ChatRoute({
   activeTab,
   chatsList,
   selectedChat,
@@ -120,3 +120,5 @@ export default function ChatRoute({
     </motion.div>
   );
 }
+
+export default React.memo(ChatRoute);

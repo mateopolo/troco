@@ -5,7 +5,7 @@ import { pageTransitionVariants, pageTransitionConfig } from './pageTransitions'
 
 const CommunityHubSection = React.lazy(() => import('../features/community/CommunityHubSection'));
 
-export default function CommunityRoute({
+function CommunityRoute({
   profile,
   setCommunityProfileUser,
   setIsCommunityProfileOpen,
@@ -49,3 +49,5 @@ export default function CommunityRoute({
     </motion.div>
   );
 }
+
+export default React.memo(CommunityRoute);

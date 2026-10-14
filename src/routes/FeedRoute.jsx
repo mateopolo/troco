@@ -23,7 +23,7 @@ const MapSection = React.lazy(() => import('../features/map/MapSection'));
 
 export { pageTransitionVariants, pageTransitionConfig };
 
-export default function FeedRoute({
+function FeedRoute({
   // Global & Layout
   globalAnnouncement,
   darkMode,
@@ -747,3 +747,5 @@ export default function FeedRoute({
     </motion.div>
   );
 }
+
+export default React.memo(FeedRoute);

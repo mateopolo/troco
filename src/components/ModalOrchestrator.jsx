@@ -7,7 +7,7 @@ import ListingDetailModal from './ListingDetailModal';
  * Groups and controls application-wide modals, drawers, and full-screen overlays.
  * Unpacks the reactive `ui` store object and delegates rendering to specialized modal trees.
  */
-export default function ModalOrchestrator({
+function ModalOrchestrator({
   ui = {},
   profile,
   listings = [],
@@ -249,3 +249,5 @@ export default function ModalOrchestrator({
     </>
   );
 }
+
+export default React.memo(ModalOrchestrator);

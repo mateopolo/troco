@@ -847,6 +847,66 @@ function ChatView({
       .slice(0, 3);
   }, [firestoreRecentBoards, recentBoardsFromMessages]);
 
+  // ---- CALLBACKS STABLES ET MÉMOÏSÉS POUR CHATINPUTBAR (Isolation du re-render INP < 200ms) ----
+  const handleChatInputSendMessage = useCallback(async (msgOrText) => {
+    const now = Date.now();
+    if (isSendingMessage || (now - lastChatSendRef.current < 500)) {
+      return;
+    }
+    lastChatSendRef.current = now;
+    setIsSendingMessage(true);
+    userJustSentMessageRef.current = true;
+    try {
+      if (typeof handleSendMessage === 'function') {
+        return await handleSendMessage(msgOrText);
+      }
+    } finally {
+      safeTimeout(() => setIsSendingMessage(false), 500);
+    }
+  }, [isSendingMessage, handleSendMessage, safeTimeout]);
+
+  const handleChatInputEditMessage = useCallback((text) => {
+    if (currentChatId && editingMsg) {
+      handleEditMessage(currentChatId, editingMsg.id, text);
+      setEditingMsg(null);
+    }
+  }, [currentChatId, editingMsg, handleEditMessage]);
+
+  const handleChatInputCancelEdit = useCallback(() => {
+    setEditingMsg(null);
+  }, []);
+
+  const handleChatInputAudioUpload = useCallback(async (audioPayload) => {
+    userJustSentMessageRef.current = true;
+    if (typeof handleSendMessage === 'function') {
+      await handleSendMessage(audioPayload);
+    }
+  }, [handleSendMessage]);
+
+  const handleChatInputOpenDirectTransfer = useCallback(() => {
+    setIsDirectTransferOpen(true);
+  }, []);
+
+  const handleChatInputStartVoiceRecord = useCallback(() => {
+    setIsRecordingAudio(true);
+  }, []);
+
+  const handleChatInputOpenWorkspaceTool = useCallback((tool) => {
+    if (typeof handleOpenWorkspaceTool === 'function') {
+      handleOpenWorkspaceTool(tool);
+    }
+  }, [handleOpenWorkspaceTool]);
+
+  const handleChatInputOpenWhiteboardPicker = useCallback(() => {
+    setActiveWhiteboardBoardId(null);
+    setWhiteboardInitialView('lobby');
+    setIsWhiteboardOpen(true);
+  }, []);
+
+  const handleChatInputOpenProjectRewards = useCallback(() => {
+    setIsProjectRewardsModalOpen(true);
+  }, []);
+
   if (activeTab !== 'chat') return null;
 
   // Helper de statut en ligne réel basé sur le heartbeat Firestore (< 30s)
@@ -2872,63 +2932,19 @@ function ChatView({
             replyingTo={null}
             isGroupChat={activeChatObj?.isGroup}
             isSending={isSendingMessage}
-            handleSendMessage={async (msgOrText) => {
-              const now = Date.now();
-              if (isSendingMessage || (now - lastChatSendRef.current < 500)) {
-                return;
-              }
-              lastChatSendRef.current = now;
-              setIsSendingMessage(true);
-              userJustSentMessageRef.current = true;
-              try {
-                if (typeof handleSendMessage === 'function') {
-                  return await handleSendMessage(msgOrText);
-                }
-              } finally {
-                safeTimeout(() => setIsSendingMessage(false), 500);
-              }
-            }}
-            onSendMessage={async (text) => {
-              const now = Date.now();
-              if (isSendingMessage || (now - lastChatSendRef.current < 500)) {
-                return;
-              }
-              lastChatSendRef.current = now;
-              setIsSendingMessage(true);
-              userJustSentMessageRef.current = true;
-              try {
-                if (typeof handleSendMessage === 'function') {
-                  return await handleSendMessage(text);
-                }
-              } finally {
-                safeTimeout(() => setIsSendingMessage(false), 500);
-              }
-            }}
-            onEditMessage={(text) => {
-              if (currentChatId && editingMsg) {
-                handleEditMessage(currentChatId, editingMsg.id, text);
-                setEditingMsg(null);
-              }
-            }}
-            onCancelEdit={() => setEditingMsg(null)}
-            onCancelReply={() => {}}
+            handleSendMessage={handleChatInputSendMessage}
+            onSendMessage={handleChatInputSendMessage}
+            onEditMessage={handleChatInputEditMessage}
+            onCancelEdit={handleChatInputCancelEdit}
+            onCancelReply={handleChatInputCancelEdit}
             onTypingChange={onTypingChange}
-            onOpenDirectTransfer={() => setIsDirectTransferOpen(true)}
-            onStartVoiceRecord={() => setIsRecordingAudio(true)}
-            onOpenWorkspaceTool={(tool) => handleOpenWorkspaceTool(tool)}
-            onOpenWhiteboardPicker={() => {
-              setActiveWhiteboardBoardId(null);
-              setWhiteboardInitialView('lobby');
-              setIsWhiteboardOpen(true);
-            }}
-            onOpenProjectRewards={() => setIsProjectRewardsModalOpen(true)}
+            onOpenDirectTransfer={handleChatInputOpenDirectTransfer}
+            onStartVoiceRecord={handleChatInputStartVoiceRecord}
+            onOpenWorkspaceTool={handleChatInputOpenWorkspaceTool}
+            onOpenWhiteboardPicker={handleChatInputOpenWhiteboardPicker}
+            onOpenProjectRewards={handleChatInputOpenProjectRewards}
             chatId={currentChatId}
-            onAudioUpload={async (audioPayload) => {
-              userJustSentMessageRef.current = true;
-              if (typeof handleSendMessage === 'function') {
-                await handleSendMessage(audioPayload);
-              }
-            }}
+            onAudioUpload={handleChatInputAudioUpload}
           />
         )}
       </div>
