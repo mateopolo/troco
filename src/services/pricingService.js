@@ -1,6 +1,8 @@
 import { isTrackerAllowed } from './consentManager';
 import { translations } from '../data/translationsData.js';
 import { secondaryTranslations } from '../data/translationsSecondary.js';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase';
 
 /**
  * pricingService.js
@@ -215,31 +217,25 @@ export function detectUserCountry(fallbackCountry = 'FR') {
 
 /**
  * Détection automatique & verrouillage strict de la devise par géolocalisation IP
- * Respecte le principe de minimisation RGPD : aucun appel externe à ipapi.co sans consentement préalable.
+ * Passe par la Cloud Function proxy getCurrencyFromIP pour éliminer les erreurs CORS et HTTP 429.
+ * Respecte le principe de minimisation RGPD : aucun appel direct sans consentement préalable.
  */
 export async function detectGeoCurrency() {
-  // 1. Appel réseau externe SEULEMENT si l'utilisateur a expressément consenti aux fonctionnalités de géolocalisation/analytics
+  // 1. Appel via Cloud Function proxy SEULEMENT si l'utilisateur a expressément consenti aux fonctionnalités de géolocalisation/analytics
   if (isTrackerAllowed('external_geoip')) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const getCurrencyCallable = httpsCallable(functions, 'getCurrencyFromIP');
+      const response = await getCurrencyCallable();
+      const data = response?.data;
 
-      // Requête géo-IP légère et rapide
-      const response = await fetch('https://ipapi.co/json/', {
-        signal: controller.signal,
-        headers: { 'Accept': 'application/json' },
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        const country = (data.country_code || data.country || 'FR').toUpperCase();
+      if (data && data.currency) {
+        const country = (data.countryCode || data.country || 'FR').toUpperCase();
         const currency = data.currency || (REGIONAL_PPP_MATRIX[country]?.currency || 'EUR');
-        const symbol = CURRENCY_SYMBOLS[currency] || '€';
+        const symbol = data.currencySymbol || CURRENCY_SYMBOLS[currency] || '€';
 
         return {
           countryCode: country,
-          countryName: data.country_name || country,
+          countryName: data.countryName || country,
           currency,
           currencySymbol: symbol,
           city: data.city || '',

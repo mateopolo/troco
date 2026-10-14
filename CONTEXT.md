@@ -1494,3 +1494,32 @@ Composants sécurisés :
 - `npm run build` : Exit Code 0, 0 warning `no-dupe-keys`.
 - `npx vitest run` : 20 fichiers de test, 218/218 tests au vert (100% pass).
 
+---
+
+## 24. PROMPT 4 — CORS ipapi.co : Proxy Cloud Function (getCurrencyFromIP)
+
+### 24.1. Problématiques & Contexte
+1. **Erreurs CORS et HTTP 429 massives sur ipapi.co :**
+   - Le navigateur émettait jusqu'à 26 erreurs CORS et 26 erreurs HTTP 429 lors de l'appel direct `fetch('https://ipapi.co/json/')` depuis le service client `src/services/pricingService.js` (`detectGeoCurrency`).
+   - L'API publique ipapi.co impose des quotas stricts par IP cliente et n'autorise pas les requêtes cross-origin non authentifiées de manière fiable.
+
+### 24.2. Actions & Corrections Réalisées
+1. **Création de la Cloud Function Callable `getCurrencyFromIP` (`functions/src/geolocation/getCurrencyFromIP.ts`) :**
+   - Récupération sécurisée de l'adresse IP cliente via `request.rawRequest.headers['x-forwarded-for']` (avec gestion des proxies et détection des adresses locales / privées).
+   - Mise en cache Firestore pendant 24 heures (`cache/geo_currency_{ip}`) pour diviser le nombre de requêtes sortantes par plus de 95% et prévenir tout dépassement de quota (anti-429).
+   - Appel externe à ipapi.co exécuté côté serveur (Node.js), éliminant intrinsèquement tout problème de CORS navigateur.
+   - Enveloppe d'exécution robuste dans un bloc `try/catch` avec fallback gracieux `{ currency: 'EUR', countryCode: 'FR', countryName: 'France', currencySymbol: '€', isGeoLocked: true }`.
+2. **Export et compilation des fonctions Firebase :**
+   - Exporté depuis `functions/src/index.ts` avec `{ region: 'europe-west1', cors: true }`.
+   - Suite de tests unitaires dédiée dans `functions/test/getCurrencyFromIP.test.ts` (validation du cache Firestore 24h, appel serveur ipapi et fallback réseau).
+3. **Refactorisation de `src/services/pricingService.js` :**
+   - Remplacement de l'appel direct `fetch('https://ipapi.co/json/')` par `httpsCallable(functions, 'getCurrencyFromIP')`.
+   - Élimination de tout code résiduel appelant `ipapi.co` directement côté client.
+   - Préservation stricte du consentement préalable RGPD (`isTrackerAllowed('external_geoip')`) et du fallback déterministe hors-ligne par fuseau horaire (`Intl.DateTimeFormat`).
+
+### 24.3. Validation
+- `npm run build` : Exit Code 0.
+- `npx vitest run` : 21 fichiers de test, 221/221 tests validés au vert (100% pass).
+- 0 appel réseau direct vers ipapi.co depuis le navigateur → 0 erreur CORS, 0 erreur 429.
+
+

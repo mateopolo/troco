@@ -192,3 +192,19 @@ export { health };
  * Migration des participants de chats (noms -> Firebase Auth UIDs) et traçabilité orphelins.
  */
 export { migrateChatParticipants } from './migration/migrateChatParticipants';
+
+/**
+ * 🌍 Cloud Function 20 : getCurrencyFromIP (Callable - CORS Proxy)
+ * Proxy ipapi.co avec cache Firestore 24h et fallback EUR pour éviter les erreurs CORS et 429.
+ */
+import { handleGetCurrencyFromIP } from './geolocation/getCurrencyFromIP';
+export const getCurrencyFromIP = onCall(
+  {
+    region: 'europe-west1',
+    cors: true,
+  },
+  async (request) => {
+    return handleGetCurrencyFromIP(request, db);
+  }
+);
+
