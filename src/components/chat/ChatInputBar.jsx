@@ -316,6 +316,7 @@ function ChatInputBar({
           <div style={{ position: 'relative' }}>
             <button
               type="button"
+              data-testid="chat-workspace-tools-input-button"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsWorkspaceMenuOpen((prev) => !prev);

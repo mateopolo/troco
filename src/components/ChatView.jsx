@@ -1457,6 +1457,7 @@ function ChatView({
                 {/* BOUTON OUTILS PRO WORKSPACE */}
                 <button
                   type="button"
+                  data-testid="chat-workspace-tools-button"
                   onClick={(e) => { e.stopPropagation(); setIsWorkspaceToolsOpen(true); }}
                   onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWorkspaceToolsOpen(true); }}
                   className="premium-button"
@@ -1587,6 +1588,37 @@ function ChatView({
                 >
                   <Palette size={15} color="var(--accent-primary)" />
                   {!isMobile && <span>Whiteboard</span>}
+                </button>
+
+                {/* BOUTON OUTILS WORKSPACE 1-TO-1 */}
+                <button
+                  type="button"
+                  data-testid="chat-workspace-tools-button"
+                  onClick={(e) => { e.stopPropagation(); setIsWorkspaceToolsOpen(true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWorkspaceToolsOpen(true); }}
+                  className="premium-button"
+                  style={{
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '9999px',
+                    width: isMobile ? '40px' : 'auto',
+                    height: '40px',
+                    minWidth: '40px',
+                    minHeight: '40px',
+                    padding: isMobile ? '0' : '0 14px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    color: 'var(--text-main)',
+                    fontWeight: '700', fontSize: '11.5px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="Outils Workspace (Docs, Sheets, Notes, Slides, Whiteboard)"
+                  aria-label="Outils Workspace"
+                >
+                  <Briefcase size={15} color="var(--accent-primary)" />
+                  {!isMobile && <span>Workspace</span>}
                 </button>
 
                 <button
@@ -3160,6 +3192,7 @@ function ChatView({
                           className="chat-row-container shrink-0 flex-shrink-0 h-[88px]"
                         >
                           <button
+                            data-testid={`chat-item-${chat.id}`}
                             onClick={() => handleSelectChatMobile(chat)}
                             style={{
                               display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',

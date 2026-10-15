@@ -1741,6 +1741,42 @@ Composants sécurisés :
    - Exécution de Vitest : 16/16 suites unitaires réussies (151/151 tests verts).
    - Compilation de production : `npm run build` réussi avec Exit Code 0.
 
+---
+
+## 31. PROMPT 12 — Outils Workspace dans Chat & Déblocage des 5 BLOCKED (E2E-FAIL-11 / Parcours 10)
+
+### 31.1. Problématique & Diagnostic
+- **Bug ciblé :** `[E2E-FAIL-11]` — Outils Workspace inaccessibles dans le chat et 5 vérifications E2E bloquées (`BLOCKED`) dans le Parcours 10 ([Issue #11](https://github.com/mateopolo/troco/issues/11)).
+- **Diagnostic :**
+  1. Le bouton d'accès aux outils Workspace (`ProjectWorkspaceToolsModal`) n'était rendu que dans les discussions de groupe (`activeChatObj?.isGroup ?`). Dans les discussions 1-to-1 (telles que le chat seedé `test-chat-e2e`), le bouton était absent de l'en-tête.
+  2. Le composant `ProjectWorkspaceToolsModal` ne proposait initialement que 3 onglets techniques (`drive`, `calendar`, `remote`), sans exposer directement les 5 outils collaboratifs bureautiques clés (`docs`, `sheets`, `notes`, `slides`, `whiteboard`) attendus par les tests E2E.
+  3. Dans `e2e/full-audit.spec.js`, le Parcours 10 cherchait les boutons Workspace immédiatement après avoir basculé sur l'onglet Messages sans avoir ouvert au préalable la discussion de test seedée (`test-chat-e2e`), provoquant le statut `BLOCKED` pour les 5 outils.
+  4. Les éléments de discussion ne disposaient pas de `data-testid="chat-item-${chat.id}"` pour automatiser la sélection de chat.
+
+### 31.2. Correctifs Appliqués
+1. **Exposition universelle du bouton Workspace (`src/components/ChatView.jsx`) :**
+   - Ajout du bouton Workspace avec `data-testid="chat-workspace-tools-button"` dans l'en-tête des discussions individuelles (1-to-1) et dans l'en-tête des groupes.
+   - Ajout de l'attribut `data-testid={`chat-item-${chat.id}`}` sur les boutons de discussion de la liste pour sélection déterministe.
+   - Ajout de `data-testid="chat-workspace-tools-input-button"` dans `src/components/chat/ChatInputBar.jsx`.
+2. **Refonte complète de `src/components/ProjectWorkspaceToolsModal.jsx` :**
+   - Implémentation riche, réactive et complète des 5 onglets collaboratifs bureautiques avec leurs attributs `data-testid` stricts :
+     - `workspace-tab-docs` : **Troco Docs** (éditeur Markdown collaboratif, barre d'outils gras/italique/liste, statut synchronisé)
+     - `workspace-tab-sheets` : **Troco Sheets** (tableur interactif, barre de formule `=SUM(B2:B5)`, tableau de budget jetons)
+     - `workspace-tab-notes` : **Troco Notes** (cartes de notes autocollantes colorées, checklists interactives, formulaire d'ajout)
+     - `workspace-tab-slides` : **Troco Slides** (diaporama interactif, carrousel de slides, aperçu de présentation)
+     - `workspace-tab-whiteboard` : **Whiteboard collaboratif** (palette d'outils stylo/formes/gomme, canvas interactif, latence WebRTC < 10ms)
+     - Onglets complémentaires conservés : `workspace-tab-drive`, `workspace-tab-calendar`, `workspace-tab-remote`.
+3. **Mise à jour du test E2E (`e2e/full-audit.spec.js`) :**
+   - Localisation du Parcours 10 : ajout de l'étape préalable d'ouverture du chat seedé `await page.getByTestId('chat-item-test-chat-e2e').click()` avec temporisation 500ms.
+   - Clic sur `chat-workspace-tools-button` pour ouvrir la modale.
+   - Clic successif et validation des 5 onglets via leur `data-testid` avec `scrollIntoViewIfNeeded`.
+4. **Validation des tests :**
+   - Exécution Playwright Parcours 10 : **6/6 vérifications PASS (100% au vert)** — les 5 statuts `BLOCKED` sont désormais convertis en `PASS` effectif !
+   - Création de la suite unitaire `tests/unit/workspaceToolsModal.test.js` (6 tests unitaires au vert).
+   - Exécution de Vitest globale : 17/17 suites unitaires réussies (157/157 tests verts).
+   - Compilation de production : `npm run build` validé avec succès (Exit Code 0).
+
+
 
 
 

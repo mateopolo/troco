@@ -474,9 +474,9 @@
     "semantic_hash": "5b5e0dfa69a81fd0258025329085373a"
   },
   "src/components/ChatView.jsx": {
-    "mtime": 1792010167.3922126,
-    "seen": 1792010931.169788,
-    "ast_hash": "0e0c9ea2c675b7f2e311ce58becda13e",
+    "mtime": 1792074783.2150297,
+    "seen": 1792081664.25382,
+    "ast_hash": "f4a23f70c7ec74f293d58ef13f3275e2",
     "semantic_hash": ""
   },
   "src/components/CloudOfficeSuiteModal.jsx": {
@@ -1008,9 +1008,9 @@
     "semantic_hash": ""
   },
   "src/components/ProjectWorkspaceToolsModal.jsx": {
-    "mtime": 1790604387.909503,
-    "seen": 1790606119.6186857,
-    "ast_hash": "4a159d697e888ab83de007495838b16e",
+    "mtime": 1792074730.1637287,
+    "seen": 1792081664.2850893,
+    "ast_hash": "f45f24abf6c7d21c50528dddf814c384",
     "semantic_hash": ""
   },
   "src/components/PublicProfileModal.jsx": {
@@ -1164,9 +1164,9 @@
     "semantic_hash": "5978da176d4928d0232844ea8cf43658"
   },
   "src/components/chat/ChatInputBar.jsx": {
-    "mtime": 1790784968.9004493,
-    "seen": 1790785319.569235,
-    "ast_hash": "d09f33ea885226c1de3ef4778e63c216",
+    "mtime": 1792074798.2255473,
+    "seen": 1792081664.2938604,
+    "ast_hash": "593e1ca46b59626f0face149753d9bc1",
     "semantic_hash": ""
   },
   "src/components/chat/DownloadButton.jsx": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1792072439.0261621,
-    "seen": 1792072473.7545445,
-    "ast_hash": "56207c1d8a9fd526e07f10cd4bc85a1c",
+    "mtime": 1792081613.7261593,
+    "seen": 1792081664.388541,
+    "ast_hash": "f83e3be0b4bd20df9fc900365bcd1e4e",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1792072419.9232378,
-    "seen": 1792072473.755391,
-    "ast_hash": "01fa3a0b8bfdddb8a3c0f3f7e85a2169",
+    "mtime": 1792081589.9358718,
+    "seen": 1792081664.3891013,
+    "ast_hash": "8002cce5c4afbddbaf6366dd2e1e54b5",
     "semantic_hash": ""
   },
   "README.md": {
@@ -3210,15 +3210,15 @@
     "semantic_hash": ""
   },
   "docs/e2e-logs/results.json": {
-    "mtime": 1792015273.0535314,
-    "seen": 1792015389.6214933,
-    "ast_hash": "76bdc4ffde51052fa1388d0e74377072",
+    "mtime": 1792081499.6122165,
+    "seen": 1792081664.2187011,
+    "ast_hash": "616cdb0200d4b7c663a69abe16b91461",
     "semantic_hash": ""
   },
   "e2e/full-audit.spec.js": {
-    "mtime": 1792014873.4854364,
-    "seen": 1792015389.6220398,
-    "ast_hash": "535d223b81c574caf513b1d1a0015ff0",
+    "mtime": 1792079989.463945,
+    "seen": 1792081664.2192907,
+    "ast_hash": "9d11486a2a4ad7ee13c8eecf04f8e437",
     "semantic_hash": ""
   },
   "e2e/helpers.js": {
@@ -3324,9 +3324,9 @@
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/FAIL-P9-Filtrage-du-fil-d-actualit-.png": {
-    "mtime": 1792015140.6756685,
-    "seen": 1792015389.7529116,
-    "ast_hash": "8588f326c36f7137b7b97538cef97d8e",
+    "mtime": 1792081486.6203108,
+    "seen": 1792081664.4150884,
+    "ast_hash": "294a886ac4d93299a376dfbcf9cacb09",
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/M1-initial-load.png": {
@@ -3642,9 +3642,9 @@
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/P9-community.png": {
-    "mtime": 1792015131.3495548,
-    "seen": 1792015389.75323,
-    "ast_hash": "974a6aad60f0d4600d187236b781b157",
+    "mtime": 1792081477.1063068,
+    "seen": 1792081664.4383228,
+    "ast_hash": "2467770a57cb69614a4a31b13feb2d23",
     "semantic_hash": ""
   },
   "functions/src/geolocation/getCurrencyFromIP.ts": {
@@ -3690,9 +3690,9 @@
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/FAIL-P9-Suppression-d-un-message-admin-.png": {
-    "mtime": 1792015140.8411582,
-    "seen": 1792015389.7529135,
-    "ast_hash": "14e9eecf33fa86895e5b3316016afa9e",
+    "mtime": 1792081486.8538494,
+    "seen": 1792081664.4150915,
+    "ast_hash": "3a379b0ce1f6587314d63f9d33989646",
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/P13-admin-reports.png": {
@@ -3783,6 +3783,48 @@
     "mtime": 1792072274.8576794,
     "seen": 1792072473.7513943,
     "ast_hash": "24cc4956563ea02951fe5dbdd74193af",
+    "semantic_hash": ""
+  },
+  "tests/unit/workspaceToolsModal.test.js": {
+    "mtime": 1792074843.317155,
+    "seen": 1792081664.3868504,
+    "ast_hash": "cacf4c9b6f5e492b5187d1989c6549ab",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/FAIL-P10-Ouverture-de-Whiteboard-collaboratif.png": {
+    "mtime": 1792079923.8465881,
+    "seen": 1792081664.4107084,
+    "ast_hash": "aa615b81e539b569d48ab1e772a21562",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P10-TrocoDocs.png": {
+    "mtime": 1792081494.0105872,
+    "seen": 1792081664.4216273,
+    "ast_hash": "73700b441923857f3f606878dab814a2",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P10-TrocoNotes.png": {
+    "mtime": 1792081496.4221234,
+    "seen": 1792081664.4216309,
+    "ast_hash": "7e21e520f92bfda0ea40ee1abfee28ca",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P10-TrocoSheets.png": {
+    "mtime": 1792081495.2097788,
+    "seen": 1792081664.4216328,
+    "ast_hash": "7b4ad3be7435ee1706673157da4fb343",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P10-TrocoSlides.png": {
+    "mtime": 1792081497.857289,
+    "seen": 1792081664.421635,
+    "ast_hash": "48a3b66a1ab630a42dd58974e8646ddb",
+    "semantic_hash": ""
+  },
+  "docs/e2e-screenshots/P10-Whiteboardcollaboratif.png": {
+    "mtime": 1792081499.231393,
+    "seen": 1792081664.4216368,
+    "ast_hash": "fe1bb458e6dafc7aceb6623565087f8e",
     "semantic_hash": ""
   }
 }

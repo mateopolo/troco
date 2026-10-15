@@ -895,6 +895,19 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
   - **Guard Global Production dans `src/index.js` :** Interception universelle de `console.error` filtrant silencieusement les erreurs de permissions attendues en production (`Missing or insufficient permissions`).
   - **Éradication des logs résiduels :** Remplacement systématique de tous les `console.log` et `console.error` isolés dans le code par `logger.info`, `logger.warn` ou suppression pure des instructions de debug obsolètes. Zéro `console.log` / `console.error` direct dans `src/` en dehors du singleton `logger.js`.
   - **Tests :** Suite unitaire dédiée `tests/unit/loggerConsoleClean.test.js` (5 tests automatisés validant la propreté du codebase et le comportement du singleton logger), 16/16 suites unitaires réussies (151/151 tests verts), `npm run build` Exit Code 0.
+- [x] `[E2E-FIX-04]` — Résolution de [E2E-FAIL-11] & Déblocage des 5 tests BLOCKED Workspace (Parcours 10) (Issue #11)
+  - **Fichiers modifiés :** `src/components/ProjectWorkspaceToolsModal.jsx`, `src/components/ChatView.jsx`, `src/components/chat/ChatInputBar.jsx`, `e2e/full-audit.spec.js`.
+  - **Bouton Workspace dans le Chat :** Exposition universelle du bouton Workspace avec `data-testid="chat-workspace-tools-button"` dans l'en-tête des conversations de groupe ET individuelles (1-to-1 comme `test-chat-e2e`), ainsi que dans `ChatInputBar.jsx` (`chat-workspace-tools-input-button`).
+  - **Onglets Collaboratifs Workspace :** Implémentation complète et typée des 5 onglets avec attributs `data-testid` dédiés :
+    1. `workspace-tab-docs` : Troco Docs (éditeur Markdown collaboratif en temps réel)
+    2. `workspace-tab-sheets` : Troco Sheets (tableur collaboratif avec formules et calcul de jetons)
+    3. `workspace-tab-notes` : Troco Notes (notes de réunion colorées et checklists interactives)
+    4. `workspace-tab-slides` : Troco Slides (diaporama interactif et pitch deck avec mode présentateur)
+    5. `workspace-tab-whiteboard` : Whiteboard collaboratif (canvas P2P WebRTC DataChannel à latence < 10ms)
+    + 3 onglets intégrés : `workspace-tab-drive` (Drive), `workspace-tab-calendar` (Planning & Visios), `workspace-tab-remote` (Contrôle à distance).
+  - **Sélection de chat E2E :** Ajout de `data-testid={`chat-item-${chat.id}`}` sur les éléments de liste de discussion dans `ChatView.jsx` pour navigation Playwright instantanée.
+  - **Résultat E2E Parcours 10 :** 6/6 vérifications **PASS** (100% au vert sur P10), 5 tests BLOCKED débloqués en PASS.
+  - **Tests :** Suite unitaire dédiée `tests/unit/workspaceToolsModal.test.js` (6 tests unitaires au vert), 17/17 suites Vitest réussies (157/157 tests verts), `npm run build` Exit Code 0.
 
 ---
 

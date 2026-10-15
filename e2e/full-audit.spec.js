@@ -590,26 +590,58 @@ test.describe('Troco — Audit E2E complet', () => {
 
     await openApp(page);
     await goTab(page, 'Messages', 2000);
+
+    // Étape préalable : ouvrir le chat seedé test-chat-e2e
+    const chatSeed = page.getByTestId('chat-item-test-chat-e2e').first();
+    if (await chatSeed.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await chatSeed.click();
+    } else {
+      const fallbackChat = page.locator('button:has-text("Test Admin"), button:has-text("Bienvenue"), .chat-row-container').first();
+      if (await fallbackChat.isVisible().catch(() => false)) await fallbackChat.click();
+    }
+    await page.waitForTimeout(500);
+
+    // Ouvrir la modale des outils Workspace
+    const wsBtn = page.getByTestId('chat-workspace-tools-button').first();
+    if (await wsBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await wsBtn.click();
+      await page.waitForTimeout(500);
+    }
+
     const tools = [
-      ['Troco Docs', /Docs/i],
-      ['Troco Sheets', /Sheets|Tableur/i],
-      ['Troco Notes', /Notes/i],
-      ['Troco Slides', /Slides/i],
-      ['Whiteboard collaboratif', /Tableau Blanc|Whiteboard/i],
+      ['Troco Docs', 'workspace-tab-docs', /Docs/i],
+      ['Troco Sheets', 'workspace-tab-sheets', /Sheets|Tableur/i],
+      ['Troco Notes', 'workspace-tab-notes', /Notes/i],
+      ['Troco Slides', 'workspace-tab-slides', /Slides/i],
+      ['Whiteboard collaboratif', 'workspace-tab-whiteboard', /Tableau Blanc|Whiteboard/i],
     ];
-    for (const [name, re] of tools) {
+    for (const [name, testId, re] of tools) {
       await step('P10', `Ouverture de ${name}`, async () => {
-        const b = page.getByText(re).first();
-        if (!(await b.isVisible().catch(() => false))) blocked(`Outils Workspace accessibles uniquement dans un chat ouvert (aucun chat disponible en session simulée)`);
-        await b.click();
-        await page.waitForTimeout(1200);
+        let b = page.getByTestId(testId).first();
+        if (!(await b.isVisible().catch(() => false))) {
+          const reopen = page.getByTestId('chat-workspace-tools-button').first();
+          if (await reopen.isVisible().catch(() => false)) {
+            await reopen.click();
+            await page.waitForTimeout(500);
+            b = page.getByTestId(testId).first();
+          }
+        }
+        if (!(await b.isVisible().catch(() => false))) {
+          b = page.getByText(re).first();
+        }
+        if (!(await b.isVisible().catch(() => false))) {
+          blocked(`Outils Workspace accessibles uniquement dans un chat ouvert (aucun chat disponible en session simulée)`);
+        }
+        await b.scrollIntoViewIfNeeded().catch(() => {});
+        await b.click({ timeout: 4000 });
+        await page.waitForTimeout(600);
         await shot(page, `P10-${name.replace(/\W+/g, '')}`);
-        await closeOverlays(page);
       }, page);
     }
     await step('P10', 'Édition collaborative / Partage dans le chat', async () => {
-      const ws = page.locator('button:has-text("Docs"), button:has-text("Workspace"), button[aria-label*="workspace" i]').first();
+      const ws = page.getByTestId('chat-workspace-tools-button').or(page.locator('button:has-text("Docs"), button:has-text("Workspace"), button[aria-label*="workspace" i]')).first();
       expect(await ws.isVisible().catch(() => true)).toBeTruthy();
+      await closeOverlays(page);
     }, page);
   });
 
