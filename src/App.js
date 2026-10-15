@@ -341,12 +341,18 @@ export default function App() {
     isTutorialOpen,
     setIsTutorialOpen,
     currentStep: tutorialCurrentStep,
+    setCurrentStep: setTutorialCurrentStep,
     nextStep: nextTutorialStep,
     prevStep: prevTutorialStep,
     skipTutorial,
     completeTutorial,
     shouldShowTutorial,
   } = useTutorial();
+
+  const handleReplayTutorial = useCallback(() => {
+    if (setTutorialCurrentStep) setTutorialCurrentStep(0);
+    setIsTutorialOpen(true);
+  }, [setTutorialCurrentStep, setIsTutorialOpen]);
 
   const [skills, setSkills] = useState([
     'Prod musicale & Ableton Live',
@@ -2948,6 +2954,8 @@ export default function App() {
                   formatStatus={formatStatus}
                   formatTokenCount={formatTokenCount}
                   formatCompensation={formatCompensation}
+                  handleReplayTutorial={handleReplayTutorial}
+                  setIsTutorialOpen={setIsTutorialOpen}
                 />
               )}
 

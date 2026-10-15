@@ -82,6 +82,8 @@ function ProfileFeature({
   formatStatus,
   formatTokenCount,
   formatCompensation,
+  handleReplayTutorial,
+  setIsTutorialOpen,
 }) {
   const langContext = useLanguage();
   const safeT = (k, defaultVal) => {
@@ -726,7 +728,7 @@ function ProfileFeature({
           <div>
             <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('trocoTokensLabel')}</div>
             <div style={{ fontSize: '19px', fontWeight: '800', color: 'var(--text-main)', position: 'relative', overflow: 'visible' }}>
-              <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '19px', fontWeight: '800', color: 'var(--text-main)' }} />
+              <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => (typeof formatTokenCount === 'function' ? formatTokenCount(v, currentLang) : v)} style={{ fontSize: '19px', fontWeight: '800', color: 'var(--text-main)' }} />
             </div>
           </div>
           <button
@@ -1403,6 +1405,37 @@ function ProfileFeature({
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Scale size={16} color="var(--accent-primary)" /> {t('termsConditionsButton', 'Conditions Générales & Charte Communautaire (v2026.1)')}
+            </span>
+            <ChevronRight size={16} color="var(--accent-primary)" />
+          </button>
+
+          <button
+            onClick={() => {
+              if (typeof handleReplayTutorial === 'function') {
+                handleReplayTutorial();
+              } else if (typeof setIsTutorialOpen === 'function') {
+                setIsTutorialOpen(true);
+              }
+            }}
+            data-testid="profile-replay-tutorial-button"
+            className="premium-button"
+            style={{
+              border: '1px solid var(--border-color)',
+              borderRadius: '16px',
+              padding: '14px 16px',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              fontWeight: '700',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Sparkles size={16} color="var(--accent-primary)" /> {t('replayTutorialButton', 'Revoir le tutoriel')}
             </span>
             <ChevronRight size={16} color="var(--accent-primary)" />
           </button>

@@ -454,20 +454,36 @@ test.describe('Troco — Audit E2E complet', () => {
       if (!(await b.isVisible().catch(() => false))) missing('Bouton absent (SplashScreen.jsx non monté dans l’app)');
     }, page);
     await step('P14', 'Bouton « Revoir le tutoriel »', async () => {
-      const b = page.getByText(/Revoir le tutoriel|tutoriel/i).first();
+      const b = page.getByTestId('profile-replay-tutorial-button').or(page.getByText(/Revoir le tutoriel|tutoriel/i)).first();
       await expect(b).toBeVisible({ timeout: 4000 });
       await b.click();
       await page.waitForTimeout(1500);
       await shot(page, 'P14-tutorial-step1');
     }, page);
     await step('P14', 'Navigation à travers les étapes (6)', async () => {
+      const indicator = page.getByTestId('tutorial-step-indicator').or(page.locator('text=/Étape \\d+ sur 6/i')).first();
+      await expect(indicator).toBeVisible({ timeout: 5000 });
+
       let steps = 1;
-      for (let i = 0; i < 8; i += 1) {
-        const next = page.getByRole('button', { name: /suivant|continuer|next/i }).first();
+      let lastStep = 1;
+      for (let i = 0; i < 6; i += 1) {
+        const next = page.getByTestId('tutorial-next-button')
+          .or(page.getByRole('button', { name: /suivant|continuer|commencer|découvrir|next/i }))
+          .first();
         if (!(await next.isVisible().catch(() => false))) break;
         await next.click();
         steps += 1;
         await page.waitForTimeout(600);
+
+        if (await indicator.isVisible().catch(() => false)) {
+          const txt = await indicator.innerText().catch(() => '');
+          const m = txt.match(/(\d+)\s*(?:sur|\/|of)\s*6/i);
+          if (m) {
+            const current = parseInt(m[1], 10);
+            expect(current).toBeGreaterThanOrEqual(lastStep);
+            lastStep = current;
+          }
+        }
       }
       await shot(page, 'P14-tutorial-last');
       expect(steps, `étapes parcourues: ${steps}`).toBeGreaterThanOrEqual(6);

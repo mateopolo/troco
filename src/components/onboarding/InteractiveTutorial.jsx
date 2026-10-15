@@ -63,20 +63,18 @@ export default function InteractiveTutorial({
     if (isLastStep) {
       if (typeof onComplete === 'function') onComplete(profile?.uid);
     } else {
+      setInternalStep(s => Math.min(s + 1, totalSteps - 1));
       if (typeof onNext === 'function') {
         onNext();
-      } else {
-        setInternalStep(s => Math.min(s + 1, totalSteps - 1));
       }
     }
   };
 
   const handlePrev = () => {
     if (internalStep > 0) {
+      setInternalStep(s => Math.max(s - 1, 0));
       if (typeof onPrev === 'function') {
         onPrev();
-      } else {
-        setInternalStep(s => Math.max(s - 1, 0));
       }
     }
   };
@@ -659,7 +657,11 @@ export default function InteractiveTutorial({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary, #888)' }}>
+            <span
+              data-testid="tutorial-step-indicator"
+              data-step={internalStep + 1}
+              style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary, #888)' }}
+            >
               {formatStepOf(internalStep + 1, totalSteps)}
             </span>
             <button
@@ -735,45 +737,64 @@ export default function InteractiveTutorial({
 
         {/* Actions de navigation */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-          {internalStep > 0 ? (
-            <button
-              onClick={handlePrev}
-              className="premium-button"
-              style={{
-                border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E8DDD3',
-                backgroundColor: 'transparent',
-                color: 'var(--text-main, #222)',
-                borderRadius: '999px',
-                padding: '12px 18px',
-                fontSize: '13px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              <ChevronLeft size={16} />
-              {t('tutorialPrev', 'Précédent')}
-            </button>
-          ) : (
-            <button
-              onClick={handleSkip}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-secondary, #888)',
-                fontSize: '13px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                padding: '12px 8px',
-              }}
-            >
-              {t('tutorialSkip', 'Passer')}
-            </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {internalStep > 0 ? (
+              <>
+                <button
+                  onClick={handlePrev}
+                  className="premium-button"
+                  style={{
+                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E8DDD3',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-main, #222)',
+                    borderRadius: '999px',
+                    padding: '12px 18px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <ChevronLeft size={16} />
+                  {t('tutorialPrev', 'Précédent')}
+                </button>
+                <button
+                  onClick={handleSkip}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary, #888)',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    padding: '12px 6px',
+                  }}
+                >
+                  {t('tutorialSkip', 'Passer')}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleSkip}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary, #888)',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  padding: '12px 8px',
+                }}
+              >
+                {t('tutorialSkip', 'Passer')}
+              </button>
+            )}
+          </div>
 
           <button
+            data-testid="tutorial-next-button"
             onClick={handleNext}
             className="premium-button"
             style={{

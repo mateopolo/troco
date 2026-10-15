@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1792086185.373359,
-    "seen": 1792086565.5308511,
-    "ast_hash": "5f1d7d2aff1f9ea0167738e7ef4cf1cf",
+    "mtime": 1792087718.7857032,
+    "seen": 1792088327.9316504,
+    "ast_hash": "57403505e0c43ad1c00b9ed954c9d35f",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -1608,9 +1608,9 @@
     "semantic_hash": "13264a4b85deea61c5a1efa095076a52"
   },
   "src/features/profile/ProfileFeature.jsx": {
-    "mtime": 1792016815.9092565,
-    "seen": 1792017084.5062084,
-    "ast_hash": "44310097b8e5813ce9b4a0b6d65367c6",
+    "mtime": 1792087898.272264,
+    "seen": 1792088328.0194345,
+    "ast_hash": "298a809953a6f688dd4f9ba2fd2bf453",
     "semantic_hash": ""
   },
   "src/features/profile/index.js": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1792086527.0806618,
-    "seen": 1792086565.6543071,
-    "ast_hash": "11c5779249781e8cfa48a48c9b9a9f34",
+    "mtime": 1792088253.1573775,
+    "seen": 1792088328.0663848,
+    "ast_hash": "f910fb3aac784d6e155ce101d2f57b11",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2784,9 +2784,9 @@
     "semantic_hash": ""
   },
   "src/routes/ProfileRoute.jsx": {
-    "mtime": 1792010513.6701272,
-    "seen": 1792010931.238961,
-    "ast_hash": "41560d2843369f5c08b0b095372cec3f",
+    "mtime": 1792087735.2191758,
+    "seen": 1792088328.0341067,
+    "ast_hash": "20e400481fbab51be0803e8e404fd496",
     "semantic_hash": ""
   },
   "src/routes/LegalRoutes.jsx": {
@@ -3156,9 +3156,9 @@
     "semantic_hash": ""
   },
   "src/components/onboarding/InteractiveTutorial.jsx": {
-    "mtime": 1791374153.567371,
-    "seen": 1791374810.5081758,
-    "ast_hash": "fbe16cce6b50a577a0439fe1a2b308a8",
+    "mtime": 1792088127.2493472,
+    "seen": 1792088327.993992,
+    "ast_hash": "dce2f981173df1449414013eecb5bcc8",
     "semantic_hash": ""
   },
   "src/hooks/useTutorial.js": {
@@ -3216,9 +3216,9 @@
     "semantic_hash": ""
   },
   "e2e/full-audit.spec.js": {
-    "mtime": 1792086217.7843347,
-    "seen": 1792086565.5088878,
-    "ast_hash": "5855d41e486f5e8acec4914c5f44ead9",
+    "mtime": 1792087800.1121404,
+    "seen": 1792088327.9098916,
+    "ast_hash": "e2cead2f3f85c63a3789e5e0cfe7ac16",
     "semantic_hash": ""
   },
   "e2e/helpers.js": {
@@ -3768,9 +3768,9 @@
     "semantic_hash": ""
   },
   "docs/E2E-REPORT-2026-10-14-v2.md": {
-    "mtime": 1792015900.6221213,
-    "seen": 1792017084.5428813,
-    "ast_hash": "f7a4ae3933a324683737237a7b2b476b",
+    "mtime": 1792088290.4700255,
+    "seen": 1792088328.0681374,
+    "ast_hash": "489c60320f7b786fbeeb2cb9e9c4cbe3",
     "semantic_hash": ""
   },
   "tests/unit/germanLanguageI18n.test.js": {
@@ -3831,6 +3831,12 @@
     "mtime": 1792086272.8093274,
     "seen": 1792086565.6505852,
     "ast_hash": "c2d54bbf133cf191f05f5ba43048549e",
+    "semantic_hash": ""
+  },
+  "tests/unit/tutorialNavigation.test.js": {
+    "mtime": 1792087966.7351134,
+    "seen": 1792088328.0642574,
+    "ast_hash": "627a58204211ce65716314e39bdbf4aa",
     "semantic_hash": ""
   }
 }

@@ -1842,6 +1842,40 @@ Composants sécurisés :
    - Validation de la totalité des tests unitaires du projet : **19/19 fichiers au vert, 168/168 tests passés**.
    - Compilation de production : `npm run build` exécuté avec succès (Exit Code 0).
 
+---
+
+## 34. PROMPT 15 — Navigation Complète du Tutoriel Interactif & Rejeu Profil (E2E-FAIL-08 & E2E-FAIL-07)
+
+### 34.1. Problématique & Diagnostic
+- **Bugs ciblés :** 
+  - `[E2E-FAIL-08]` — Le tutoriel interactif s'arrête prématurément à la première étape (`étapes parcourues: 1`) ([Issue #8](https://github.com/mateopolo/troco/issues/8)).
+  - `[E2E-FAIL-07]` — Absence ou inopérabilité du déclencheur « Revoir le tutoriel » dans la vue Profil ([Issue #7](https://github.com/mateopolo/troco/issues/7)).
+- **Diagnostic :**
+  1. **Libellé du CTA d'étape initiale :** À l'étape 0 (« Bienvenue sur Troco »), le bouton principal affichait `t('tutorialStart', 'Commencer le tutoriel')` ou `Commencer`, tandis que le test E2E Playwright ciblait exclusivement `getByRole('button', { name: /suivant|continuer|next/i })`. Faute de concordance textuelle et d'attribut unifié, la boucle de navigation échouait dès la première itération.
+  2. **Absence d'attributs de test explicites :** Absence de `data-testid="tutorial-next-button"` et de `data-testid="tutorial-step-indicator"` rendant les assertions E2E fragiles et dépendantes des traductions i18n locales.
+  3. **Gestion de l'incrément d'étape :** Dans `InteractiveTutorial.jsx`, `handleNext()` déléguait conditionnellement à `onNext()` sans garantir l'incrémentation locale réactive synchrone lorsque le parent ne forçait pas de re-render immédiat.
+  4. **Déclencheur de rejeu manquant dans Profil :** Dans `src/features/profile/ProfileFeature.jsx`, aucun bouton « Revoir le tutoriel » portant `data-testid="profile-replay-tutorial-button"` n'était relié à `useTutorial().setCurrentStep(0)` et `setIsTutorialOpen(true)`.
+
+### 34.2. Correctifs Appliqués
+1. **Composant `src/components/onboarding/InteractiveTutorial.jsx` :**
+   - Ajout de `data-testid="tutorial-next-button"` sur le bouton principal d'action (opérant pour « Commencer », « Suivant » et « C'est parti ! »).
+   - Ajout de `data-testid="tutorial-step-indicator"` sur l'indicateur d'étape affichant dynamiquement `Étape X sur 6` avec attribut `data-step={internalStep + 1}`.
+   - Synchronisation robuste de l'état d'étape `internalStep` garantissant la navigation ordonnée de l'étape 1 à 6 (`totalSteps = 6`).
+   - Maintien du bouton discret « Passer » accessible à toute étape pour garantir la conformité UX et les tests de complétion.
+2. **Câblage du Rejeu depuis le Profil (`src/App.js`, `src/routes/ProfileRoute.jsx`, `src/features/profile/ProfileFeature.jsx`) :**
+   - Création de `handleReplayTutorial` dans `App.js` réinitialisant l'étape à 0 et ouvrant la modale : `setTutorialCurrentStep(0); setIsTutorialOpen(true);`.
+   - Transmission via `ProfileRoute` vers `ProfileFeature`.
+   - Ajout d'un bouton « Revoir le tutoriel » avec `data-testid="profile-replay-tutorial-button"` dans la section Compte & Préférences du profil.
+3. **Mise à jour du Test E2E (`e2e/full-audit.spec.js`) :**
+   - Parcours P14 modernisé : ouverture depuis le profil via `data-testid="profile-replay-tutorial-button"`.
+   - Boucle de progression sur les 6 étapes via `page.getByTestId('tutorial-next-button').click()`.
+   - Assertion pas-à-pas de l'indicateur `page.getByTestId('tutorial-step-indicator')` vérifiant `Étape X sur 6`.
+4. **Validation des tests :**
+   - Création de la suite unitaire `tests/unit/tutorialNavigation.test.js` (4/4 tests passés).
+   - Exécution globale Vitest : **20/20 fichiers de test au vert (172/172 tests unitaires passés)**.
+   - Compilation de production : `npm run build` exécuté avec Exit Code 0.
+
+
 
 
 

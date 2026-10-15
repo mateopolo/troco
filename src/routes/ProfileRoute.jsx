@@ -32,6 +32,8 @@ function ProfileRoute({
   formatStatus,
   formatTokenCount,
   formatCompensation,
+  handleReplayTutorial,
+  setIsTutorialOpen,
 }) {
   return (
     <motion.div
@@ -72,6 +74,8 @@ function ProfileRoute({
           formatStatus={formatStatus}
           formatTokenCount={formatTokenCount}
           formatCompensation={formatCompensation}
+          handleReplayTutorial={handleReplayTutorial}
+          setIsTutorialOpen={setIsTutorialOpen}
         />
       </Suspense>
     </motion.div>
