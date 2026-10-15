@@ -558,9 +558,9 @@
     "semantic_hash": ""
   },
   "src/components/GlobalLiveChat.jsx": {
-    "mtime": 1792000200.0114331,
-    "seen": 1792000656.311273,
-    "ast_hash": "a4222c0d894272b3345141fc91bdce1c",
+    "mtime": 1792083569.7034028,
+    "seen": 1792083829.6163347,
+    "ast_hash": "e282c45ab4768713945f4796a66d12df",
     "semantic_hash": ""
   },
   "src/components/ImageEditorModal.jsx": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1792081613.7261593,
-    "seen": 1792081664.388541,
-    "ast_hash": "f83e3be0b4bd20df9fc900365bcd1e4e",
+    "mtime": 1792083791.090723,
+    "seen": 1792083829.7155757,
+    "ast_hash": "e7040acf4961280c19741570273fa105",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1792081589.9358718,
-    "seen": 1792081664.3891013,
-    "ast_hash": "8002cce5c4afbddbaf6366dd2e1e54b5",
+    "mtime": 1792083772.5862904,
+    "seen": 1792083829.7160544,
+    "ast_hash": "4e79bd4e1a07c4b548047ccbabbf9629",
     "semantic_hash": ""
   },
   "README.md": {
@@ -3216,9 +3216,9 @@
     "semantic_hash": ""
   },
   "e2e/full-audit.spec.js": {
-    "mtime": 1792079989.463945,
-    "seen": 1792081664.2192907,
-    "ast_hash": "9d11486a2a4ad7ee13c8eecf04f8e437",
+    "mtime": 1792083759.4287596,
+    "seen": 1792083829.585593,
+    "ast_hash": "d06faa3e8894203944883af795a9a125",
     "semantic_hash": ""
   },
   "e2e/helpers.js": {
@@ -3791,12 +3791,6 @@
     "ast_hash": "cacf4c9b6f5e492b5187d1989c6549ab",
     "semantic_hash": ""
   },
-  "docs/e2e-screenshots/FAIL-P10-Ouverture-de-Whiteboard-collaboratif.png": {
-    "mtime": 1792079923.8465881,
-    "seen": 1792081664.4107084,
-    "ast_hash": "aa615b81e539b569d48ab1e772a21562",
-    "semantic_hash": ""
-  },
   "docs/e2e-screenshots/P10-TrocoDocs.png": {
     "mtime": 1792081494.0105872,
     "seen": 1792081664.4216273,
@@ -3825,6 +3819,12 @@
     "mtime": 1792081499.231393,
     "seen": 1792081664.4216368,
     "ast_hash": "fe1bb458e6dafc7aceb6623565087f8e",
+    "semantic_hash": ""
+  },
+  "tests/unit/adminDeleteMessage.test.js": {
+    "mtime": 1792083600.8962476,
+    "seen": 1792083829.7120068,
+    "ast_hash": "99b6e51227aab35197807c5ecb806b38",
     "semantic_hash": ""
   }
 }

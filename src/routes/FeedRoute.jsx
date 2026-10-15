@@ -530,6 +530,26 @@ function FeedRoute({
             </div>
           ) : (
             <PullToRefresh onRefresh={handleRefreshFeed} disabled={viewMode === 'map'}>
+              {/* COMPTEUR DE CARTES CHARGÉES DANS LE FEED */}
+              {filteredListings && filteredListings.length > 0 && (
+                <div
+                  data-testid="feed-card-count"
+                  data-count={filteredListings.length}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '2px 6px 12px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    color: 'var(--text-secondary)',
+                    opacity: 0.9,
+                  }}
+                >
+                  <span>{filteredListings.length} {t('results') || 'annonces'}</span>
+                </div>
+              )}
+
               <motion.div
                 ref={listingsGridRef}
                 variants={{
@@ -696,15 +716,18 @@ function FeedRoute({
               </motion.div>
 
               {/* SENTINELLE OBSERVER POUR AUTO INFINITE SCROLL */}
-              {hasMoreListings && (
-                <div ref={loadMoreSentinelRef} style={{ width: '100%', height: '24px', margin: '8px 0', pointerEvents: 'none' }} />
-              )}
+              <div
+                ref={loadMoreSentinelRef}
+                data-testid="load-more-sentinel"
+                style={{ width: '100%', height: '32px', margin: '8px 0', pointerEvents: 'none' }}
+              />
 
               {/* BOUTON CHARGER PLUS D'ANNONCES (PAGINATED INFINITE SCROLL) */}
               {hasMoreListings && (
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: '28px', marginBottom: '20px' }}>
                   <button
                     type="button"
+                    data-testid="load-more-btn"
                     onClick={handleLoadMoreListings}
                     disabled={isLoadingMoreListings}
                     className="premium-button"

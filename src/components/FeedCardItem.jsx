@@ -295,6 +295,7 @@ function FeedCardItem({
       onTouchStart={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseEnter={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseLeave={() => { if (setHoveredCardId) setHoveredCardId(null); }}
+      data-testid="feed-card"
       className="feed-card-item premium-card"
       style={{
         contentVisibility: 'auto',

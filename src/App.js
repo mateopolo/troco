@@ -1858,6 +1858,7 @@ export default function App() {
 
   // ---- SYNC TEMPS RÉEL FIRESTORE (LIMIT 50) ----
   // Chargement des annonces réelles Firestore filtrées par status == 'active' pour se conformer aux règles de sécurité
+  const FEED_PAGE_SIZE = 8;
   useEffect(() => {
     let unsubFirestore = () => { };
     let isCancelled = false;
@@ -1866,7 +1867,7 @@ export default function App() {
     const initialQuery = query(
       collection(db, 'listings'),
       where('status', '==', 'active'),
-      limit(50)
+      limit(FEED_PAGE_SIZE)
     );
 
     unsubFirestore = onSnapshot(
@@ -1886,7 +1887,7 @@ export default function App() {
 
         const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
         setLastVisibleListingDoc(lastDoc);
-        setHasMoreListings(snapshot.docs.length >= 50);
+        setHasMoreListings(snapshot.docs.length >= FEED_PAGE_SIZE);
 
         setListings(prev => {
           const customLocalListings = prev.filter(p => !p.isDemo && !(typeof p.id === 'number' && p.id <= 20) && !firestoreListings.some(f => f.id === p.id));
@@ -1897,7 +1898,7 @@ export default function App() {
         logger.warn('[Firestore] onSnapshot listings query error:', error);
         if (!isCancelled) {
           try {
-            const fallbackQuery = query(collection(db, 'listings'), limit(50));
+            const fallbackQuery = query(collection(db, 'listings'), limit(FEED_PAGE_SIZE));
             unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
               if (isCancelled) return;
               const firestoreListings = snapshot.docs
@@ -1912,7 +1913,7 @@ export default function App() {
                 .filter(l => !l.isDemo && !(typeof l.id === 'number' && l.id <= 20) && l.status === 'active');
               const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
               setLastVisibleListingDoc(lastDoc);
-              setHasMoreListings(snapshot.docs.length >= 50);
+              setHasMoreListings(snapshot.docs.length >= FEED_PAGE_SIZE);
               setListings(prev => {
                 const customLocalListings = prev.filter(p => !p.isDemo && !(typeof p.id === 'number' && p.id <= 20) && !firestoreListings.some(f => f.id === p.id));
                 return [...firestoreListings, ...customLocalListings];
@@ -1937,9 +1938,9 @@ export default function App() {
     try {
       let result;
       if (userCoords && Array.isArray(userCoords) && userCoords.length >= 2 && !isInfiniteRadius && radiusKm < 2000) {
-        result = await fetchListingsByGeohash({ center: userCoords, radiusKm, pageSize: 25 });
+        result = await fetchListingsByGeohash({ center: userCoords, radiusKm, pageSize: FEED_PAGE_SIZE });
       } else {
-        result = await fetchListingsPaginated({ pageSize: 20, lastDoc: lastVisibleListingDoc });
+        result = await fetchListingsPaginated({ pageSize: FEED_PAGE_SIZE, lastDoc: lastVisibleListingDoc });
       }
 
       if (result && result.items && result.items.length > 0) {
@@ -2209,24 +2210,52 @@ export default function App() {
   const listingsGridRef = useRef(null);
   const loadMoreSentinelRef = useRef(null);
 
-  // ---- INFINITE SCROLL AUTOMATIQUE VIA INTERSECTION OBSERVER ----
+  // ---- INFINITE SCROLL AUTOMATIQUE VIA INTERSECTION OBSERVER + FALLBACK LISTENER SCROLL DÉBOUNCÉ ----
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return;
+    if (typeof window === 'undefined') return;
     if (!hasMoreListings || isLoadingMoreListings || activeTab !== 'feed') return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0] && entries[0].isIntersecting) {
+
+    let observer = null;
+    if (typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0] && entries[0].isIntersecting) {
+            handleLoadMoreListings();
+          }
+        },
+        { rootMargin: '400px 0px', threshold: 0.05 }
+      );
+
+      const target = loadMoreSentinelRef.current;
+      if (target) observer.observe(target);
+    }
+
+    // Listener scroll classique avec debounce pour garantir le déclenchement
+    let scrollTimeout = null;
+    const handleScroll = () => {
+      if (scrollTimeout) return;
+      scrollTimeout = setTimeout(() => {
+        scrollTimeout = null;
+        if (!hasMoreListings || isLoadingMoreListings) return;
+        const scrollY = window.scrollY || document.documentElement.scrollTop;
+        const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+        const docHeight = document.documentElement.scrollHeight;
+        if (scrollY + windowHeight >= docHeight - 500) {
           handleLoadMoreListings();
         }
-      },
-      { rootMargin: '350px 0px', threshold: 0.1 }
-    );
+      }, 150);
+    };
 
-    const target = loadMoreSentinelRef.current;
-    if (target) observer.observe(target);
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      if (target) observer.unobserve(target);
+      if (observer) {
+        const target = loadMoreSentinelRef.current;
+        if (target) observer.unobserve(target);
+        observer.disconnect();
+      }
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasMoreListings, isLoadingMoreListings, activeTab, lastVisibleListingDoc]);

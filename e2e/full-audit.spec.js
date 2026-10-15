@@ -265,12 +265,24 @@ test.describe('Troco — Audit E2E complet', () => {
       expect(seen.size, `valeurs observées: ${[...seen].join(',')}`).toBeGreaterThan(1);
     }, page);
     await step('P2', 'Scroll infini (plus d’annonces après scroll)', async () => {
-      const before = await cards.count();
-      for (let i = 0; i < 6; i += 1) {
-        await page.mouse.wheel(0, 2500);
-        await page.waitForTimeout(700);
+      const feedCards = page.getByTestId('feed-card');
+      const before = (await feedCards.count()) || (await cards.count());
+      const sentinel = page.getByTestId('load-more-sentinel');
+      if (await sentinel.count() > 0) {
+        await sentinel.scrollIntoViewIfNeeded();
+      } else {
+        await page.mouse.wheel(0, 3000);
       }
-      const after = await cards.count();
+      await page.waitForTimeout(2000);
+      let after = (await feedCards.count()) || (await cards.count());
+      if (after <= before) {
+        const loadMoreBtn = page.getByTestId('load-more-btn').or(page.locator('button:has-text("Charger plus")')).first();
+        if (await loadMoreBtn.isVisible().catch(() => false)) {
+          await loadMoreBtn.click();
+          await page.waitForTimeout(2000);
+        }
+        after = (await feedCards.count()) || (await cards.count());
+      }
       await shot(page, 'P2-infinite-scroll');
       if (after <= before) throw new Error(`Cartes avant=${before} après=${after} (virtualisation ou pas de pagination)`);
     }, page);

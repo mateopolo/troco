@@ -1807,6 +1807,42 @@ Composants sécurisés :
    - Exécution globale Vitest : **18/18 fichiers de tests passés (166/166 tests unitaires au vert)**.
    - Compilation de production : `npm run build` exécuté avec Exit Code 0.
 
+---
+
+## 33. PROMPT 14 — Déclenchement Garanti du Scroll Infini & Pagination du Feed (E2E-FAIL-04)
+
+### 33.1. Problématique & Diagnostic
+- **Bug ciblé :** `[E2E-FAIL-04]` — Le scroll infini ne charge pas plus d'annonces lors du test Playwright E2E P2 ([Issue #4](https://github.com/mateopolo/troco/issues/4)).
+- **Diagnostic :**
+  1. **Seeding insuffisant dans `e2e/globalSetup.js` :** Une seule annonce (`test-listing-e2e`) était injectée lors du setup. Avec un `limit(50)` ou même `limit(8)`, `snapshot.docs.length < limit`, positionnant immédiatement `hasMoreListings` à `false` dès le premier rendu.
+  2. **Disparition de la sentinelle du DOM :** Dans `src/routes/FeedRoute.jsx`, la sentinelle d'intersection (`loadMoreSentinelRef`) n'était rendue que sous condition `{hasMoreListings && ...}`, disparaissant du DOM lorsque `hasMoreListings` était `false`.
+  3. **Attributs de ciblage Playwright manquants :** Absence de `data-testid="feed-card"` sur les cartes d'annonces individuelles (`FeedCardItem.jsx`), de `data-testid="load-more-sentinel"` sur la sentinelle et de `data-testid="feed-card-count"` sur l'indicateur de volume.
+  4. **Vulnérabilité aux optimisations de rendu (`content-visibility: auto`) :** Le défilement au curseur souris (`page.mouse.wheel`) pouvait ne pas déclencher l'IntersectionObserver en environnement headless ou sous virtualisation CSS sans défilement réel de l'élément cible dans le viewport.
+
+### 33.2. Correctifs Appliqués
+1. **Normalisation du flux paginé (`FEED_PAGE_SIZE = 8`) :**
+   - Définition d'un seuil de pagination cohérent `FEED_PAGE_SIZE = 8` dans `src/hooks/useFeedListings.js` et `src/App.js`.
+   - Requête d'écoute initiale Firestore avec `limit(FEED_PAGE_SIZE)`.
+   - `setHasMoreListings(snapshot.docs.length >= FEED_PAGE_SIZE)`.
+   - Pagination subséquente avec curseur Firestore `lastDoc` via `fetchListingsPaginated({ pageSize: FEED_PAGE_SIZE, lastDoc })`.
+2. **Mécanisme de Déclenchement Hybride (IntersectionObserver + Scroll Window Debouncé) :**
+   - `IntersectionObserver` configuré avec `rootMargin: '400px 0px'` et `threshold: 0.05` pour précharger les annonces avant même que la sentinelle ne soit pleinement visible.
+   - Ajout d'un écouteur d'événement `window.addEventListener('scroll', ...)` avec debounce de 150ms en fallback résilient (`scrollY + clientHeight >= docHeight - 500`).
+   - Nettoyage rigoureux des écouteurs et déconnexion de l'observer au démontage.
+3. **Sentinelle Permanente & Attributs Playwright :**
+   - Dans `src/routes/FeedRoute.jsx`, maintien permanent de `<div ref={loadMoreSentinelRef} data-testid="load-more-sentinel" ... />` dans le DOM.
+   - Ajout de `<div data-testid="feed-card-count" data-count={filteredListings.length}>...</div>` pour un assert de comptage direct.
+   - Ajout de `data-testid="feed-card"` sur le conteneur principal de `src/components/FeedCardItem.jsx`.
+   - Ajout de `data-testid="load-more-btn"` sur le bouton manuel de secours.
+4. **Enrichissement du Jeu d'Essai E2E & Adaptation du Test P2 :**
+   - `e2e/globalSetup.js` : Création de 12 annonces de test actives multi-catégories (Services, Bricolage, Maison, Technologie, Cours, etc.) garantissant 8 annonces en page 1 et 4 annonces prêtes pour la page 2.
+   - `e2e/full-audit.spec.js` : Étape P2 modernisée utilisant `await page.getByTestId('load-more-sentinel').scrollIntoViewIfNeeded()`, temporisation 2000ms, et comptage précis via `page.getByTestId('feed-card').count()`.
+5. **Validation & Non-Régression :**
+   - Création de la suite unitaire `tests/unit/infiniteScrollFeed.test.js` (2/2 tests passés).
+   - Validation de la totalité des tests unitaires du projet : **19/19 fichiers au vert, 168/168 tests passés**.
+   - Compilation de production : `npm run build` exécuté avec succès (Exit Code 0).
+
+
 
 
 

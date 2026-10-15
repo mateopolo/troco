@@ -106,20 +106,38 @@ module.exports = async () => {
       createdAt: new Date(),
     }, { merge: true });
 
-    // 6. Créer une annonce de test
-    await db.collection('listings').doc('test-listing-e2e').set({
-      id: 'test-listing-e2e',
-      title: 'Cours de dev React & Firebase',
-      description: 'Session de coaching et programmation collaborative.',
-      createdBy: userRecord.uid,
-      authorUid: userRecord.uid,
-      authorName: 'Test User',
-      category: 'Services',
-      price: 25,
-      tokens: 2,
-      createdAt: new Date(),
-      status: 'active',
-    }, { merge: true });
+    // 6. Créer des annonces de test (12 annonces pour tester la pagination et le scroll infini)
+    const testListingsData = [
+      { id: 'test-listing-e2e', title: 'Cours de dev React & Firebase', category: 'Services', desc: 'Session de coaching et programmation collaborative.' },
+      { id: 'test-listing-e2e-2', title: 'Réparation meuble et montage étagère', category: 'Bricolage', desc: 'Outillage complet et aide au montage de meubles.' },
+      { id: 'test-listing-e2e-3', title: 'Jardinage et taille de haies', category: 'Maison', desc: 'Entretien de jardin, tonte et taille.' },
+      { id: 'test-listing-e2e-4', title: 'Dépannage informatique et smartphone', category: 'Technologie', desc: 'Assistance logicielle et réparation.' },
+      { id: 'test-listing-e2e-5', title: 'Cours d’anglais conversationnel', category: 'Cours', desc: 'Pratique orale fluide et préparation d’entretiens.' },
+      { id: 'test-listing-e2e-6', title: 'Aide au déménagement et transport', category: 'Services', desc: 'Bras forts et diable de transport disponible.' },
+      { id: 'test-listing-e2e-7', title: 'Peinture murale et finitions intérieures', category: 'Bricolage', desc: 'Préparation des murs et peinture soignée.' },
+      { id: 'test-listing-e2e-8', title: 'Création de logo et charte graphique', category: 'Art & Design', desc: 'Identité visuelle moderne sur Figma/Illustrator.' },
+      { id: 'test-listing-e2e-9', title: 'Initiation à la guitare acoustique', category: 'Musique', desc: 'Premiers accords et morceaux simples.' },
+      { id: 'test-listing-e2e-10', title: 'Garde de chat et promenade de chien', category: 'Services', desc: 'Amoureux des animaux disponible les weekends.' },
+      { id: 'test-listing-e2e-11', title: 'Animation musicale et sono pour soirée', category: 'Événements', desc: 'Enceintes de fête et playlist festive.' },
+      { id: 'test-listing-e2e-12', title: 'Séance de yoga doux et relaxation', category: 'Bien-être', desc: 'Respiration et étirements guidés.' },
+    ];
+
+    for (let i = 0; i < testListingsData.length; i++) {
+      const item = testListingsData[i];
+      await db.collection('listings').doc(item.id).set({
+        id: item.id,
+        title: item.title,
+        description: item.desc,
+        createdBy: userRecord.uid,
+        authorUid: userRecord.uid,
+        authorName: 'Test User',
+        category: item.category,
+        price: 25,
+        tokens: 2,
+        createdAt: new Date(Date.now() - i * 60000),
+        status: 'active',
+      }, { merge: true });
+    }
 
     // 7. Créer un signalement de test pour l'Admin Panel
     await db.collection('reports').doc('test-report-e2e').set({

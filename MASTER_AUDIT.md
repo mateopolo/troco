@@ -913,6 +913,17 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
   - **Gestion de suppression Firestore & locale :** Fonction `handleDelete` exécutant la mise à jour immédiate de l'état local (`setMessages(prev => prev.filter(m => m.id !== targetId))`) couplée à la suppression atomique Firestore `deleteDoc(doc(db, 'global_chat', targetId))` et `deleteDoc(doc(db, 'community_messages', targetId))`, complétée par un marquage soft-delete de sécurité.
   - **Règles de sécurité Firestore :** Vérification formelle des règles `firestore.rules` autorisant la suppression par les administrateurs sur `/global_chat/{msgId}` (`allow update, delete: if isAdmin()`).
   - **Tests :** Suite unitaire dédiée `tests/unit/adminDeleteMessage.test.js` (9/9 tests validés au vert couvrant la visibilité admin, l'absence pour les utilisateurs non-admins, l'appel deleteDoc et la purge du DOM local), 18/18 suites Vitest réussies (166/166 tests verts), `npm run build` Exit Code 0.
+- [x] `[E2E-FIX-06]` — Résolution de [E2E-FAIL-04] : Déclenchement garanti du scroll infini et pagination du feed (Issue #4)
+  - **Fichiers modifiés :** `src/routes/FeedRoute.jsx`, `src/hooks/useFeedListings.js`, `src/App.js`, `src/components/FeedCardItem.jsx`, `e2e/globalSetup.js`, `e2e/full-audit.spec.js`, `tests/unit/infiniteScrollFeed.test.js`.
+  - **Taille de page & Requêtes paginées :** Définition de `FEED_PAGE_SIZE = 8` dans `src/hooks/useFeedListings.js` et `src/App.js`. Requête initiale avec `limit(8)` et déclenchement de la pagination avec `lastDoc` via `fetchListingsPaginated`.
+  - **Déclenchement Hybride Résilient :** Double mécanisme d'écoute : `IntersectionObserver` sur la sentinelle (`rootMargin: '400px 0px', threshold: 0.05`) couplé à un écouteur `scroll` window classique avec debounce 150ms (`scrollY + clientHeight >= scrollHeight - 500`), garantissant le rechargement même en cas d'incompatibilité de l'IntersectionObserver ou de virtualisation.
+  - **Attributs Playwright & Accessibilité :**
+    - `data-testid="feed-card"` sur chaque carte d'annonce (`src/components/FeedCardItem.jsx`).
+    - `data-testid="load-more-sentinel"` sur la sentinelle dans `FeedRoute.jsx`, conservée de manière permanente dans le DOM.
+    - `data-testid="feed-card-count"` avec `data-count={filteredListings.length}` pour le suivi précis du nombre de cartes.
+    - `data-testid="load-more-btn"` sur le bouton manuel de secours "Charger plus d'annonces".
+  - **Seed E2E & Correction du Test :** `e2e/globalSetup.js` enrichi pour insérer 12 annonces actives (réparties sur plusieurs catégories dont 'Services' et 'Bricolage') au lieu d'une seule, permettant le chargement de la page 2. Test P2 mis à jour dans `e2e/full-audit.spec.js` avec `scrollIntoViewIfNeeded` sur la sentinelle et comptage via `data-testid="feed-card"`.
+  - **Tests :** Suite unitaire dédiée `tests/unit/infiniteScrollFeed.test.js` (2/2 tests passés), 19/19 suites Vitest validées (168/168 tests unitaires au vert), compilation `npm run build` Exit Code 0.
 
 ---
 

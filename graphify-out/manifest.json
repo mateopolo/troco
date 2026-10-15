@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1792018817.216598,
-    "seen": 1792019132.4399278,
-    "ast_hash": "c7ab477005c6792f28768e6bdb3e2b49",
+    "mtime": 1792086185.373359,
+    "seen": 1792086565.5308511,
+    "ast_hash": "5f1d7d2aff1f9ea0167738e7ef4cf1cf",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "src/components/FeedCardItem.jsx": {
-    "mtime": 1792003050.996173,
-    "seen": 1792003937.593305,
-    "ast_hash": "421c2b7fb6cfe52a2ad823188df50842",
+    "mtime": 1792085897.643143,
+    "seen": 1792086565.5398052,
+    "ast_hash": "b57db9a995303b4eefe439bf3785bda7",
     "semantic_hash": ""
   },
   "src/components/FeedView.jsx": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1792083791.090723,
-    "seen": 1792083829.7155757,
-    "ast_hash": "e7040acf4961280c19741570273fa105",
+    "mtime": 1792086527.0806618,
+    "seen": 1792086565.6543071,
+    "ast_hash": "11c5779249781e8cfa48a48c9b9a9f34",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1792083772.5862904,
-    "seen": 1792083829.7160544,
-    "ast_hash": "4e79bd4e1a07c4b548047ccbabbf9629",
+    "mtime": 1792086506.9742935,
+    "seen": 1792086565.6548872,
+    "ast_hash": "9d038457bf1b61790f5f974faeea0561",
     "semantic_hash": ""
   },
   "README.md": {
@@ -2754,9 +2754,9 @@
     "semantic_hash": ""
   },
   "src/routes/FeedRoute.jsx": {
-    "mtime": 1792010410.3036602,
-    "seen": 1792010931.238542,
-    "ast_hash": "77257542f53b8bafe2271aa459f014ed",
+    "mtime": 1792085929.6694348,
+    "seen": 1792086565.6235955,
+    "ast_hash": "15a1f27ecdf466bce477272bd27f10a3",
     "semantic_hash": ""
   },
   "src/routes/ChatRoute.jsx": {
@@ -2832,9 +2832,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useFeedListings.js": {
-    "mtime": 1791374359.9089377,
-    "seen": 1791374810.540035,
-    "ast_hash": "d7da970fa42751fe66f5767026205ca1",
+    "mtime": 1792086315.0328393,
+    "seen": 1792086565.6140623,
+    "ast_hash": "2d05b7ded37dca682ead4b4d0b0969ca",
     "semantic_hash": ""
   },
   "src/hooks/useGlobalCalls.js": {
@@ -3216,9 +3216,9 @@
     "semantic_hash": ""
   },
   "e2e/full-audit.spec.js": {
-    "mtime": 1792083759.4287596,
-    "seen": 1792083829.585593,
-    "ast_hash": "d06faa3e8894203944883af795a9a125",
+    "mtime": 1792086217.7843347,
+    "seen": 1792086565.5088878,
+    "ast_hash": "5855d41e486f5e8acec4914c5f44ead9",
     "semantic_hash": ""
   },
   "e2e/helpers.js": {
@@ -3660,9 +3660,9 @@
     "semantic_hash": ""
   },
   "e2e/globalSetup.js": {
-    "mtime": 1792014772.7632995,
-    "seen": 1792015389.6220431,
-    "ast_hash": "3ecb0c91e9d8bfcd274b5d6bc242e38f",
+    "mtime": 1792086202.6823242,
+    "seen": 1792086565.5088923,
+    "ast_hash": "79991520ae474451fcec1abba426da1a",
     "semantic_hash": ""
   },
   "docs/e2e-screenshots/FAIL-M5-Clavier-virtuel-viewport-r-duit-champ-de-saisie-reste-visible.png": {
@@ -3825,6 +3825,12 @@
     "mtime": 1792083600.8962476,
     "seen": 1792083829.7120068,
     "ast_hash": "99b6e51227aab35197807c5ecb806b38",
+    "semantic_hash": ""
+  },
+  "tests/unit/infiniteScrollFeed.test.js": {
+    "mtime": 1792086272.8093274,
+    "seen": 1792086565.6505852,
+    "ast_hash": "c2d54bbf133cf191f05f5ba43048549e",
     "semantic_hash": ""
   }
 }
