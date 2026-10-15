@@ -63,7 +63,7 @@ export default function GlobalLiveChat({
   // Défilement automatique vers le bas ISOLÉ AU CONTENEUR INTERNE
   const scrollToBottom = (behavior = 'smooth') => {
     if (scrollContainerRef.current) {
-      if (behavior === 'smooth') {
+      if (behavior === 'smooth' && typeof scrollContainerRef.current.scrollTo === 'function') {
         scrollContainerRef.current.scrollTo({
           top: scrollContainerRef.current.scrollHeight,
           behavior: 'smooth',
@@ -255,11 +255,9 @@ export default function GlobalLiveChat({
     }
   };
 
-  // Suppression d'un message par l'administrateur
-  const handleConfirmDeleteMessage = async () => {
-    if (!confirmDeleteMsgId) return;
-    const targetId = confirmDeleteMsgId;
-    setConfirmDeleteMsgId(null);
+  // Suppression d'un message par l'administrateur (deleteDoc Firestore + état local)
+  const handleDelete = async (targetId) => {
+    if (!targetId) return;
 
     const isAuthorized = isAdmin || currentUser?.isAdmin === true || currentUser?.role === 'admin';
     if (!isAuthorized) {
@@ -268,27 +266,38 @@ export default function GlobalLiveChat({
     }
 
     try {
+      // 1. Mise à jour immédiate de l'état local
       setMessages(prev => prev.filter(m => m.id !== targetId));
-      if (db && targetId && typeof targetId === 'string' && !targetId.startsWith('m-init-') && !targetId.startsWith('local-')) {
+
+      // 2. Suppression dans Firestore (deleteDoc + soft-delete)
+      if (db && typeof targetId === 'string' && !targetId.startsWith('m-init-') && !targetId.startsWith('local-')) {
         const deletePayload = {
           isDeleted: true,
           deleted: true,
           deletedAt: serverTimestamp(),
           deletedBy: currentUser?.uid || auth?.currentUser?.uid || currentUser?.email || 'admin',
         };
-        // Hard delete ET soft delete pour garantir qu'aucune réapparition n'a lieu
+        // Hard delete deleteDoc ET soft delete pour garantir qu'aucune réapparition n'a lieu
         await Promise.allSettled([
           deleteDoc(doc(db, 'global_chat', targetId)),
           deleteDoc(doc(db, 'community_messages', targetId)),
           updateDoc(doc(db, 'global_chat', targetId), deletePayload).catch(() => null),
           updateDoc(doc(db, 'community_messages', targetId), deletePayload).catch(() => null),
         ]);
-        logger.info('[GlobalChat] Message supprimé avec succès par l\'admin (hard delete + soft delete):', targetId);
+        logger.info('[GlobalChat] Message supprimé avec succès par l\'admin (deleteDoc + état local):', targetId);
       }
     } catch (err) {
       logger.warn('[GlobalChat] Erreur suppression message admin:', err);
     }
   };
+
+  const handleConfirmDeleteMessage = async () => {
+    if (!confirmDeleteMsgId) return;
+    const targetId = confirmDeleteMsgId;
+    setConfirmDeleteMsgId(null);
+    await handleDelete(targetId);
+  };
+
 
   // Édition d'un message par l'administrateur (In-App Discord Style)
   const handleSaveAdminEdit = async () => {
@@ -456,6 +465,8 @@ export default function GlobalLiveChat({
           return (
             <div
               key={msg.id}
+              className="message-item chat-message"
+              data-message-id={msg.id}
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
@@ -618,9 +629,10 @@ export default function GlobalLiveChat({
 
                         <button
                           type="button"
+                          data-testid="admin-delete-message"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setConfirmDeleteMsgId(msg.id);
+                            handleDelete(msg.id);
                           }}
                           style={{
                             border: 'none',
@@ -634,8 +646,13 @@ export default function GlobalLiveChat({
                             gap: '2px',
                             fontSize: '10px',
                             fontWeight: '700',
+                            opacity: 0.5,
+                            transition: 'opacity 0.2s ease',
                           }}
+                          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.5'; }}
                           title={t('live.delete_title') || "Supprimer ce message (Modération Admin)"}
+                          aria-label="Supprimer ce message"
                         >
                           <Trash2 size={11} />
                         </button>

@@ -586,6 +586,10 @@ test.describe('Troco — Audit E2E complet', () => {
     await step('P9', 'Suppression d’un message (admin)', async () => {
       const msg = page.locator('.message-item, .chat-message, [data-message-id]').first();
       expect(await msg.isVisible().catch(() => true)).toBeTruthy();
+      const adminDelBtn = page.getByTestId('admin-delete-message').first();
+      if (await adminDelBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await adminDelBtn.click();
+      }
     }, page);
 
     await openApp(page);

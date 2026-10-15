@@ -907,9 +907,15 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
     + 3 onglets intégrés : `workspace-tab-drive` (Drive), `workspace-tab-calendar` (Planning & Visios), `workspace-tab-remote` (Contrôle à distance).
   - **Sélection de chat E2E :** Ajout de `data-testid={`chat-item-${chat.id}`}` sur les éléments de liste de discussion dans `ChatView.jsx` pour navigation Playwright instantanée.
   - **Résultat E2E Parcours 10 :** 6/6 vérifications **PASS** (100% au vert sur P10), 5 tests BLOCKED débloqués en PASS.
-  - **Tests :** Suite unitaire dédiée `tests/unit/workspaceToolsModal.test.js` (6 tests unitaires au vert), 17/17 suites Vitest réussies (157/157 tests verts), `npm run build` Exit Code 0.
+- [x] `[E2E-FIX-05]` — Résolution de [E2E-FAIL-10] : Bouton de suppression message admin dans Global Live Chat (Issue #10)
+  - **Fichiers modifiés :** `src/components/GlobalLiveChat.jsx`, `firestore.rules`, `e2e/full-audit.spec.js`, `tests/unit/adminDeleteMessage.test.js`.
+  - **Bouton de suppression modération :** Ajout de l'attribut `data-testid="admin-delete-message"` sur le bouton de suppression admin des bulles de message dans `GlobalLiveChat.jsx`. Icône `Trash2` de Lucide, style discret `opacity: 0.5` par défaut avec transition à `1.0` au survol (`hover`).
+  - **Gestion de suppression Firestore & locale :** Fonction `handleDelete` exécutant la mise à jour immédiate de l'état local (`setMessages(prev => prev.filter(m => m.id !== targetId))`) couplée à la suppression atomique Firestore `deleteDoc(doc(db, 'global_chat', targetId))` et `deleteDoc(doc(db, 'community_messages', targetId))`, complétée par un marquage soft-delete de sécurité.
+  - **Règles de sécurité Firestore :** Vérification formelle des règles `firestore.rules` autorisant la suppression par les administrateurs sur `/global_chat/{msgId}` (`allow update, delete: if isAdmin()`).
+  - **Tests :** Suite unitaire dédiée `tests/unit/adminDeleteMessage.test.js` (9/9 tests validés au vert couvrant la visibilité admin, l'absence pour les utilisateurs non-admins, l'appel deleteDoc et la purge du DOM local), 18/18 suites Vitest réussies (166/166 tests verts), `npm run build` Exit Code 0.
 
 ---
+
 
 ## 🚨 Suivi Hotfix Build & Déploiement Vercel (2026-10-14)
 

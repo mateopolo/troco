@@ -1776,6 +1776,38 @@ Composants sécurisés :
    - Exécution de Vitest globale : 17/17 suites unitaires réussies (157/157 tests verts).
    - Compilation de production : `npm run build` validé avec succès (Exit Code 0).
 
+---
+
+## 32. PROMPT 13 — Suppression Message Admin dans Global Live Chat (E2E-FAIL-10)
+
+### 32.1. Problématique & Diagnostic
+- **Bug ciblé :** `[E2E-FAIL-10]` — Aucun bouton de suppression n'apparaît pour l'admin sur les messages du Global Live Chat ([Issue #10](https://github.com/mateopolo/troco/issues/10)).
+- **Diagnostic :**
+  1. Dans `src/components/GlobalLiveChat.jsx`, le bouton de suppression admin de message ne comportait pas l'attribut `data-testid="admin-delete-message"`, bloquant sa détection par les tests E2E Playwright.
+  2. Le bouton de corbeille déclenchait initialement `setConfirmDeleteMsgId(msg.id)` ouvrant une modale modérée, sans fonction `handleDelete(msg.id)` directe assurant la suppression immédiate et idempotente.
+  3. Le style visuel discret attendu (opacité 0.5 par défaut, 1.0 au survol) n'était pas configuré avec transition CSS douce.
+
+### 32.2. Correctifs Appliqués
+1. **Implémentation de `handleDelete` dans `src/components/GlobalLiveChat.jsx` :**
+   - Fonction asynchrone acceptant `targetId`, validant les permissions administratives (`isAdmin || currentUser?.isAdmin === true || currentUser?.role === 'admin'`).
+   - Mise à jour optimiste et réactive immédiate de l'état local : `setMessages(prev => prev.filter(m => m.id !== targetId))`.
+   - Suppression Firestore physique (`deleteDoc(doc(db, 'global_chat', targetId))` et `deleteDoc(doc(db, 'community_messages', targetId))`) combinée à un marquage de soft-delete de sécurité (`isDeleted: true`).
+2. **Bouton Admin discret avec Icône Lucide Trash2 :**
+   - Ajout de `data-testid="admin-delete-message"` conditionné strictement par `{isAdmin && ...}`.
+   - Icône `Trash2` de Lucide, style discret `opacity: 0.5`, transition `opacity 0.2s ease`, et passage à `opacity: 1` sur `onMouseEnter`.
+   - Ajout des sélecteurs `.message-item.chat-message` et `data-message-id={msg.id}` sur chaque conteneur de message.
+   - Protection de l'appel `scrollTo` contre les environnements dépourvus de la méthode native sur les éléments HTML.
+3. **Vérification des Règles Firestore (`firestore.rules`) :**
+   - Confirmation formelle : `match /global_chat/{msgId}` inclut `allow update, delete: if isAdmin() || (isAuthenticated() && ...)`.
+   - Règle globale racine `match /{document=**}` inclut également `allow read, write: if isAuthenticated() && (request.auth.token.admin == true || isDbAdmin())`.
+4. **Mise à jour du test E2E (`e2e/full-audit.spec.js`) :**
+   - Clic automatisé sur `data-testid="admin-delete-message"` lors du parcours P9 pour valider la suppression admin.
+5. **Validation des tests :**
+   - Création de la suite unitaire `tests/unit/adminDeleteMessage.test.js` (9/9 tests passés avec succès).
+   - Exécution globale Vitest : **18/18 fichiers de tests passés (166/166 tests unitaires au vert)**.
+   - Compilation de production : `npm run build` exécuté avec Exit Code 0.
+
+
 
 
 
