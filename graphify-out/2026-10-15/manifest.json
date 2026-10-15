@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1792016854.978032,
-    "seen": 1792017084.4028509,
-    "ast_hash": "fc2a0464d56d42f3eb4ce93c860c9385",
+    "mtime": 1792018817.216598,
+    "seen": 1792019132.4399278,
+    "ast_hash": "c7ab477005c6792f28768e6bdb3e2b49",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -624,9 +624,9 @@
     "semantic_hash": "5f0f58ec2d7d3db8c284321f7a2001bd"
   },
   "src/components/Navbar.jsx": {
-    "mtime": 1792001400.5586,
-    "seen": 1792001701.3377304,
-    "ast_hash": "6582b1403a5fc9c489af0a49d39c2e02",
+    "mtime": 1792018840.930941,
+    "seen": 1792019132.451907,
+    "ast_hash": "6203fa64df61a836eb84df0d0e8df4f4",
     "semantic_hash": ""
   },
   "src/components/NotesAndDocsDefensive.test.js": {
@@ -756,10 +756,10 @@
     "semantic_hash": "d24830253a7e02ddc2ca52e27ad4f03e"
   },
   "src/components/Phase119DynamicTranslationAndLanguageSync.test.js": {
-    "mtime": 1788536699.156631,
-    "seen": 1790594464.2381628,
-    "ast_hash": "6d08a9e43a86e1c5b54861283a93d156",
-    "semantic_hash": "6d08a9e43a86e1c5b54861283a93d156"
+    "mtime": 1792018888.69265,
+    "seen": 1792019132.4578297,
+    "ast_hash": "5233b77893ba206e2065614f30b3bf55",
+    "semantic_hash": ""
   },
   "src/components/Phase121ContinuousTextAndToolbarRestore.test.js": {
     "mtime": 1788948089.7938342,
@@ -1254,9 +1254,9 @@
     "semantic_hash": ""
   },
   "src/components/layout/AppHeader.jsx": {
-    "mtime": 1792001388.455631,
-    "seen": 1792001701.363013,
-    "ast_hash": "b74980461dfc1c83277cfa680c285ee2",
+    "mtime": 1792018831.7599418,
+    "seen": 1792019132.481284,
+    "ast_hash": "51a68b2c97f6e47c15357631dcca54c7",
     "semantic_hash": ""
   },
   "src/components/layout/GeometricBackground.jsx": {
@@ -1410,9 +1410,9 @@
     "semantic_hash": ""
   },
   "src/contexts/LanguageContext.jsx": {
-    "mtime": 1791377952.807136,
-    "seen": 1791379630.9156604,
-    "ast_hash": "c2415dd21215aed4f270537c71f2a68d",
+    "mtime": 1792018755.313936,
+    "seen": 1792019132.4901407,
+    "ast_hash": "5c7d830d3cb4aa50b7b14ceb5d30a225",
     "semantic_hash": ""
   },
   "src/contexts/ThemeContext.jsx": {
@@ -1434,15 +1434,15 @@
     "semantic_hash": "d6cbd99abea778cd447820a111d1b50c"
   },
   "src/data/translationsData.js": {
-    "mtime": 1792001321.2447903,
-    "seen": 1792001701.377846,
-    "ast_hash": "7cb6e863120ea40bfa4b1e8f6a039282",
+    "mtime": 1792018722.5635552,
+    "seen": 1792019132.4999614,
+    "ast_hash": "49b22e90f405cea538fda9a9704f1f77",
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1792001321.4241421,
-    "seen": 1792001701.3778484,
-    "ast_hash": "d2df219de9dee1f56f6727fd203e5351",
+    "mtime": 1792018688.0330153,
+    "seen": 1792019132.4999669,
+    "ast_hash": "9342f996b40517e9148e9124e96a3f30",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -1740,9 +1740,9 @@
     "semantic_hash": "f7258c03464fe32198bd8b84737d2570"
   },
   "src/index.js": {
-    "mtime": 1790714017.9149053,
-    "seen": 1790714309.1431854,
-    "ast_hash": "7492340efaf76ac518bc50b1283bd18c",
+    "mtime": 1792018854.2811973,
+    "seen": 1792019132.515634,
+    "ast_hash": "e7edc633068d3c4ab3e8737fedaa90dc",
     "semantic_hash": ""
   },
   "src/lib/utils.js": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": "2c8beff856537a1e2618e9407b2e7927"
   },
   "src/locales/translations.js": {
-    "mtime": 1792001321.52661,
-    "seen": 1792001701.3942103,
-    "ast_hash": "dd9624d61035bc4909b2d72d93e24696",
+    "mtime": 1792018711.143811,
+    "seen": 1792019132.5158632,
+    "ast_hash": "b3c2d1b82c6645b23804abd988260a13",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -2280,9 +2280,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1792017000.6946127,
-    "seen": 1792017084.5416052,
-    "ast_hash": "19cf9cd1e06375c57037d6473355f359",
+    "mtime": 1792019095.8239014,
+    "seen": 1792019132.5433419,
+    "ast_hash": "9c18e2a58d3eac0a94e867be5b4adb9e",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2298,9 +2298,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1792016964.888222,
-    "seen": 1792017084.542124,
-    "ast_hash": "8cf573a8ec595f6b735af23dacce6f38",
+    "mtime": 1792019076.11409,
+    "seen": 1792019132.5438366,
+    "ast_hash": "682029542eca7d9b7699204d46ebf240",
     "semantic_hash": ""
   },
   "README.md": {
@@ -3771,6 +3771,12 @@
     "mtime": 1792015900.6221213,
     "seen": 1792017084.5428813,
     "ast_hash": "f7a4ae3933a324683737237a7b2b476b",
+    "semantic_hash": ""
+  },
+  "tests/unit/germanLanguageI18n.test.js": {
+    "mtime": 1792018942.287929,
+    "seen": 1792019132.5410333,
+    "ast_hash": "7eaad045fcdce1c6f9986aa0e35c9341",
     "semantic_hash": ""
   }
 }

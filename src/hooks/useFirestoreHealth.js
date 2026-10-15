@@ -12,7 +12,7 @@ const errorCounters = new Map();
 export function useFirestoreHealth() {
   useEffect(() => {
     // Sauvegarde du logger.error original
-    const originalConsoleError = console.error;
+    const originalLoggerError = logger.error;
 
     logger.error = (...args) => {
       try {
@@ -42,8 +42,10 @@ export function useFirestoreHealth() {
         // En cas d'exception dans l'intercepteur, ne jamais bloquer l'application
       }
 
-      // Transmission de l'erreur au handler standard
-      originalConsoleError.apply(console, args);
+      // Transmission de l'erreur au handler standard logger
+      if (typeof originalLoggerError === 'function') {
+        originalLoggerError.apply(logger, args);
+      }
     };
 
     // Purge périodique des compteurs chaque minute
@@ -52,8 +54,10 @@ export function useFirestoreHealth() {
     }, 60000);
 
     return () => {
-      logger.error = originalConsoleError;
+      logger.error = originalLoggerError;
       clearInterval(intervalId);
     };
   }, []);
 }
+
+export default useFirestoreHealth;

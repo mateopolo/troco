@@ -1,3 +1,5 @@
+import logger from './logger';
+
 export async function forceDownload(url, filename = 'fichier') {
   try {
     const response = await fetch(url);
@@ -14,7 +16,7 @@ export async function forceDownload(url, filename = 'fichier') {
     window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
     return true;
   } catch (error) {
-    console.error('[Download] Unable to download resource:', error);
+    logger.warn('[Download] Unable to download resource, opening in new tab:', error?.message || error);
     window.open(url, '_blank', 'noopener,noreferrer');
     return false;
   }

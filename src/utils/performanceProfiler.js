@@ -31,7 +31,7 @@ export function onRenderProfilerCallback(
       `⚡ [Performance Drop] <${id}> a pris ${actualDuration.toFixed(2)}ms (${phase}) pour être calculé. Budget 16ms dépassé !`
     );
   } else if (PERF_LOG_ENABLED) {
-    console.debug(
+    logger.info(
       `📊 [React Profiler] <${id}> [${phase}] - Rendu réel: ${actualDuration.toFixed(2)}ms | Base estimée: ${baseDuration.toFixed(2)}ms`
     );
   }
@@ -64,14 +64,8 @@ export function logWebVitalMetric(metric) {
   const { name, value, id, rating } = metric;
   const formattedValue = name === 'CLS' ? value.toFixed(3) : `${Math.round(value)}ms`;
 
-  const color = rating === 'good' ? '#10B981' : rating === 'needs-improvement' ? '#F59E0B' : '#EF4444';
-
   if (PERF_LOG_ENABLED) {
-    console.log(
-      `%c🌐 [Web Vitals] ${name}: ${formattedValue} (${rating})`,
-      `color: ${color}; font-weight: bold;`,
-      { id, delta: metric.delta }
-    );
+    logger.info(`[Web Vitals] ${name}: ${formattedValue} (${rating})`, { id, delta: metric.delta });
   }
 
   // Dispatch événement analytique pour monitoring

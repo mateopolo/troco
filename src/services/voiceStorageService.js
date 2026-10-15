@@ -47,10 +47,7 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
       isLocal: false,
     };
   } catch (err) {
-    logger.error('[VoiceStorageService] Firebase Storage upload failed:', err);
-    logger.error('[VoiceStorageService] Firebase Storage error code:', err?.code);
-    logger.error('[VoiceStorageService] Firebase Storage error message:', err?.message);
-    console.error('[Upload Failed]', err?.code, err?.message, err?.serverResponse);
+    logger.warn('[VoiceStorageService] Firebase Storage non disponible, bascule sur fallback local:', err?.code, err?.message);
     try {
       const dataUrl = await blobToDataURL(audioBlob);
       return {
@@ -126,10 +123,7 @@ export async function uploadAudioFile(file, chatId = 'global') {
       contentType: resolvedContentType,
     };
   } catch (err) {
-    logger.error('[VoiceStorageService] Storage upload failed:', err);
-    logger.error('[VoiceStorageService] Storage error code:', err?.code);
-    logger.error('[VoiceStorageService] Storage error message:', err?.message);
-    console.error('[Upload Failed]', err?.code, err?.message, err?.serverResponse);
+    logger.warn('[VoiceStorageService] Storage upload failed:', err?.code, err?.message);
     throw err;
   }
 

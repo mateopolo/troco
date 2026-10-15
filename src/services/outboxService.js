@@ -55,7 +55,7 @@ class OutboxService {
     if (typeof window === 'undefined') return;
 
     window.addEventListener('online', () => {
-      console.log('[OutboxService] 🟢 Réseau rétabli — Déclenchement de la réconciliation Outbox...');
+      logger.info('[OutboxService] 🟢 Réseau rétabli — Déclenchement de la réconciliation Outbox...');
       this.flushOutbox();
     });
 

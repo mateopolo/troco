@@ -66,13 +66,16 @@ const captureToSentry = (error, context = {}) => {
   try {
     sentryInstance.captureException(error, { contexts: cleanContext });
   } catch (sentryErr) {
-    console.error('[Sentry Capture Error]', sentryErr, error, cleanContext);
+    // Sentry capture error silencieuse ou en warn dev pour ne pas polluer la console
+    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+      console.warn('[WARN] [Sentry Capture Non-Blocking]', sentryErr?.message || sentryErr);
+    }
   }
 };
 
 /**
  * Logger principal
- * - DEV: sort vers console
+ * - DEV: sort vers console (sauf permission-denied attendus traités en warn)
  * - PROD: warn/info silencieux, error vers Sentry
  */
 const logger = {
@@ -102,14 +105,28 @@ const logger = {
 
   /**
    * Log une erreur
-   * - DEV: console.error
-   * - PROD: envoi à Sentry + fallback console.error
+   * - DEV: console.error (ou console.warn si permission-denied attendu sur émulateur)
+   * - PROD: envoi à Sentry
    * @param {...any} args - Arguments à logger
    */
   error: (...args) => {
     const error = args[0];
     const context = args.length > 1 ? args[1] : undefined;
     const isDev = typeof process !== 'undefined' ? process.env.NODE_ENV !== 'production' : true;
+
+    // Détection des erreurs de permissions Firestore attendues (ex: listeners au boot ou règles émulateur)
+    const fullMsg = args.map(a => (typeof a === 'string' ? a : a?.message || a?.code || a?.toString?.() || '')).join(' ');
+    if (
+      fullMsg.includes('Missing or insufficient permissions') ||
+      fullMsg.includes('permission-denied') ||
+      fullMsg.includes('Property admin is undefined') ||
+      fullMsg.includes('auth/invalid-refresh-token')
+    ) {
+      if (isDev) {
+        console.warn('[WARN] [Firestore Expected Permission]', ...args);
+      }
+      return;
+    }
 
     if (isDev) {
       console.error('[ERROR]', ...args);

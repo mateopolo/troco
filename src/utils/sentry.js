@@ -4,7 +4,7 @@
  */
 
 import * as Sentry from '@sentry/react';
-import { setSentryInstance } from './logger';
+import logger, { setSentryInstance } from './logger';
 
 /**
  * Initialise Sentry avec la configuration adaptée
@@ -57,7 +57,7 @@ export const initSentry = () => {
     // Configurer l'instance dans logger
     setSentryInstance(Sentry);
     
-    console.log('[Sentry] Initialisé avec succès', {
+    logger.info('[Sentry] Initialisé avec succès', {
       environment: config.environment,
       tracesSampleRate: config.tracesSampleRate,
       enabled: config.enabled,
@@ -65,7 +65,7 @@ export const initSentry = () => {
     
     return Sentry;
   } catch (err) {
-    console.error('[Sentry] Échec initialisation:', err);
+    logger.warn('[Sentry] Initialisation non disponible ou désactivée:', err?.message || err);
     return null;
   }
 };

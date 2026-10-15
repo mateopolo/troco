@@ -161,7 +161,7 @@ class WhiteboardP2PService {
   setupDataChannel(remotePeerId, dc) {
     dc.onopen = () => {
       this.dataChannels.set(remotePeerId, dc);
-      console.log(`[WhiteboardP2P] ⚡ DataChannel ouvert avec ${remotePeerId} (Latence 0ms)`);
+      logger.info(`[WhiteboardP2P] ⚡ DataChannel ouvert avec ${remotePeerId} (Latence 0ms)`);
     };
 
     dc.onmessage = (event) => {

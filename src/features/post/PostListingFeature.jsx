@@ -524,7 +524,7 @@ export default function PostListingFeature({
               updatedAt: serverTimestamp(),
             });
             await updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), sanitized);
-            console.log('[PostListingFeature] Listing mis à jour avec succès dans Firestore:', editingOriginalListing.firestoreId);
+            logger.info('[PostListingFeature] Listing mis à jour avec succès dans Firestore:', editingOriginalListing.firestoreId);
           } catch (e) {
             logger.error('[PostListingFeature] Firestore updateDoc failed:', e);
           }
@@ -542,7 +542,7 @@ export default function PostListingFeature({
             const docRef = await addDoc(collection(db, 'listings'), sanitized);
             createdFirestoreId = docRef.id;
             newListing.firestoreId = createdFirestoreId;
-            console.log('[PostListingFeature] Annonce créée avec succès dans Firestore (ID):', createdFirestoreId);
+            logger.info('[PostListingFeature] Annonce créée avec succès dans Firestore (ID):', createdFirestoreId);
           } catch (e) {
             logger.error('[PostListingFeature] Firestore addDoc failed:', e);
           }
