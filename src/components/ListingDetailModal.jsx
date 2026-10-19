@@ -17,15 +17,10 @@ import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 import MobileHeader from './common/MobileHeader';
 import { getFallbackImage } from '../utils/mediaHelpers';
 import {
-  getKnownTitleTranslation,
-  cleanLanguageTag,
-  parseAndTranslateDynamicText,
-} from '../utils/dynamicTranslation';
-import {
   getListingDisplayContent,
   getBioTranslation,
 } from '../utils/translationHelpers';
-import { getInstantOrQueueTranslation, subscribeTranslations } from '../utils/translator';
+import { subscribeTranslations } from '../utils/translator';
 import {
   localizeTags,
   localizeReview,
@@ -59,7 +54,8 @@ export default function ListingDetailModal({
   const listing = propListing || selectedListing;
   const [detailMediaTab, setDetailMediaTab] = useState('video');
   const [selectedDetailImageIndex, setSelectedDetailImageIndex] = useState(0);
-  const [showOriginal, setShowOriginal] = useState(false);
+  const [isDetailShowingOriginal, setIsDetailShowingOriginal] = useState(false);
+  const showOriginal = isDetailShowingOriginal;
   const [translationRevision, setTranslationRevision] = useState(0);
   const modalTouchStartRef = useRef(null);
 
@@ -73,7 +69,7 @@ export default function ListingDetailModal({
   // Synchronisation avec showingOriginalListings si géré au niveau parent
   useEffect(() => {
     if (listing?.id && showingOriginalListings?.[listing.id] !== undefined) {
-      setShowOriginal(Boolean(showingOriginalListings[listing.id]));
+      setIsDetailShowingOriginal(Boolean(showingOriginalListings[listing.id]));
     }
   }, [listing?.id, showingOriginalListings]);
 
@@ -139,7 +135,7 @@ export default function ListingDetailModal({
 
   const handleToggleOriginal = (e) => {
     e?.stopPropagation?.();
-    setShowOriginal(prev => !prev);
+    setIsDetailShowingOriginal(prev => !prev);
     if (typeof toggleOriginalListing === 'function' && listing?.id) {
       try {
         toggleOriginalListing(listing.id, e);
@@ -532,7 +528,7 @@ export default function ListingDetailModal({
             })()}
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{listing.authorProfile?.name || listing.author || 'Membre Troco'}</div>
-              <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(listing.authorProfile?.bio || listing.bio || '', currentLang, showOriginal)}</div>
+              <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(listing.authorProfile?.bio || listing.bio || '', currentLang, isDetailShowingOriginal)}</div>
             </div>
           </div>
           <div style={{ marginBottom: '14px' }}>
