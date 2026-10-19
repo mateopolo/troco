@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useMap, useMapEvents, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 /**
  * Contrôleur de centrage fluide & synchronisation automatique de la carte
@@ -54,9 +56,9 @@ export default function MapClusterTracker({
     const borderWeight = count < 10 ? 2.5 : 3;
 
     return L.divIcon({
-      className: 'troco-cluster-icon',
+      className: 'troco-cluster-icon marker-cluster',
       html: `
-        <div style="
+        <div data-testid="map-cluster" style="
           width: ${size}px;
           height: ${size}px;
           border-radius: 50%;

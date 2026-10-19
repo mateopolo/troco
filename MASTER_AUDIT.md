@@ -930,8 +930,16 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
   - **Transmission aux aides de traduction :** Passage de `{ forceOriginal: showOriginal }` à `getListingDisplayContent(listing, currentLang, { forceOriginal: showOriginal })`. Application cohérente du toggle au titre, à la description et à la biographie d'auteur.
   - **Prise en charge multi-langues i18n :** Correction dans `dynamicTranslation.js` (`getKnownTitleTranslation`) pour s'assurer que les annonces en langue source (ex. DE) soient correctement traduites vers le français ou affichées en VO selon le toggle sans court-circuit.
   - **Tests & Validation :** Suite unitaire `tests/unit/listingDetailTranslation.test.js` validée à 100% (5/5 tests au vert), 29/29 suites Vitest passées (266/266 tests au vert), `npm run build` Exit Code 0.
+- [x] `[E2E-FIX-08]` — Résolution de [E2E-MISSING-02] : Regroupement cartographique (clustering) des annonces Leaflet (Issue #15)
+  - **Fichiers modifiés :** `package.json`, `src/features/map/InteractiveMapView.jsx`, `src/components/MapClusterTracker.jsx`, `src/index.css`, `tests/unit/mapClustering.test.js`.
+  - **Intégration MarkerClusterGroup :** Installation de `leaflet.markercluster` et `react-leaflet-cluster`. Importation de `MarkerClusterGroup` et des styles CSS `MarkerCluster.css` et `MarkerCluster.Default.css`.
+  - **Configuration requise :** `maxClusterRadius: 50`, `spiderfyOnMaxZoom: true`, `showCoverageOnHover: false`.
+  - **Attribut & Sélecteur E2E :** `iconCreateFunction` personnalisée générant des badges avec `data-testid="map-cluster"` et classes `.marker-cluster`, garantissant la détection immédiate dans les tests Playwright (`.marker-cluster, [class*="cluster"]`).
+  - **Design Apple-grade :** Styles dédiés dans `index.css` appliquant le dégradé thématique Troco (`--accent-primary`), bordure blanche et transition micro-interactive au survol.
+  - **Tests & Validation :** Suite unitaire dédiée `tests/unit/mapClustering.test.js` (4/4 tests au vert), 30/30 suites Vitest validées (270/270 tests au vert), `npm run build` Exit Code 0.
 
 ---
+
 
 
 

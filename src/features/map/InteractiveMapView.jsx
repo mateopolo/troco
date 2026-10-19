@@ -1,18 +1,58 @@
 import logger from '../../utils/logger';
-import React, { Suspense, useCallback, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import Portal from '../../components/ui/Portal';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { Navigation, Loader2, Maximize, X, Hand, MapPin } from 'lucide-react';
 import SectoralErrorBoundary from '../../components/SectoralErrorBoundary';
 import useMediaQuery from '../../hooks/useMediaQuery';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { MAP_I18N, getMapTranslation } from './mapTranslations';
 
-const MapClusterTracker = React.lazy(() => import('../../components/MapClusterTracker'));
-
 export { MAP_I18N, getMapTranslation };
+
+/**
+ * Contrôleur de centrage fluide & synchronisation automatique de la carte
+ */
+function MapFlyController({ center, zoom }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (center && Array.isArray(center) && center.length === 2 && !isNaN(center[0]) && !isNaN(center[1])) {
+      const targetZoom = zoom || map.getZoom();
+      map.flyTo(center, targetZoom, {
+        animate: true,
+        duration: 1.2,
+        easeLinearity: 0.25,
+      });
+    }
+  }, [center, zoom, map]);
+
+  return null;
+}
+
+/**
+ * Création d'icône de Cluster avec attribut data-testid="map-cluster"
+ */
+const createClusterCustomIcon = (cluster) => {
+  const count = cluster.getChildCount();
+  let sizeClass = 'marker-cluster-small';
+  if (count >= 10 && count < 50) {
+    sizeClass = 'marker-cluster-medium';
+  } else if (count >= 50) {
+    sizeClass = 'marker-cluster-large';
+  }
+
+  return L.divIcon({
+    html: `<div data-testid="map-cluster" class="cluster-badge-inner"><span>${count}</span></div>`,
+    className: `marker-cluster ${sizeClass}`,
+    iconSize: L.point(40, 40, true),
+  });
+};
 
 /**
  * Gestionnaire de redimensionnement, de déblocage des contrôles et du cycle de vie Leaflet
@@ -502,23 +542,86 @@ export function InteractiveMapView({
 
         <MapLocateControl onLocated={() => {}} currentLang={currentLang} />
 
-        <Suspense fallback={null}>
-          <MapClusterTracker
-            listings={filteredListings}
-            mapCenter={mapCenter || [49.0022, 2.5153]}
-            mapZoom={mapZoom || 12}
-            darkMode={darkMode}
-            currentLang={currentLang}
-            t={t}
-            primaryColor={theme?.variables?.['--accent-primary'] || '#C67D5B'}
-            getCoordinatesForLocation={getCoordinatesForLocation}
-            getSuggestedMedia={getSuggestedMedia}
-            getListingDisplayContent={getListingDisplayContent}
-            localizeLocation={localizeLocation}
-            handleOpenListing={handleOpenListing}
-            createModernMapIcon={mapIconFn}
-          />
-        </Suspense>
+        <MapFlyController center={mapCenter} zoom={mapZoom} />
+
+        <MarkerClusterGroup
+          maxClusterRadius={50}
+          spiderfyOnMaxZoom={true}
+          showCoverageOnHover={false}
+          iconCreateFunction={createClusterCustomIcon}
+        >
+          {filteredListings.map((item) => {
+            const coords = item.coordinates || (getCoordinatesForLocation ? getCoordinatesForLocation(item.location) : [48.8566, 2.3522]);
+            if (!coords || !Array.isArray(coords) || coords.length !== 2 || isNaN(coords[0]) || isNaN(coords[1])) return null;
+
+            const media = getSuggestedMedia ? getSuggestedMedia(item.title, item.description || '', item.image, item.video) : { image: item.image };
+            const displayContent = getListingDisplayContent ? getListingDisplayContent(item, currentLang, false) : { title: item.title };
+            const localizedLoc = localizeLocation ? localizeLocation(item.location, currentLang) : item.location;
+            const pinIcon = mapIconFn ? mapIconFn(darkMode) : undefined;
+
+            return (
+              <Marker
+                key={`marker-${item.id}-${coords[0]}-${coords[1]}`}
+                position={coords}
+                icon={pinIcon}
+              >
+                <Popup>
+                  <div style={{ minWidth: '200px', maxWidth: '280px', display: 'flex', flexDirection: 'column', gap: '6px', padding: '2px' }}>
+                    <div style={{ position: 'relative' }}>
+                      <img
+                        src={media.image}
+                        alt={displayContent.title}
+                        style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '10px' }}
+                      />
+                      {(item.isDemo || (typeof item.id === 'number' && item.id <= 20)) && (
+                        <span style={{
+                          position: 'absolute', top: '6px', left: '6px',
+                          backgroundColor: 'rgba(20,18,16,0.75)', color: '#FAF7F2',
+                          fontSize: '9px', fontWeight: '750', padding: '3px 7px',
+                          borderRadius: '999px', backdropFilter: 'blur(8px)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          textTransform: 'uppercase', letterSpacing: '0.04em'
+                        }}>
+                          Exemple
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontWeight: '800', fontSize: '12.5px', color: '#3D3530', lineHeight: 1.3 }}>
+                      {displayContent.title}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#6B5E54', lineHeight: 1.4 }}>
+                      📍 {localizedLoc} {item.locationPrivacy === 'blurred' && '• ~500m'}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: theme?.variables?.['--accent-primary'] || '#C67D5B', fontWeight: '800' }}>
+                      {item.compensation}
+                    </div>
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (handleOpenListing) handleOpenListing(item);
+                      }}
+                      className="premium-button"
+                      style={{
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '8px 12px',
+                        background: `linear-gradient(135deg, ${theme?.variables?.['--accent-primary'] || '#C67D5B'} 0%, #A8644A 100%)`,
+                        color: '#FFF',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        marginTop: '4px',
+                        fontSize: '11.5px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                      }}
+                    >
+                      {t('viewListingButton') || 'Voir l’annonce'}
+                    </button>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MarkerClusterGroup>
       </MapContainer>
     </div>
   );

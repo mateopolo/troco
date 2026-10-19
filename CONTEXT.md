@@ -1637,7 +1637,7 @@ Composants sécurisés :
   - [#13](https://github.com/mateopolo/troco/issues/13) : `[E2E-FAIL-13]` Navigation vers l'onglet sandbox de modération dans le Panel Admin
 - **Fonctionnalités manquantes (3 issues) :**
   - [#14](https://github.com/mateopolo/troco/issues/14) : `[E2E-MISSING-01]` Bouton « Voir l'original » / « Voir la traduction » sur le détail d'annonce *(RÉSOLU)*
-  - [#15](https://github.com/mateopolo/troco/issues/15) : `[E2E-MISSING-02]` Regroupement cartographique (clustering) des annonces Leaflet
+  - [#15](https://github.com/mateopolo/troco/issues/15) : `[E2E-MISSING-02]` Regroupement cartographique (clustering) des annonces Leaflet *(RÉSOLU)*
   - [#16](https://github.com/mateopolo/troco/issues/16) : `[E2E-MISSING-03]` Restauration du Splash Screen CRT rétro optionnel via ?splash=1
 
 ---
@@ -1900,6 +1900,34 @@ Composants sécurisés :
    - Suite unitaire `tests/unit/listingDetailTranslation.test.js` (5/5 tests au vert).
    - Suite globale Vitest : **29/29 fichiers au vert, 266/266 tests passés**.
    - Compilation de production : `npm run build` exécuté avec Exit Code 0.
+
+---
+
+## 36. PROMPT 17 — Regroupement Cartographique (Clustering) des Annonces Leaflet (E2E-MISSING-02)
+
+### 36.1. Problématique & Diagnostic
+- **Fonctionnalité ciblée :** `[E2E-MISSING-02]` — Chevauchement des marqueurs cartographiques Leaflet dans les zones denses ([Issue #15](https://github.com/mateopolo/troco/issues/15)).
+- **Diagnostic :**
+  1. Lors de la navigation sur la carte interactive (`InteractiveMapView.jsx`), plusieurs annonces situées dans un même secteur géographique (ex: Paris) superposaient leurs icônes de pin, rendant les clics individuels difficiles ou impossibles.
+  2. Le composant n'intégrait pas la bibliothèque standard `leaflet.markercluster` couplée à `react-leaflet-cluster`.
+  3. L'assertion Playwright P3 (`.marker-cluster, [class*="cluster"]`) et la spécification demandaient des clusters interactifs avec `data-testid="map-cluster"`.
+
+### 36.2. Correctifs Appliqués
+1. **Installation des Dépendances :**
+   - `leaflet.markercluster` (^1.5.3) et `react-leaflet-cluster` (^4.1.3).
+2. **Composant `src/features/map/InteractiveMapView.jsx` :**
+   - Importation de `MarkerClusterGroup` depuis `react-leaflet-cluster`.
+   - Importation des feuilles de styles : `leaflet.markercluster/dist/MarkerCluster.css` et `MarkerCluster.Default.css`.
+   - Enveloppement direct des `<Marker>` de chaque annonce dans `<MarkerClusterGroup>`.
+   - Paramétrage strict : `maxClusterRadius={50}`, `spiderfyOnMaxZoom={true}`, `showCoverageOnHover={false}`.
+   - Intégration de `iconCreateFunction` personnalisée générant des pastilles de cluster stylisées avec `data-testid="map-cluster"`.
+3. **Harmonisation Design & CSS (`src/index.css`) :**
+   - Définition des règles CSS pour `.marker-cluster` et `[data-testid="map-cluster"]` reprenant les dégradés warm luxury de Troco (`var(--accent-primary)`), bordure blanche et zoom micro-interactif au survol.
+4. **Validation & Non-Régression :**
+   - Création de la suite unitaire `tests/unit/mapClustering.test.js` (4/4 tests au vert).
+   - Validation globale Vitest : **30/30 suites de tests passées (270/270 tests unitaires au vert)**.
+   - Compilation de production : `npm run build` exécuté avec succès (Exit Code 0).
+
 
 
 
