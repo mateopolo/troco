@@ -21,8 +21,12 @@ export function validateTransferParams(params: {
     throw new HttpsError('invalid-argument', 'Clé d\'idempotence (idempotencyKey) obligatoire.');
   }
 
-  if (tokens < 0 || euros < 0) {
-    throw new HttpsError('invalid-argument', 'Les montants transférés ne peuvent pas être négatifs.');
+  if (typeof tokens !== 'number' || !Number.isFinite(tokens) || !Number.isInteger(tokens) || tokens < 0) {
+    throw new HttpsError('invalid-argument', 'Le nombre de jetons doit être un entier positif ou zéro.');
+  }
+
+  if (typeof euros !== 'number' || !Number.isFinite(euros) || euros < 0) {
+    throw new HttpsError('invalid-argument', 'Le montant en euros doit être un nombre positif ou zéro.');
   }
 
   if (tokens === 0 && euros === 0) {

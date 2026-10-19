@@ -1,8 +1,72 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    
+    // ========================================================================
+    // 🛡️ HELPER FUNCTIONS
+    // ========================================================================
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/(jpeg|jpg|png|webp|gif)');
+    }
+
+    function isValidSize(maxMb) {
+      return request.resource.size <= maxMb * 1024 * 1024;
+    }
+
+    // ========================================================================
+    // 👤 AVATARS UTILISATEURS : users/{uid}/avatar/{fileName}
+    // ========================================================================
+    match /users/{uid}/{allAvatarPaths=**} {
+      // Lecture publique des photos de profil
+      allow read: if true;
+      // Écriture réservée au propriétaire (images max 5MB)
+      allow write: if (isOwner(uid) || isAdmin()) && isImage() && isValidSize(5);
+    }
+
+    // ========================================================================
+    // 📢 PHOTOS D'ANNONCES : listings/{listingId}/{fileName}
+    // ========================================================================
+    match /listings/{listingId}/{fileName} {
+      // Lecture publique pour affichage dans le marketplace
+      allow read: if true;
+      // Écriture : utilisateur authentifié, image max 10MB
+      allow write: if isAuthenticated() && isImage() && isValidSize(10);
+    }
+
+    // ========================================================================
+    // 💬 PIÈCES JOINTES DE CONVERSATION : chats/{chatId}/{fileName}
+    // ========================================================================
+    match /chats/{chatId}/{fileName} {
+      // Accessible uniquement aux utilisateurs authentifiés, max 15MB
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidSize(15);
+    }
+
+    // ========================================================================
+    // 🔒 DOCUMENTS KYC & JUSTIFICATIFS : kyc/{uid}/{fileName}
+    // ========================================================================
+    match /kyc/{uid}/{fileName} {
+      // Strictement réservé au propriétaire du compte ou admin (max 10MB)
+      allow read, write: if (isOwner(uid) || isAdmin()) && isValidSize(10);
+    }
+
+    // ========================================================================
+    // 🚫 DEFAULT DENY
+    // ========================================================================
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
   }
 }

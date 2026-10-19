@@ -63,6 +63,8 @@ export async function handleClaimBonus(
   } else if (DEFAULT_PARTNER_REWARDS[campaignId]) {
     rewardAmount = DEFAULT_PARTNER_REWARDS[campaignId].rewardAmount;
     rewardType = DEFAULT_PARTNER_REWARDS[campaignId].rewardType;
+  } else {
+    throw new HttpsError('not-found', 'Campagne promotionnelle ou offre partenaire introuvable ou inactive.');
   }
 
   // 3. Exécution de la transaction atomique Firestore

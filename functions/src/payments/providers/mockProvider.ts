@@ -39,7 +39,8 @@ export class MockProvider implements PaymentProvider {
     }
 
     // 2. Fallback pour développement / tests unitaires (pi_mock_*)
-    if (paymentIntentId.startsWith('pi_mock_') || paymentIntentId.startsWith('mock_')) {
+    const isDevOrTest = process.env.NODE_ENV !== 'production' || process.env.FUNCTIONS_EMULATOR === 'true';
+    if (isDevOrTest && (paymentIntentId.startsWith('pi_mock_') || paymentIntentId.startsWith('mock_'))) {
       const isToken = paymentIntentId.includes('token') || paymentIntentId.includes('pack');
       const isFailed = paymentIntentId.includes('fail');
       return {

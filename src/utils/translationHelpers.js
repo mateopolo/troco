@@ -283,8 +283,23 @@ export const getReviewTranslation = (reviewText, targetLang, forceOriginal = fal
  * - Si item.translations[targetLang] n'existe pas (annonces démo ou non encore traduites) :
  *   passe systématiquement par getInstantOrQueueTranslation (ou knownTitles pour FCP 0ms).
  */
-export const getListingDisplayContent = (item, targetLang = 'FR', forceOriginal = false) => {
+export const getListingDisplayContent = (item, targetLangOrOptions = 'FR', forceOriginalOrOptions = false) => {
   if (!item) return { title: '', description: '', compensation: '' };
+
+  let targetLang = 'FR';
+  let forceOriginal = false;
+
+  if (typeof targetLangOrOptions === 'object' && targetLangOrOptions !== null) {
+    targetLang = targetLangOrOptions.targetLang || targetLangOrOptions.currentLang || 'FR';
+    forceOriginal = Boolean(targetLangOrOptions.forceOriginal);
+  } else {
+    targetLang = targetLangOrOptions || 'FR';
+    if (typeof forceOriginalOrOptions === 'object' && forceOriginalOrOptions !== null) {
+      forceOriginal = Boolean(forceOriginalOrOptions.forceOriginal);
+    } else {
+      forceOriginal = Boolean(forceOriginalOrOptions);
+    }
+  }
 
   const target = (targetLang || 'FR').toUpperCase();
   const rawTitle = item.title || '';
@@ -339,27 +354,27 @@ export const getListingDisplayContent = (item, targetLang = 'FR', forceOriginal 
       cleanTitle,
       target,
       isDemo ? 'FR' : (titleTag || nativeLang || 'auto')
-    );
+    ) || parseAndTranslateDynamicText(cleanTitle, target, { forceOriginal: false, sourceLang: isDemo ? 'FR' : (titleTag || nativeLang || 'auto') });
   }
 
   // 4. Traduction de la description via getInstantOrQueueTranslation
   const cleanDesc = cleanLanguageTag(rawDesc);
   const translatedDesc = cleanDesc
-    ? getInstantOrQueueTranslation(
+    ? (getInstantOrQueueTranslation(
         cleanDesc,
         target,
         isDemo ? 'FR' : (descTag || nativeLang || 'auto')
-      )
+      ) || parseAndTranslateDynamicText(cleanDesc, target, { forceOriginal: false, sourceLang: isDemo ? 'FR' : (descTag || nativeLang || 'auto') }))
     : '';
 
   // 5. Traduction de la compensation via getInstantOrQueueTranslation
   const cleanComp = cleanLanguageTag(rawComp);
   const translatedComp = cleanComp
-    ? getInstantOrQueueTranslation(
+    ? (getInstantOrQueueTranslation(
         cleanComp,
         target,
         isDemo ? 'FR' : (nativeLang || 'auto')
-      )
+      ) || parseAndTranslateDynamicText(cleanComp, target, { forceOriginal: false, sourceLang: isDemo ? 'FR' : (nativeLang || 'auto') }))
     : '';
 
   return {

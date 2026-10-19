@@ -22,6 +22,7 @@ import {
   parseAndTranslateDynamicText,
 } from '../utils/dynamicTranslation';
 import {
+  getListingDisplayContent,
   getBioTranslation,
 } from '../utils/translationHelpers';
 import { getInstantOrQueueTranslation, subscribeTranslations } from '../utils/translator';
@@ -58,7 +59,7 @@ export default function ListingDetailModal({
   const listing = propListing || selectedListing;
   const [detailMediaTab, setDetailMediaTab] = useState('video');
   const [selectedDetailImageIndex, setSelectedDetailImageIndex] = useState(0);
-  const [localShowOriginal, setLocalShowOriginal] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [translationRevision, setTranslationRevision] = useState(0);
   const modalTouchStartRef = useRef(null);
 
@@ -69,72 +70,18 @@ export default function ListingDetailModal({
     return () => unsub();
   }, []);
 
-  const isDetailShowingOriginal = Boolean(
-    localShowOriginal || (listing?.id && showingOriginalListings?.[listing.id])
-  );
+  // Synchronisation avec showingOriginalListings si géré au niveau parent
+  useEffect(() => {
+    if (listing?.id && showingOriginalListings?.[listing.id] !== undefined) {
+      setShowOriginal(Boolean(showingOriginalListings[listing.id]));
+    }
+  }, [listing?.id, showingOriginalListings]);
 
   // ALIGNEMENT DU PIPELINE SUR CHATROUTE / COMMUNITYROUTE AVEC RE-RENDER FORCÉ PAR TRANSLATIONREVISION
   const detailDisplayContent = useMemo(() => {
     if (!listing) return { title: '', description: '', compensation: '' };
-
-    const rawTitle = listing.title || '';
-    const rawDesc = listing.description || '';
-    const rawComp = listing.compensation || '';
-
-    if (isDetailShowingOriginal) {
-      return {
-        title: cleanLanguageTag(rawTitle),
-        description: cleanLanguageTag(rawDesc),
-        compensation: cleanLanguageTag(rawComp),
-      };
-    }
-
-    const target = (currentLang || 'FR').toUpperCase();
-
-    // 1. Traductions multilingues persistées
-    if (listing.translations && listing.translations[target]) {
-      const tItem = listing.translations[target];
-      return {
-        title: cleanLanguageTag(tItem.title || rawTitle),
-        description: cleanLanguageTag(tItem.description || rawDesc),
-        compensation: cleanLanguageTag(tItem.compensation || rawComp),
-      };
-    }
-
-    // 2. Si langue cible FR sans balise étrangère
-    if (target === 'FR' && !rawTitle.startsWith('[') && !rawDesc.startsWith('[')) {
-      return {
-        title: cleanLanguageTag(rawTitle),
-        description: cleanLanguageTag(rawDesc),
-        compensation: cleanLanguageTag(rawComp),
-      };
-    }
-
-    // 3. Traduction du titre via dictionnaire instantané ou traducteur dynamique
-    let transTitle = getKnownTitleTranslation(rawTitle, target);
-    if (!transTitle) {
-      const cleanTitle = cleanLanguageTag(rawTitle);
-      transTitle = getInstantOrQueueTranslation(cleanTitle, target, 'auto') || parseAndTranslateDynamicText(cleanTitle, target, { forceOriginal: false, sourceLang: 'auto' });
-    }
-
-    // 4. Traduction de la description via traducteur dynamique
-    const cleanDesc = cleanLanguageTag(rawDesc);
-    const transDesc = cleanDesc
-      ? (getInstantOrQueueTranslation(cleanDesc, target, 'auto') || parseAndTranslateDynamicText(cleanDesc, target, { forceOriginal: false, sourceLang: 'auto' }))
-      : '';
-
-    // 5. Traduction de la compensation
-    const cleanComp = cleanLanguageTag(rawComp);
-    const transComp = cleanComp
-      ? (getInstantOrQueueTranslation(cleanComp, target, 'auto') || parseAndTranslateDynamicText(cleanComp, target, { forceOriginal: false, sourceLang: 'auto' }))
-      : '';
-
-    return {
-      title: cleanLanguageTag(transTitle || rawTitle),
-      description: cleanLanguageTag(transDesc || rawDesc),
-      compensation: cleanLanguageTag(transComp || rawComp),
-    };
-  }, [listing, currentLang, isDetailShowingOriginal, translationRevision]);
+    return getListingDisplayContent(listing, currentLang, { forceOriginal: showOriginal });
+  }, [listing, currentLang, showOriginal, translationRevision]);
 
   if (!listing) return null;
 
@@ -192,7 +139,7 @@ export default function ListingDetailModal({
 
   const handleToggleOriginal = (e) => {
     e?.stopPropagation?.();
-    setLocalShowOriginal(prev => !prev);
+    setShowOriginal(prev => !prev);
     if (typeof toggleOriginalListing === 'function' && listing?.id) {
       try {
         toggleOriginalListing(listing.id, e);
@@ -416,29 +363,35 @@ export default function ListingDetailModal({
                   </span>
                 )}
               </div>
-              <h3 className="font-editorial-heading" style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{detailDisplayContent.title}</h3>
-              {(currentLang !== (listing.nativeLang || 'FR') || currentLang !== 'FR') && (
-                <button
-                  type="button"
-                  onClick={handleToggleOriginal}
-                  className="premium-button"
-                  style={{
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    color: '#C67D5B',
-                    fontSize: '12px',
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    padding: '2px 0 6px 0'
-                  }}
-                >
-                  <Globe size={13} color="#C67D5B" />
-                  {isDetailShowingOriginal ? (t('showTranslation', 'Voir la traduction') || 'Voir la traduction') : (t('showOriginal', "Voir l'original") || "Voir l'original")}
-                </button>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', margin: '0 0 6px 0' }}>
+                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                  {detailDisplayContent.title}
+                </h3>
+                {currentLang !== listing.nativeLang && (
+                  <button
+                    type="button"
+                    onClick={handleToggleOriginal}
+                    data-testid="listing-toggle-original"
+                    className="premium-button"
+                    style={{
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: '#C67D5B',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                    }}
+                  >
+                    <Globe size={13} color="#C67D5B" />
+                    {showOriginal ? (t('showTranslation') || 'Voir la traduction') : (t('showOriginal') || "Voir l'original")}
+                  </button>
+                )}
+              </div>
             </div>
             {!isOwnListing ? (
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>

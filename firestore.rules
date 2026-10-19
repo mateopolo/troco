@@ -87,11 +87,16 @@ service cloud.firestore {
     // 👤 COLLECTION USERS (PROFILS PRIVÉS & SOUS-COLLECTIONS)
     // ========================================================================
     match /users/{uid} {
-      // Lecture : tout utilisateur authentifié peut consulter les profils des membres
-      allow read: if isAuthenticated();
+      // Lecture : propriétaire ou administrateur (les profils publics sont dans users_public)
+      allow read: if isOwner(uid) || isAdmin();
 
-      // Création : propriétaire uniquement
-      allow create: if isOwner(uid);
+      // Création : propriétaire uniquement avec interdiction des champs privilégiés & financiers
+      allow create: if isOwner(uid)
+        && !request.resource.data.keys().hasAny([
+          'euroBalance', 'trocoTokens', 'walletBalanceFiat', 'balance',
+          'dealsCompleted', 'kycVerified', 'isBanned', 'isShadowBanned',
+          'role', 'isAdmin', 'adminGrantedBy', 'subscriptionPlan', 'cguAcceptedAt'
+        ]);
 
       // Mise à jour : propriétaire authentifié ou administrateur ou transfert entrant
       allow update: if isAuthenticated() && (
@@ -257,14 +262,41 @@ service cloud.firestore {
     // 💬 COLLECTION CHATS (CONVERSATIONS ET DISCUSSIONS PRIVÉES)
     // ========================================================================
     match /chats/{chatId} {
-      allow read, write: if isAuthenticated();
+      // Création : membre authentifié non banni qui s'inclut dans les participants
+      allow create: if isAuthenticated() && isNotBanned()
+        && ('participants' in request.resource.data)
+        && (request.auth.uid in request.resource.data.participants);
 
+      // Lecture & Modification : réservées strictement aux participants ou à l'admin
+      allow read, update: if isAuthenticated() && (
+        ('participants' in resource.data && request.auth.uid in resource.data.participants)
+        || isAdmin()
+      );
+
+      // Suppression : administrateur uniquement
+      allow delete: if isAdmin();
+
+      // Messages de la conversation
       match /messages/{messageId} {
-        allow read, write: if isAuthenticated();
-      }
+        // Lecture : participants du chat parent ou admin
+        allow read: if isAuthenticated() && (
+          (exists(/databases/$(database)/documents/chats/$(chatId))
+            && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('participants', []))
+          || isAdmin()
+        );
 
-      match /{allSubcollections=**} {
-        allow read, write: if isAuthenticated();
+        // Création : participant émetteur du message
+        allow create: if isAuthenticated() && isNotBanned()
+          && request.resource.data.senderUid == request.auth.uid
+          && (
+            (exists(/databases/$(database)/documents/chats/$(chatId))
+              && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('participants', []))
+            || isAdmin()
+          );
+
+        // Modification & Suppression : auteur du message ou admin
+        allow update: if isAuthenticated() && isNotBanned() && resource.data.senderUid == request.auth.uid;
+        allow delete: if isAuthenticated() && (resource.data.senderUid == request.auth.uid || isAdmin());
       }
     }
 
@@ -272,20 +304,17 @@ service cloud.firestore {
     // 💳 COLLECTION TRANSACTIONS (REGISTRE FINANCIER & SÉQUESTRE ESCROW)
     // ========================================================================
     match /transactions/{txId} {
-      // Lecture : parties prenantes de la transaction, administrateur ou deals clôturés publics
+      // Lecture : parties prenantes de la transaction ou administrateur
       allow read: if isAuthenticated() && (
         resource.data.userId == request.auth.uid
         || resource.data.partnerUid == request.auth.uid
         || resource.data.buyerUid == request.auth.uid
         || resource.data.sellerUid == request.auth.uid
-        || resource.data.status == 'completed'
         || isAdmin()
       );
 
-      // Écriture : réservée au serveur (ou transaction client initialisée)
-      allow create: if isAuthenticated() && isNotBanned()
-        && (request.resource.data.userId == request.auth.uid || request.resource.data.buyerUid == request.auth.uid);
-      allow update, delete: if isAdmin();
+      // Écriture : réservée exclusivement à l'Admin SDK serveur
+      allow write: if isAdmin();
     }
 
     // ========================================================================
