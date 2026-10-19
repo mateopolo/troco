@@ -454,7 +454,7 @@ test.describe('Troco — Audit E2E complet', () => {
       if (!(await b.isVisible().catch(() => false))) missing('Bouton absent (SplashScreen.jsx non monté dans l’app)');
     }, page);
     await step('P14', 'Bouton « Revoir le tutoriel »', async () => {
-      const b = page.getByTestId('profile-replay-tutorial-button').or(page.getByText(/Revoir le tutoriel|tutoriel/i)).first();
+      const b = page.getByTestId('replay-tutorial-button').or(page.getByTestId('profile-replay-tutorial-button')).or(page.getByText(/Revoir le tutoriel|tutoriel/i)).first();
       await expect(b).toBeVisible({ timeout: 4000 });
       await b.click();
       await page.waitForTimeout(1500);

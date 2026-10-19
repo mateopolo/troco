@@ -1928,6 +1928,35 @@ Composants sécurisés :
    - Validation globale Vitest : **30/30 suites de tests passées (270/270 tests unitaires au vert)**.
    - Compilation de production : `npm run build` exécuté avec succès (Exit Code 0).
 
+---
+
+## 37. PROMPT 19 — Polish Final : Bouton "Revoir le tutoriel" & Montage Splash Screen via ?splash=1 (FAIL-07, MISSING-03 & MISSING-04)
+
+### 37.1. Problématique & Diagnostic
+- **Fonctionnalités ciblées :**
+  1. `[E2E-FAIL-07]` : Absence du sélecteur `data-testid="replay-tutorial-button"` dans les paramètres du profil utilisateur.
+  2. `[E2E-MISSING-03]` : Bouton « Revoir l'animation d'accueil » absent de la vue profil (`ProfileFeature.jsx`).
+  3. `[E2E-MISSING-04]` : L'URL avec paramètre `?splash=1` n'activait pas l'écran d'accueil rétro CRT dither (`SplashScreen.jsx`), qui n'était pas monté dans `src/App.js`.
+
+### 37.2. Correctifs Appliqués
+1. **Composant `src/features/profile/ProfileFeature.jsx` :**
+   - Ajout dans la section Paramètres du bouton « Revoir le tutoriel » :
+     `<button onClick={() => setIsTutorialOpen(true)} data-testid="replay-tutorial-button" className="premium-button">` avec libellé dynamique `{t('replayTutorial') || 'Revoir le tutoriel'}`.
+   - Ajout du bouton « Revoir l'animation d'accueil » avec `data-testid="replay-splash-button"` et redirection vers `/?splash=1`.
+2. **Montage dans `src/App.js` :**
+   - Importation de `SplashScreen` depuis `./components/onboarding/SplashScreen`.
+   - Ajout du court-circuit de rendu prioritaire :
+     ```jsx
+     if (typeof window !== 'undefined' && window.location.search.includes('splash=1')) {
+       return <SplashScreen onComplete={() => { window.location.href = window.location.pathname; }} darkMode={darkMode} t={t} />;
+     }
+     ```
+3. **Mise à jour des Tests E2E (`e2e/full-audit.spec.js`) :**
+   - Alignement du sélecteur Playwright P14 pour cibler `page.getByTestId('replay-tutorial-button')`.
+4. **Validation :**
+   - Compilation de production : `npm run build` exécuté avec succès (Exit Code 0).
+
+
 
 
 

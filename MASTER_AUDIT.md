@@ -936,7 +936,13 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
   - **Configuration requise :** `maxClusterRadius: 50`, `spiderfyOnMaxZoom: true`, `showCoverageOnHover: false`.
   - **Attribut & Sélecteur E2E :** `iconCreateFunction` personnalisée générant des badges avec `data-testid="map-cluster"` et classes `.marker-cluster`, garantissant la détection immédiate dans les tests Playwright (`.marker-cluster, [class*="cluster"]`).
   - **Design Apple-grade :** Styles dédiés dans `index.css` appliquant le dégradé thématique Troco (`--accent-primary`), bordure blanche et transition micro-interactive au survol.
-  - **Tests & Validation :** Suite unitaire dédiée `tests/unit/mapClustering.test.js` (4/4 tests au vert), 30/30 suites Vitest validées (270/270 tests au vert), `npm run build` Exit Code 0.
+- [x] `[E2E-FIX-09]` — Résolution de [E2E-FAIL-07], [E2E-MISSING-03] & [E2E-MISSING-04] : Bouton "Revoir le tutoriel" & Montage Splash Screen via `?splash=1`
+  - **Fichiers modifiés :** `src/App.js`, `src/features/profile/ProfileFeature.jsx`, `e2e/full-audit.spec.js`.
+  - **Bouton Revoir le tutoriel (FAIL-07) :** Ajout dans la section Paramètres de `ProfileFeature.jsx` avec `data-testid="replay-tutorial-button"`, classe `premium-button`, icône `Sparkles` et libellé dynamique `{t('replayTutorial') || 'Revoir le tutoriel'}`. Déclenchement de `setIsTutorialOpen(true)` et `handleReplayTutorial`.
+  - **Bouton Revoir l'animation d'accueil (MISSING-03) :** Ajout dans la section Paramètres de `ProfileFeature.jsx` avec `data-testid="replay-splash-button"`, classe `premium-button`, icône `Tv` et libellé `{t('replaySplashAnimation') || "Revoir l'animation d'accueil"}`. Redirige vers `/?splash=1`.
+  - **Montage conditionnel Splash Screen (MISSING-04) :** Importation de `SplashScreen.jsx` dans `src/App.js` et montage prioritaire : `if (typeof window !== 'undefined' && window.location.search.includes('splash=1')) return <SplashScreen onComplete={() => { window.location.href = window.location.pathname; }} darkMode={darkMode} t={t} />;`.
+  - **Mise à jour suite E2E :** Mise à jour du sélecteur Playwright dans `e2e/full-audit.spec.js` pour inclure `page.getByTestId('replay-tutorial-button')`.
+  - **Tests & Validation :** Compilation de production `npm run build` exécutée avec Exit Code 0.
 
 ---
 

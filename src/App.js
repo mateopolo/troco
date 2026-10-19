@@ -44,6 +44,7 @@ import ConfirmDialog from './components/ui/ConfirmDialog';
 import { AnimatePresence } from 'framer-motion';
 import { useTutorial } from './hooks/useTutorial';
 import InteractiveTutorial from './components/onboarding/InteractiveTutorial';
+import SplashScreen from './components/onboarding/SplashScreen';
 import {
   translations,
   localizeLocation,
@@ -2483,6 +2484,10 @@ export default function App() {
       }
     }
   };
+
+  if (typeof window !== 'undefined' && window.location.search.includes('splash=1')) {
+    return <SplashScreen onComplete={() => { window.location.href = window.location.pathname; }} darkMode={darkMode} t={t} />;
+  }
 
   if (!isAuthResolved || isLoadingSession || (isAuthenticated && isProfileLoading)) {
     return (

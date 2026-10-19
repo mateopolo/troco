@@ -32,6 +32,7 @@ import {
   Sun,
   Moon,
   Clock,
+  Tv,
 } from 'lucide-react';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
@@ -1417,7 +1418,7 @@ function ProfileFeature({
                 setIsTutorialOpen(true);
               }
             }}
-            data-testid="profile-replay-tutorial-button"
+            data-testid="replay-tutorial-button"
             className="premium-button"
             style={{
               border: '1px solid var(--border-color)',
@@ -1435,7 +1436,36 @@ function ProfileFeature({
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Sparkles size={16} color="var(--accent-primary)" /> {t('replayTutorialButton', 'Revoir le tutoriel')}
+              <Sparkles size={16} color="var(--accent-primary)" /> {t('replayTutorial') || t('replayTutorialButton', 'Revoir le tutoriel')}
+            </span>
+            <ChevronRight size={16} color="var(--accent-primary)" />
+          </button>
+
+          <button
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.location.href = '/?splash=1';
+              }
+            }}
+            data-testid="replay-splash-button"
+            className="premium-button"
+            style={{
+              border: '1px solid var(--border-color)',
+              borderRadius: '16px',
+              padding: '14px 16px',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              fontWeight: '700',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Tv size={16} color="var(--accent-primary)" /> {t('replaySplashAnimation') || "Revoir l'animation d'accueil"}
             </span>
             <ChevronRight size={16} color="var(--accent-primary)" />
           </button>
