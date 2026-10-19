@@ -532,7 +532,7 @@ export default function ListingDetailModal({
             })()}
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{listing.authorProfile?.name || listing.author || 'Membre Troco'}</div>
-              <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(listing.authorProfile?.bio || listing.bio || '', currentLang, isDetailShowingOriginal)}</div>
+              <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(listing.authorProfile?.bio || listing.bio || '', currentLang, showOriginal)}</div>
             </div>
           </div>
           <div style={{ marginBottom: '14px' }}>

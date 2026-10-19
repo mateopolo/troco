@@ -1636,7 +1636,7 @@ Composants sécurisés :
   - [#12](https://github.com/mateopolo/troco/issues/12) : `[E2E-FAIL-12]` Prise en compte dynamique de la langue Allemande (DE) dans l'interface
   - [#13](https://github.com/mateopolo/troco/issues/13) : `[E2E-FAIL-13]` Navigation vers l'onglet sandbox de modération dans le Panel Admin
 - **Fonctionnalités manquantes (3 issues) :**
-  - [#14](https://github.com/mateopolo/troco/issues/14) : `[E2E-MISSING-01]` Bouton « Voir l'original » / « Voir la traduction » sur le détail d'annonce
+  - [#14](https://github.com/mateopolo/troco/issues/14) : `[E2E-MISSING-01]` Bouton « Voir l'original » / « Voir la traduction » sur le détail d'annonce *(RÉSOLU)*
   - [#15](https://github.com/mateopolo/troco/issues/15) : `[E2E-MISSING-02]` Regroupement cartographique (clustering) des annonces Leaflet
   - [#16](https://github.com/mateopolo/troco/issues/16) : `[E2E-MISSING-03]` Restauration du Splash Screen CRT rétro optionnel via ?splash=1
 
@@ -1874,6 +1874,33 @@ Composants sécurisés :
    - Création de la suite unitaire `tests/unit/tutorialNavigation.test.js` (4/4 tests passés).
    - Exécution globale Vitest : **20/20 fichiers de test au vert (172/172 tests unitaires passés)**.
    - Compilation de production : `npm run build` exécuté avec Exit Code 0.
+
+---
+
+## 35. PROMPT 16 — Bouton « Voir l'original » / « Voir la traduction » sur le détail d'annonce (E2E-MISSING-01)
+
+### 35.1. Problématique & Diagnostic
+- **Fonctionnalité ciblée :** `[E2E-MISSING-01]` — Absence du bouton toggle « Voir l'original » / « Voir la traduction » dans la modale de détail d'annonce ([Issue #14](https://github.com/mateopolo/troco/issues/14)).
+- **Diagnostic :**
+  1. Lorsqu'une annonce est rédigée dans une langue étrangère (ex: DE, EN, ES) et que l'utilisateur consulte l'application dans une autre langue (ex: FR), les textes traduits s'affichaient sans possibilité pour l'utilisateur d'inspecter le texte d'origine.
+  2. `src/components/ListingDetailModal.jsx` ne disposait pas d'état local de basculement ni de bouton dédié pour forcer la version originale.
+  3. Le helper `getListingDisplayContent(listing, currentLang, { forceOriginal })` acceptait déjà le paramètre `forceOriginal`, mais il n'était pas piloté par la vue.
+  4. Dans `src/utils/dynamicTranslation.js` (`getKnownTitleTranslation`), un court-circuit renvoyait directement la chaîne sans vérifier le dictionnaire si la cible était `'FR'`, empêchant la traduction d'annonces étrangères (ex: allemandes) vers le français.
+
+### 35.2. Correctifs Appliqués
+1. **Composant `src/components/ListingDetailModal.jsx` :**
+   - Ajout de l'état local : `const [showOriginal, setShowOriginal] = useState(false);` synchronisé avec `showingOriginalListings`.
+   - Ajout du bouton toggle conditionnel `{currentLang !== listing.nativeLang && ...}` placé à côté du titre avec `data-testid="listing-toggle-original"` et classe `premium-button`.
+   - Bascule de texte i18n `{showOriginal ? t('showTranslation') : t('showOriginal')}`.
+   - Transmission directe `{ forceOriginal: showOriginal }` à `getListingDisplayContent(listing, currentLang, { forceOriginal: showOriginal })`.
+   - Application cohérente du toggle à la fois au titre, à la description et à la biographie d'auteur (`authorBio`).
+2. **Correctif `src/utils/dynamicTranslation.js` :**
+   - Sécurisation de `getKnownTitleTranslation` pour que la recherche dans `knownTitles` soit toujours validée avant d'ignorer le traducteur dynamique.
+3. **Validation & Non-Régression :**
+   - Suite unitaire `tests/unit/listingDetailTranslation.test.js` (5/5 tests au vert).
+   - Suite globale Vitest : **29/29 fichiers au vert, 266/266 tests passés**.
+   - Compilation de production : `npm run build` exécuté avec Exit Code 0.
+
 
 
 

@@ -924,8 +924,15 @@ gcloud storage buckets update gs://troco-8a6eb.firebasestorage.app --cors-file=c
     - `data-testid="load-more-btn"` sur le bouton manuel de secours "Charger plus d'annonces".
   - **Seed E2E & Correction du Test :** `e2e/globalSetup.js` enrichi pour insérer 12 annonces actives (réparties sur plusieurs catégories dont 'Services' et 'Bricolage') au lieu d'une seule, permettant le chargement de la page 2. Test P2 mis à jour dans `e2e/full-audit.spec.js` avec `scrollIntoViewIfNeeded` sur la sentinelle et comptage via `data-testid="feed-card"`.
   - **Tests :** Suite unitaire dédiée `tests/unit/infiniteScrollFeed.test.js` (2/2 tests passés), 19/19 suites Vitest validées (168/168 tests unitaires au vert), compilation `npm run build` Exit Code 0.
+- [x] `[E2E-FIX-07]` — Résolution de [E2E-MISSING-01] : Bouton « Voir l'original » / « Voir la traduction » sur le détail d'annonce (Issue #14)
+  - **Fichiers modifiés :** `src/components/ListingDetailModal.jsx`, `src/utils/dynamicTranslation.js`, `tests/unit/listingDetailTranslation.test.js`.
+  - **État local & Bouton Toggle :** Ajout de l'état local `const [showOriginal, setShowOriginal] = useState(false);` dans `ListingDetailModal.jsx`. Bouton toggle conditionnel `{currentLang !== listing.nativeLang && ...}` placé à côté du titre avec `data-testid="listing-toggle-original"` et classe `premium-button`. Libellé dynamique i18n `{showOriginal ? t('showTranslation') : t('showOriginal')}`.
+  - **Transmission aux aides de traduction :** Passage de `{ forceOriginal: showOriginal }` à `getListingDisplayContent(listing, currentLang, { forceOriginal: showOriginal })`. Application cohérente du toggle au titre, à la description et à la biographie d'auteur.
+  - **Prise en charge multi-langues i18n :** Correction dans `dynamicTranslation.js` (`getKnownTitleTranslation`) pour s'assurer que les annonces en langue source (ex. DE) soient correctement traduites vers le français ou affichées en VO selon le toggle sans court-circuit.
+  - **Tests & Validation :** Suite unitaire `tests/unit/listingDetailTranslation.test.js` validée à 100% (5/5 tests au vert), 29/29 suites Vitest passées (266/266 tests au vert), `npm run build` Exit Code 0.
 
 ---
+
 
 
 ## 🚨 Suivi Hotfix Build & Déploiement Vercel (2026-10-14)

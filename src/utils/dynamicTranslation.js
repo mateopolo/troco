@@ -38,9 +38,19 @@ export function cleanLanguageTag(text) {
 export function getKnownTitleTranslation(title, targetLang = 'FR') {
   if (!title || typeof title !== 'string' || !knownTitles) return null;
   const target = (targetLang || 'FR').toUpperCase();
-  if (target === 'FR') return cleanLanguageTag(title);
-
   const clean = cleanLanguageTag(title).trim();
+
+  // Si on cherche le français, vérifier que le titre est bien une clé répertoriée dans knownTitles
+  if (target === 'FR') {
+    if (knownTitles[title] || knownTitles[clean]) return clean;
+    const norm = clean.toLowerCase().replace(/[’']/g, "'").trim();
+    for (const k of Object.keys(knownTitles)) {
+      if (k.toLowerCase().replace(/[’']/g, "'").trim() === norm) {
+        return k;
+      }
+    }
+    return null;
+  }
 
   // 1. Recherche directe exacte
   if (knownTitles[title]?.[target]) return knownTitles[title][target];

@@ -12,8 +12,8 @@ vi.mock('../../src/firebase', () => ({
 
 vi.mock('../../src/utils/translator', () => ({
   getInstantOrQueueTranslation: vi.fn((text, targetLang) => {
-    if (text.includes('Gitarrenunterricht')) return 'Cours de guitare à Berlin';
     if (text.includes('Akustik')) return 'Cours de guitare acoustique et électrique pour débutants.';
+    if (text.includes('Gitarrenunterricht')) return 'Cours de guitare à Berlin';
     return text;
   }),
   subscribeTranslations: vi.fn(() => () => {}),
