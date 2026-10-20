@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 9.4/10 | **Progression :** 64 / 75 tâches validées avec preuves formelles (85.3%)
+> **Score global :** 9.4/10 | **Progression :** 65 / 75 tâches validées avec preuves formelles (86.7%)
 
 ---
 
@@ -23,10 +23,10 @@
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 30 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 20 | 0 | 100% |
-| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 13 | 2 | 86.7% |
+| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 14 | 1 | 93.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 8 | 2 | 80.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
-| **TOTAL** | **64** | **11** | **85.3%** |
+| **TOTAL** | **65** | **10** | **86.7%** |
 
 
 ### Score par axe vs cible Licorne
@@ -476,11 +476,11 @@
 **Estimation** : 5h  
 **Impact** : Augmente de 25% la réactivité des utilisateurs sur les propositions en attente en affichant une carte compacte glassmorphism en tête du Feed avec bouton de reprise directe de discussion.
 
-### [ ] [MOY-06] — Exportation native des documents Troco Office Suite (.pdf, .docx, .xlsx)
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/features/workspace/CloudOfficeSuiteModal.jsx`  
+### [x] [MOY-06] — Exportation native des documents Troco Office Suite (.pdf, .docx, .xlsx)
+**Statut** : ✅ RÉALISÉ (`src/components/CloudOfficeSuiteModal.jsx`, `src/components/office/EditorMenuBar.jsx`, suite unitaire: `tests/unit/OfficeExportNative.test.js`)  
+**Fichier** : `src/components/CloudOfficeSuiteModal.jsx`, `src/components/office/EditorMenuBar.jsx`, `src/components/TrocoDocs.jsx`, `src/components/TrocoSheets.jsx`, `src/components/TrocoSlides.jsx`  
 **Estimation** : 6h  
-**Impact** : Transformation de la suite bureautique en un véritable outil de productivité professionnelle.
+**Impact** : Transformation de la suite bureautique en un véritable outil de productivité professionnelle avec export PDF vectoriel pour Docs, tableur Excel (.xlsx) pour Sheets et PDF Paysage pour Slides, propulsés par jsPDF, xlsx et file-saver.
 
 ### [ ] [MOY-07] — Double validation bilatérale pour le troc pur sans monnaie
 **Statut** : ❌ À FAIRE  

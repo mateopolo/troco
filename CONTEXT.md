@@ -2161,6 +2161,50 @@ Composants sécurisés :
 - **`npx vitest run` :** 34/34 fichiers de tests au vert, **306/306 tests passés avec succès** (0 échec).
 - **`npm run build` :** **Exit Code 0**, compilation de production validée sans warning bloquant.
 
+---
+
+## 43. [MOY-06] — Exportation Native des Documents Troco Office Suite (.pdf, .docx, .xlsx)
+
+### 43.1. Contexte & Objectif
+- **Objectif :** Remplacer les faux exports et impressions bricolées par de véritables générateurs de fichiers binaires natifs professionnels (.pdf vectoriel A4 et paysage, tableur Microsoft Excel .xlsx, document Microsoft Word .docx, présentation PowerPoint .pptx).
+- **Dépendances installées :** `jspdf`, `xlsx`, `file-saver`.
+- **Composants concernés :**
+  - `src/components/CloudOfficeSuiteModal.jsx` (moteur central bureautique partagé)
+  - `src/components/office/EditorMenuBar.jsx` (barre de menu macOS/Windows native)
+  - `src/components/TrocoDocs.jsx` (éditeur de texte A4 Word-Like)
+  - `src/components/TrocoSheets.jsx` (tableur Excel temps réel)
+  - `src/components/TrocoSlides.jsx` (présentations visuelles)
+
+### 43.2. Implémentation & Architecture
+1. **Génération PDF Natif A4 (`handleDownloadPDF`) :**
+   - Utilisation de `jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })`.
+   - En-tête officiel Troco Terracotta (`#C67D5B`), date dynamique, titre document bold 18pt.
+   - Algorithme de découpage et retour à la ligne automatique (`splitTextToSize`) gérant les titres h1/h2/h3, puces et pagination automatique sans coupure de texte.
+   - Pieds de page dynamiques "Document généré par Troco Cloud Workspace · Page X / Y".
+2. **Génération Excel Natif .xlsx (`handleDownloadXLSX`) :**
+   - Utilisation de `xlsx` (`XLSX.utils.book_new()`, `XLSX.utils.aoa_to_sheet()`, `XLSX.write(wb, { bookType: 'xlsx', type: 'array' })`).
+   - Analyse automatique de la grille `sheetData`, évaluation des formules (=SUM, =AVERAGE, etc.), détection automatique des types numériques vs texte, et auto-dimensionnement des colonnes (`!cols`).
+3. **Génération PDF Paysage pour Slides (`handleDownloadSlidesPDF`) :**
+   - Utilisation de `jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })` (297mm x 210mm).
+   - Génération de diapositives professionnelles avec bordures arrondies, bandeau terracotta, titres, sous-titres, puces et numérotation de slides.
+4. **Export Word (.docx) & PowerPoint (.pptx) :**
+   - Encapsulation des contenus HTML formatés sous format XML/OpenXML avec encodage UTF-8 et BOM `\ufeff`.
+5. **Gestionnaire de Téléchargement Universel (`triggerSave`) :**
+   - Utilisation de `file-saver` (`fileSaver(blob, filename)` ou `fileSaver.saveAs`) avec fallback sécurisé DOM `<a>` et `URL.revokeObjectURL` pour assurer la compatibilité multi-navigateurs et headless/tests.
+6. **Boutons d'Exportation Intégrés :**
+   - Ajout d'icônes `Download` et de boutons interactifs dans la barre de titre globale, dans `EditorMenuBar` (menu Fichier), dans la barre de formatage Docs, la barre de formule Sheets et la barre d'outils Slides.
+   - Ajout des `data-testid` : `export-doc-pdf-btn`, `export-doc-docx-btn`, `export-sheet-xlsx-btn`, `export-sheet-csv-btn`, `export-slides-pdf-btn`, `export-slides-pptx-btn`.
+7. **Traductions 7 Langues :**
+   - Clés `office.export_pdf`, `office.export_slides_pdf`, `office.export_docx`, `office.export_xlsx`, `office.export_csv`, `office.export_pptx`, `office.export_md` ajoutées dans `translationsData.js`, `translationsSecondary.js` et `translations.js` (FR, EN, ES, IT, DE, JA, ZH).
+8. **Suite de tests unitaires dédiée (`tests/unit/OfficeExportNative.test.js`) :**
+   - 8/8 tests validant l'export PDF vectoriel, DOCX, XLSX, CSV, Slides PDF Paysage et PPTX.
+
+### 43.3. Validation Formelle
+- **`npx vitest run tests/unit/OfficeExportNative.test.js` :** 8/8 tests passés au vert.
+- **`npx vitest run` :** 35/35 fichiers de tests passés, **314/314 tests validés avec succès** (0 échec).
+- **`npm run build` :** **Exit Code 0**, compilation de production validée.
+
+
 
 
 

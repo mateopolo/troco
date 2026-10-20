@@ -17,6 +17,33 @@ import { db, storage } from '../firebase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatDocumentName, isAlphanumericId } from '../utils/workspaceHelpers';
 import EditorMenuBar from './office/EditorMenuBar';
+import { jsPDF } from 'jspdf';
+import * as XLSX from 'xlsx';
+import fileSaver from 'file-saver';
+
+// Déclencheur universel de téléchargement compatible multi-environnements (file-saver + fallback DOM)
+const triggerSave = (blob, filename) => {
+  try {
+    if (typeof fileSaver === 'function') {
+      fileSaver(blob, filename);
+    } else if (fileSaver && typeof fileSaver.saveAs === 'function') {
+      fileSaver.saveAs(blob, filename);
+    } else if (typeof window !== 'undefined') {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 150);
+    }
+  } catch (err) {
+    logger.error('Erreur lors du déclenchement du téléchargement avec file-saver:', err);
+  }
+};
 
 // Squelette local sécurisé par défaut garantissant zéro crash
 const defaultDoc = {
@@ -1007,9 +1034,155 @@ function CloudOfficeSuiteModalContent({
   // EXPORTS PROFESSIONNELS NATIFS (PDF, DOCX, XLSX, PPTX, MD, CSV)
   // ==========================================
 
-  // 1. Export PDF (Moteur d'impression natif stylé)
-  // 1. Export PDF Imprimable HD
+  // ==========================================
+  // EXPORTS & IMPRESSIONS BUREAUTIQUES NATIFS
+  // ==========================================
+
+  // 1. Export PDF Document Imprimable HD natif (via jsPDF & file-saver)
   const handleDownloadPDF = () => {
+    if (activeTab === 'slides') {
+      handleDownloadSlidesPDF();
+      return;
+    }
+
+    try {
+      const safeDocTitle = String(docTitle || 'Document');
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+
+      // En-tête officiel Troco Terracotta
+      doc.setFillColor(198, 125, 91);
+      doc.rect(margin, 15, 6, 12, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(198, 125, 91);
+      doc.text('TROCO OFFICE SUITE PRO', margin + 9, 20);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(120, 110, 100);
+      const dateStr = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+      doc.text(`Document certifié · ${dateStr}`, margin + 9, 25);
+
+      // Titre principal
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.setTextColor(30, 41, 59);
+      const titleLines = doc.splitTextToSize(safeDocTitle, contentWidth);
+      doc.text(titleLines, margin, 38);
+
+      let currentY = 38 + (titleLines.length * 8) + 4;
+
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.5);
+      doc.line(margin, currentY, pageWidth - margin, currentY);
+      currentY += 8;
+
+      let textContent = '';
+      if (editorRef.current) {
+        textContent = editorRef.current.innerText || editorRef.current.textContent || '';
+      }
+      if (!textContent.trim()) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = docContent || '';
+        textContent = tempDiv.innerText || tempDiv.textContent || String(docContent || '');
+      }
+
+      const paragraphs = textContent.split(/\n+/);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10.5);
+      doc.setTextColor(51, 65, 85);
+      const lineHeight = 5.5;
+
+      paragraphs.forEach((p) => {
+        const cleanP = p.trim();
+        if (!cleanP) {
+          currentY += 3;
+          return;
+        }
+
+        const isHeading1 = cleanP.startsWith('# ');
+        const isHeading2 = cleanP.startsWith('## ');
+        const isHeading3 = cleanP.startsWith('### ');
+        const displayText = cleanP.replace(/^#{1,3}\s*/, '');
+
+        if (isHeading1) {
+          currentY += 4;
+          if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = 25;
+          }
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.setTextColor(30, 41, 59);
+          const hLines = doc.splitTextToSize(displayText, contentWidth);
+          doc.text(hLines, margin, currentY);
+          currentY += (hLines.length * 6.5) + 3;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(10.5);
+          doc.setTextColor(51, 65, 85);
+          return;
+        }
+
+        if (isHeading2 || isHeading3) {
+          currentY += 3;
+          if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = 25;
+          }
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.setTextColor(45, 55, 72);
+          const hLines = doc.splitTextToSize(displayText, contentWidth);
+          doc.text(hLines, margin, currentY);
+          currentY += (hLines.length * 6) + 2;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(10.5);
+          doc.setTextColor(51, 65, 85);
+          return;
+        }
+
+        const isBullet = cleanP.startsWith('- ') || cleanP.startsWith('• ');
+        const bulletText = isBullet ? `•  ${cleanP.replace(/^[-•]\s*/, '')}` : cleanP;
+        const lines = doc.splitTextToSize(bulletText, contentWidth - (isBullet ? 5 : 0));
+
+        if (currentY + (lines.length * lineHeight) > pageHeight - 20) {
+          doc.addPage();
+          currentY = 25;
+        }
+
+        doc.text(lines, margin + (isBullet ? 5 : 0), currentY);
+        currentY += (lines.length * lineHeight) + 2;
+      });
+
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setDrawColor(241, 245, 249);
+        doc.setLineWidth(0.4);
+        doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text('Document généré par Troco Cloud Workspace', margin, pageHeight - 10);
+        doc.text(`Page ${i} / ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+      }
+
+      const pdfBlob = doc.output('blob');
+      const safeFilename = `${safeDocTitle.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}.pdf`;
+      triggerSave(pdfBlob, safeFilename);
+    } catch (err) {
+      logger.error('Erreur lors de la génération du PDF Docs via jsPDF:', err);
+    }
+  };
+
+  // 1b. Impression papier / système
+  const handlePrint = () => {
     let contentHtml = '';
     const safeDocTitle = String(docTitle || 'Document');
     const safeDocContent = String(docContent || '');
@@ -1052,7 +1225,7 @@ function CloudOfficeSuiteModalContent({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${safeDocTitle} - Export PDF</title>
+          <title>${safeDocTitle} - Impression</title>
           <style>
             body { font-family: 'Inter', sans-serif; padding: 32px; color: #2D2825; }
             h1 { color: #C67D5B; border-bottom: 2px solid #C67D5B; padding-bottom: 8px; }
@@ -1072,7 +1245,7 @@ function CloudOfficeSuiteModalContent({
     }, 250);
   };
 
-  // 2. Export Word (.docx / HTML Word Document)
+  // 2. Export Word (.docx natif via file-saver)
   const handleDownloadDOCX = () => {
     const safeDocTitle = String(docTitle || 'Document');
     const safeDocContent = editorRef.current ? editorRef.current.innerHTML : String(docContent || '');
@@ -1080,42 +1253,157 @@ function CloudOfficeSuiteModalContent({
     <head><meta charset='utf-8'><title>${safeDocTitle}</title></head><body>`;
     const footer = `</body></html>`;
     const body = `<h1>${safeDocTitle}</h1><div>${safeDocContent}</div>`;
-    const blob = new Blob(['\ufeff', header + body + footer], { type: 'application/msword' });
-    const link = document.createElement('a');
-    link.download = `${safeDocTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.docx`;
-    link.href = URL.createObjectURL(blob);
-    link.click();
+    const blob = new Blob(['\ufeff', header + body + footer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    triggerSave(blob, `${safeDocTitle.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}.docx`);
   };
 
-  // 3. Export Excel (.xlsx / XML Spreadsheet)
+  // 3. Export Excel (.xlsx natif via bibliothèque xlsx & file-saver)
   const handleDownloadXLSX = () => {
-    const safeSheetTitle = String(sheetTitle || 'Feuille_de_calcul');
-    const cols = Array.from({ length: numCols }).map((_, i) => getColLetter(i));
-    let rowsXml = '';
-    for (let r = 1; r <= numRows; r++) {
-      let cellsXml = '';
-      cols.forEach(c => {
-        const val = evaluateCellFormula(sheetData?.[`${c}${r}`] || '', sheetData);
-        cellsXml += `<Cell><Data ss:Type="String">${String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</Data></Cell>`;
+    try {
+      const safeSheetTitle = String(sheetTitle || 'Feuille_de_calcul');
+      const cols = Array.from({ length: numCols }).map((_, i) => getColLetter(i));
+      const dataRows = [];
+
+      for (let r = 1; r <= numRows; r++) {
+        const rowData = [];
+        cols.forEach((c) => {
+          const rawVal = (sheetData && sheetData[`${c}${r}`]) != null ? sheetData[`${c}${r}`] : '';
+          const evaluated = evaluateCellFormula(rawVal, sheetData || {});
+          const num = Number(evaluated);
+          if (evaluated !== '' && !isNaN(num) && !String(evaluated).startsWith('0') && isFinite(num)) {
+            rowData.push(num);
+          } else {
+            rowData.push(evaluated);
+          }
+        });
+        dataRows.push(rowData);
+      }
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(dataRows);
+
+      const colWidths = cols.map((c, colIdx) => {
+        let maxLen = 10;
+        dataRows.forEach((row) => {
+          const cell = row[colIdx];
+          if (cell != null) {
+            const len = String(cell).length;
+            if (len > maxLen) maxLen = Math.min(len + 3, 50);
+          }
+        });
+        return { wch: maxLen };
       });
-      rowsXml += `<Row>${cellsXml}</Row>`;
+      ws['!cols'] = colWidths;
+
+      const cleanSheetName = safeSheetTitle.replace(/[\\/?*[\]:]/g, '_').slice(0, 31) || 'Feuille1';
+      XLSX.utils.book_append_sheet(wb, ws, cleanSheetName);
+
+      const wbArray = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const safeFilename = `${safeSheetTitle.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}.xlsx`;
+      triggerSave(blob, safeFilename);
+    } catch (err) {
+      logger.error('Erreur lors de la génération Excel via xlsx:', err);
     }
-    const excelXml = `<?xml version="1.0"?>
-    <?mso-application progid="Excel.Sheet"?>
-    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-      xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-      <Worksheet ss:Name="Troco_Planning">
-        <Table>${rowsXml}</Table>
-      </Worksheet>
-    </Workbook>`;
-    const blob = new Blob([excelXml], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    const link = document.createElement('a');
-    link.download = `${safeSheetTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.xlsx`;
-    link.href = URL.createObjectURL(blob);
-    link.click();
   };
 
-  // 4. Export PowerPoint (.pptx / HTML Slide Presentation Package)
+  // 4. Export Présentation Slides en PDF Paysage natif (via jsPDF & file-saver)
+  const handleDownloadSlidesPDF = () => {
+    try {
+      const safeSlidesTitle = String(slidesTitle || 'Presentation');
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+
+      const slideList = Array.isArray(slides) && slides.length > 0 ? slides : [
+        { title: safeSlidesTitle, subtitle: 'Présentation Troco Slides', bullets: [] }
+      ];
+
+      slideList.forEach((s, idx) => {
+        if (idx > 0) {
+          doc.addPage('a4', 'landscape');
+        }
+
+        // Cadre extérieur carte diapositive
+        doc.setFillColor(250, 247, 242);
+        doc.roundedRect(margin, margin, contentWidth, pageHeight - (margin * 2), 4, 4, 'F');
+        doc.setDrawColor(232, 221, 211);
+        doc.setLineWidth(0.6);
+        doc.roundedRect(margin, margin, contentWidth, pageHeight - (margin * 2), 4, 4, 'S');
+
+        // Barre d'accent terracotta
+        doc.setFillColor(198, 125, 91);
+        doc.roundedRect(margin + 6, margin + 6, 8, 14, 2, 2, 'F');
+
+        // Tag et numéro
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(198, 125, 91);
+        doc.text('TROCO SLIDES PRO', margin + 18, margin + 12);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(140, 130, 120);
+        doc.text(`Diapositive ${idx + 1} sur ${slideList.length}`, margin + 18, margin + 17);
+
+        // Titre
+        const sTitle = s?.title || `Diapositive ${idx + 1}`;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(45, 40, 37);
+        const titleLines = doc.splitTextToSize(sTitle, contentWidth - 30);
+        doc.text(titleLines, margin + 12, margin + 32);
+
+        let currentY = margin + 32 + (titleLines.length * 9) + 4;
+
+        if (s?.subtitle) {
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(13);
+          doc.setTextColor(107, 94, 84);
+          const subLines = doc.splitTextToSize(s.subtitle, contentWidth - 30);
+          doc.text(subLines, margin + 12, currentY);
+          currentY += (subLines.length * 6.5) + 6;
+        }
+
+        doc.setDrawColor(218, 207, 197);
+        doc.setLineWidth(0.4);
+        doc.line(margin + 12, currentY, margin + contentWidth - 12, currentY);
+        currentY += 10;
+
+        const bullets = Array.isArray(s?.bullets) ? s.bullets : [];
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(13);
+        doc.setTextColor(50, 45, 40);
+
+        bullets.forEach((b) => {
+          const cleanB = String(b || '').trim();
+          if (!cleanB) return;
+          const bLines = doc.splitTextToSize(`•  ${cleanB}`, contentWidth - 40);
+          if (currentY + (bLines.length * 7) < pageHeight - margin - 20) {
+            doc.text(bLines, margin + 18, currentY);
+            currentY += (bLines.length * 7) + 5;
+          }
+        });
+
+        // Pied de slide
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(160, 150, 140);
+        doc.text(safeSlidesTitle, margin + 12, pageHeight - margin - 6);
+        doc.text(`${idx + 1} / ${slideList.length}`, margin + contentWidth - 12, pageHeight - margin - 6, { align: 'right' });
+      });
+
+      const pdfBlob = doc.output('blob');
+      const safeFilename = `${safeSlidesTitle.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}.pdf`;
+      triggerSave(pdfBlob, safeFilename);
+    } catch (err) {
+      logger.error('Erreur lors de la génération du PDF Paysage Slides via jsPDF:', err);
+    }
+  };
+
+  // 5. Export PowerPoint (.pptx natif via file-saver)
   const handleDownloadPPTX = () => {
     const safeSlidesTitle = String(slidesTitle || 'Presentation');
     const slidesHtml = (slides || []).map((s, idx) => `
@@ -1128,21 +1416,15 @@ function CloudOfficeSuiteModalContent({
     `).join('');
     const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${safeSlidesTitle}</title></head><body>${slidesHtml}</body></html>`;
     const blob = new Blob([fullHtml], { type: 'application/vnd.ms-powerpoint;charset=utf-8' });
-    const link = document.createElement('a');
-    link.download = `${safeSlidesTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pptx`;
-    link.href = URL.createObjectURL(blob);
-    link.click();
+    triggerSave(blob, `${safeSlidesTitle.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}.pptx`);
   };
 
-  // 5. Export Markdown & CSV
+  // 6. Export Markdown & CSV natif via file-saver
   const handleDownloadMarkdown = () => {
     const safeDocTitle = String(docTitle || 'Document');
     const safeDocContent = String(docContent || '');
     const blob = new Blob([safeDocContent], { type: 'text/markdown;charset=utf-8' });
-    const link = document.createElement('a');
-    link.download = `${safeDocTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-    link.href = URL.createObjectURL(blob);
-    link.click();
+    triggerSave(blob, `${safeDocTitle.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}.md`);
   };
 
   const handleDownloadCSV = () => {
@@ -1154,10 +1436,7 @@ function CloudOfficeSuiteModalContent({
       csv += rowVals.join(',') + '\n';
     }
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const link = document.createElement('a');
-    link.download = `${safeSheetTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
-    link.href = URL.createObjectURL(blob);
-    link.click();
+    triggerSave(blob, `${safeSheetTitle.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}.csv`);
   };
 
   const [isSendingToChat, setIsSendingToChat] = useState(false);
@@ -1822,16 +2101,11 @@ function CloudOfficeSuiteModalContent({
                 if (actionId === 'export-primary') {
                   if (activeTab === 'notes') {
                     const blob = new Blob([notesContent || ''], { type: 'text/markdown;charset=utf-8' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${(notesTitle || 'Note').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-                    a.click();
-                    URL.revokeObjectURL(url);
+                    triggerSave(blob, `${(notesTitle || 'Note').replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}.md`);
                   } else if (activeTab === 'sheets') {
-                    handleDownloadCSV();
+                    handleDownloadXLSX();
                   } else if (activeTab === 'slides') {
-                    handleDownloadPPTX();
+                    handleDownloadSlidesPDF();
                   } else {
                     handleDownloadPDF();
                   }
@@ -1839,8 +2113,10 @@ function CloudOfficeSuiteModalContent({
                   handleDownloadDOCX();
                 } else if (actionId === 'export-xlsx') {
                   handleDownloadXLSX();
+                } else if (actionId === 'export-slides-pdf') {
+                  handleDownloadSlidesPDF();
                 } else if (actionId === 'print') {
-                  handleDownloadPDF();
+                  handlePrint();
                 } else if (actionId === 'share-chat') {
                   handleShareToChat();
                 } else if (actionId === 'undo') {
@@ -1892,6 +2168,7 @@ function CloudOfficeSuiteModalContent({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
                     title={t('office.export_pdf') || "Exporter en PDF imprimable"}
+                    data-testid="export-doc-pdf-btn"
                   >
                     <Download size={13} />
                     <span>PDF</span>
@@ -1902,6 +2179,7 @@ function CloudOfficeSuiteModalContent({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
                     title={t('office.export_docx') || "Exporter au format Word (.docx)"}
+                    data-testid="export-doc-docx-btn"
                   >
                     <Download size={13} />
                     <span>DOCX</span>
@@ -1917,6 +2195,7 @@ function CloudOfficeSuiteModalContent({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
                     title={t('office.export_xlsx') || "Exporter au format Excel (.xlsx)"}
+                    data-testid="export-sheet-xlsx-btn"
                   >
                     <Download size={13} />
                     <span>XLSX</span>
@@ -1927,6 +2206,7 @@ function CloudOfficeSuiteModalContent({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
                     title={t('office.export_csv') || "Exporter en CSV"}
+                    data-testid="export-sheet-csv-btn"
                   >
                     <Download size={13} />
                     <span>CSV</span>
@@ -1935,16 +2215,30 @@ function CloudOfficeSuiteModalContent({
               )}
 
               {activeTab === 'slides' && (
-                <button
-                  type="button"
-                  onClick={handleDownloadPPTX}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                  style={{ color: 'var(--text-main)' }}
-                  title={t('office.export_pptx') || "Exporter au format PowerPoint (.pptx)"}
-                >
-                  <Download size={13} />
-                  <span>PPTX</span>
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDownloadSlidesPDF}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                    style={{ color: 'var(--text-main)' }}
+                    title={t('office.export_slides_pdf') || "Exporter en PDF paysage"}
+                    data-testid="export-slides-pdf-btn"
+                  >
+                    <Download size={13} />
+                    <span>PDF (Paysage)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadPPTX}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                    style={{ color: 'var(--text-main)' }}
+                    title={t('office.export_pptx') || "Exporter au format PowerPoint (.pptx)"}
+                    data-testid="export-slides-pptx-btn"
+                  >
+                    <Download size={13} />
+                    <span>PPTX</span>
+                  </button>
+                </>
               )}
 
               {activeTab === 'notes' && (
@@ -1952,12 +2246,7 @@ function CloudOfficeSuiteModalContent({
                   type="button"
                   onClick={() => {
                     const blob = new Blob([notesContent || ''], { type: 'text/markdown;charset=utf-8' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${(notesTitle || 'Note').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-                    a.click();
-                    URL.revokeObjectURL(url);
+                    triggerSave(blob, `${(notesTitle || 'Note').replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}.md`);
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                   style={{ color: 'var(--text-main)' }}
@@ -1970,7 +2259,7 @@ function CloudOfficeSuiteModalContent({
 
               <button
                 type="button"
-                onClick={handleDownloadPDF}
+                onClick={handlePrint}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                 style={{ color: 'var(--text-main)' }}
                 title={t('office.print') || "Imprimer le document"}
@@ -2254,25 +2543,70 @@ function CloudOfficeSuiteModalContent({
                 <RemoveFormatting size={14} />
               </button>
 
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={handleDownloadMarkdown}
-                style={{
-                  border: '1px solid #CBD5E1',
-                  borderRadius: '6px',
-                  padding: '3px 7px',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  marginLeft: 'auto',
-                }}
-                title={t('office.export_md') || "Exporter en Markdown (.md)"}
-              >
-                Export .md
-              </button>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleDownloadPDF}
+                  style={{
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    padding: '3px 8px',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title={t('office.export_pdf') || "Exporter en PDF imprimable"}
+                >
+                  <Download size={11} />
+                  <span>PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleDownloadDOCX}
+                  style={{
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    padding: '3px 8px',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title={t('office.export_docx') || "Exporter au format Word (.docx)"}
+                >
+                  <Download size={11} />
+                  <span>DOCX</span>
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleDownloadMarkdown}
+                  style={{
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    padding: '3px 7px',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-secondary)',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                  }}
+                  title={t('office.export_md') || "Exporter en Markdown (.md)"}
+                >
+                  Export .md
+                </button>
+              </div>
             </div>
           )}
 
@@ -2398,7 +2732,50 @@ function CloudOfficeSuiteModalContent({
                     outline: 'none',
                   }}
                 />
-                <button type="button" onClick={handleDownloadCSV} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '5px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Export .csv</button>
+                <button
+                  type="button"
+                  onClick={handleDownloadXLSX}
+                  className="premium-button"
+                  style={{
+                    border: '1px solid #10B981',
+                    borderRadius: '6px',
+                    padding: '5px 10px',
+                    backgroundColor: '#10B981',
+                    color: '#FFFFFF',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title={t('office.export_xlsx') || "Exporter au format Excel (.xlsx)"}
+                >
+                  <Download size={11} />
+                  <span>Export .xlsx</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadCSV}
+                  className="premium-button"
+                  style={{
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    padding: '5px 8px',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title={t('office.export_csv') || "Exporter en CSV"}
+                >
+                  <Download size={11} />
+                  <span>Export .csv</span>
+                </button>
               </div>
 
               {/* GRILLE TABLEUR EXCEL INTERACTIVE AVEC COLONNES & LIGNES DYNAMIQUES */}
@@ -2792,6 +3169,31 @@ function CloudOfficeSuiteModalContent({
                       >
                         <ImageIcon size={13} />
                         <span>{isUploadingImage ? 'Envoi...' : '➕ Image'}</span>
+                      </button>
+
+                      {/* BOUTON D'EXPORTATION PDF PAYSAGE */}
+                      <button
+                        type="button"
+                        onClick={handleDownloadSlidesPDF}
+                        className="premium-button"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 10px',
+                          backgroundColor: '#C67D5B',
+                          color: '#FFFFFF',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title={t('office.export_slides_pdf') || "Exporter en PDF paysage"}
+                      >
+                        <Download size={13} />
+                        <span>Export PDF</span>
                       </button>
                     </div>
                   </div>

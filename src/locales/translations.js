@@ -40,6 +40,13 @@ export const translations = {
     "office.menu_italic": "Italique",
     "office.menu_underline": "Souligné",
     "office.menu_word_count": "Statistiques & Mots",
+    "office.export_pdf": "Exporter en PDF imprimable",
+    "office.export_slides_pdf": "Exporter en PDF paysage",
+    "office.export_docx": "Exporter au format Word (.docx)",
+    "office.export_xlsx": "Exporter au format Excel (.xlsx)",
+    "office.export_csv": "Exporter en CSV",
+    "office.export_pptx": "Exporter au format PowerPoint (.pptx)",
+    "office.export_md": "Exporter la note en Markdown (.md)",
 
     // ---- WORKSPACE KEYS (FR) ----
     "workspace.workspace_premium": "WORKSPACE PREMIUM",
@@ -819,6 +826,13 @@ export const translations = {
     "office.menu_italic": "Italic",
     "office.menu_underline": "Underline",
     "office.menu_word_count": "Word Count & Stats",
+    "office.export_pdf": "Export as printable PDF",
+    "office.export_slides_pdf": "Export as landscape PDF",
+    "office.export_docx": "Export as Word document (.docx)",
+    "office.export_xlsx": "Export as Excel spreadsheet (.xlsx)",
+    "office.export_csv": "Export as CSV",
+    "office.export_pptx": "Export as PowerPoint (.pptx)",
+    "office.export_md": "Export note as Markdown (.md)",
 
     // ---- WORKSPACE KEYS (EN) ----
     "workspace.workspace_premium": "WORKSPACE PREMIUM",
@@ -1598,6 +1612,13 @@ export const translations = {
     "office.menu_italic": "Cursiva",
     "office.menu_underline": "Subrayado",
     "office.menu_word_count": "Conteo de palabras",
+    "office.export_pdf": "Exportar como PDF imprimible",
+    "office.export_slides_pdf": "Exportar como PDF horizontal",
+    "office.export_docx": "Exportar en formato Word (.docx)",
+    "office.export_xlsx": "Exportar en formato Excel (.xlsx)",
+    "office.export_csv": "Exportar en CSV",
+    "office.export_pptx": "Exportar en PowerPoint (.pptx)",
+    "office.export_md": "Exportar nota en Markdown (.md)",
 
     // ---- WORKSPACE KEYS (ES) ----
     "workspace.workspace_premium": "WORKSPACE PREMIUM",
@@ -2377,6 +2398,13 @@ export const translations = {
     "office.menu_italic": "Corsivo",
     "office.menu_underline": "Sottolineato",
     "office.menu_word_count": "Conteggio parole",
+    "office.export_pdf": "Esporta come PDF stampabile",
+    "office.export_slides_pdf": "Esporta come PDF orizzontale",
+    "office.export_docx": "Esporta in formato Word (.docx)",
+    "office.export_xlsx": "Esporta in formato Excel (.xlsx)",
+    "office.export_csv": "Esporta in CSV",
+    "office.export_pptx": "Esporta in PowerPoint (.pptx)",
+    "office.export_md": "Esporta nota in Markdown (.md)",
 
     // ---- WORKSPACE KEYS (IT) ----
     "workspace.workspace_premium": "WORKSPACE PREMIUM",
@@ -3156,6 +3184,13 @@ export const translations = {
     "office.menu_italic": "Kursiv",
     "office.menu_underline": "Unterstrichen",
     "office.menu_word_count": "Wortzählung",
+    "office.export_pdf": "Als druckbares PDF exportieren",
+    "office.export_slides_pdf": "Als Querformat-PDF exportieren",
+    "office.export_docx": "Im Word-Format (.docx) exportieren",
+    "office.export_xlsx": "Im Excel-Format (.xlsx) exportieren",
+    "office.export_csv": "Als CSV exportieren",
+    "office.export_pptx": "Als PowerPoint (.pptx) exportieren",
+    "office.export_md": "Notiz als Markdown (.md) exportieren",
 
     // ---- WORKSPACE KEYS (DE) ----
     "workspace.workspace_premium": "WORKSPACE PREMIUM",
@@ -3937,6 +3972,13 @@ export const translations = {
     "office.menu_italic": "斜体",
     "office.menu_underline": "下線",
     "office.menu_word_count": "文字数カウント",
+    "office.export_pdf": "印刷可能PDFとしてエクスポート",
+    "office.export_slides_pdf": "横向きPDFとしてエクスポート",
+    "office.export_docx": "Word形式(.docx)でエクスポート",
+    "office.export_xlsx": "Excel形式(.xlsx)でエクスポート",
+    "office.export_csv": "CSVとしてエクスポート",
+    "office.export_pptx": "PowerPoint形式(.pptx)でエクスポート",
+    "office.export_md": "Markdown(.md)としてエクスポート",
 
     // ---- WORKSPACE KEYS (JA) ----
     "workspace.workspace_premium": "WORKSPACE PREMIUM",
@@ -4716,6 +4758,13 @@ export const translations = {
     "office.menu_italic": "斜体",
     "office.menu_underline": "下划线",
     "office.menu_word_count": "字数统计",
+    "office.export_pdf": "导出为可打印 PDF",
+    "office.export_slides_pdf": "导出为横向 PDF",
+    "office.export_docx": "导出为 Word 格式 (.docx)",
+    "office.export_xlsx": "导出为 Excel 格式 (.xlsx)",
+    "office.export_csv": "导出为 CSV",
+    "office.export_pptx": "导出为 PowerPoint (.pptx)",
+    "office.export_md": "导出便签为 Markdown (.md)",
 
     // ---- WORKSPACE KEYS (ZH) ----
     "workspace.workspace_premium": "工作区高级版",

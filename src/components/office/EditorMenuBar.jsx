@@ -109,6 +109,15 @@ export default function EditorMenuBar({
             action: () => triggerAction('export-xlsx'),
           }
         ] : []),
+        ...(activeTab === 'slides' ? [
+          {
+            id: 'export-slides-pdf',
+            label: t('office.export_slides_pdf') || 'Exporter en PDF paysage',
+            icon: Download,
+            shortcut: '.pdf',
+            action: () => triggerAction('export-slides-pdf'),
+          }
+        ] : []),
         {
           id: 'print',
           label: t('office.print') || 'Imprimer / Exporter PDF',

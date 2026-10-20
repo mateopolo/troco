@@ -732,6 +732,7 @@ export const translations = {
     "office.share_title": "Partager au chat",
     "office.download": "Télécharger",
     "office.export_pdf": "Exporter en PDF imprimable",
+    "office.export_slides_pdf": "Exporter en PDF paysage",
     "office.export_docx": "Exporter au format Word (.docx)",
     "office.export_xlsx": "Exporter au format Excel (.xlsx)",
     "office.export_csv": "Exporter en CSV",
