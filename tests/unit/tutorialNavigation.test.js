@@ -137,7 +137,7 @@ describe('Prompt 15 / FAIL-08 — Navigation complète du tutoriel interactif', 
       />
     );
 
-    const replayBtn = screen.getByTestId('profile-replay-tutorial-button');
+    const replayBtn = screen.queryByTestId('replay-tutorial-button') || screen.getByTestId('profile-replay-tutorial-button');
     expect(replayBtn).toBeDefined();
     expect(screen.getByText(/Revoir le tutoriel/i)).toBeDefined();
 

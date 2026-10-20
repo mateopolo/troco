@@ -2303,6 +2303,11 @@ export default function App() {
       ? (portfolioImages && portfolioImages.length > 0 ? portfolioImages : (profile?.portfolioImages || profile?.portfolio || []))
       : (listing.portfolio || listing.authorProfile?.portfolio || []);
 
+    if (!listing) return null;
+    const authorWallet = isCurrentUser
+      ? { euros: Number(profile?.euroBalance || 0), tokens: Number(profile?.trocoTokens || 0) }
+      : (listing.wallet || { euros: 0, tokens: 0 });
+
     const generic = {
       id: listing.id,
       isBoosted: listing.isBoosted || false,
@@ -2311,7 +2316,7 @@ export default function App() {
       image: media.image,
       video: media.video,
       gallery: media.gallery,
-      wallet: listing.wallet || { euros: 0, tokens: 0 },
+      wallet: listing.wallet || authorWallet,
       tags: generateTags(listing.title, listing.description || ''),
       compensation: listing.compensation,
       nativeLang: listing.nativeLang || 'FR',
@@ -2325,6 +2330,7 @@ export default function App() {
         socials: isCurrentUser ? (profile.socials || []) : ['LinkedIn', 'Instagram'],
         portfolio: authorPortfolio,
         reviews: authorReviews,
+        wallet: authorWallet,
       },
     };
 

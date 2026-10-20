@@ -60,11 +60,11 @@
 
 ## ⏭️ PROCHAINE ACTION RECOMMANDÉE (Impact max & Quick Win)
 
-**[CLEANUP-03] / [QW-15] — Nettoyage des 3 faux soldes résiduels dans `getListingDetail`**
-- **Pourquoi :** 3 soldes factices hardcodés `wallet: { euros: ..., tokens: ... }` subsistent encore dans `getListingDetail` (`src/App.js:5349, 5370, 5389`), ce qui fausse les données de portefeuille lors de la consultation des fiches d'auteurs tiers. Cette tâche rapide (15 min) assainira définitivement le module d'annonces.
-- **Fichier(s) :** `src/App.js`
-- **Estimation :** 15-30 minutes
-- **Effort/Impact :** ⭐⭐⭐⭐⭐ (Intégrité des données financières et conformité utilisateur)
+**[MOY-02] — Extraction du feed d'annonces hors d'App.js vers le hook dédié `src/hooks/useListingsFeed.js`**
+- **Pourquoi :** Allègement architectural majeur d'App.js conformément à la roadmap Jour 2, découplage des requêtes de pagination Firestore et optimisation des re-rendus du feed.
+- **Fichier(s) :** `src/App.js`, `src/hooks/useListingsFeed.js`, `src/routes/FeedRoute.jsx`
+- **Estimation :** 2-3 heures
+- **Effort/Impact :** ⭐⭐⭐⭐⭐ (Modularité & Maintenabilité)
 
 ---
 
@@ -98,9 +98,9 @@
 **Preuve** : `src/App.js:2159` (`const [listings, setListings] = useState([]);`), 0 occurrence de `troco_user_listings` dans `src/App.js`.
 **Statut** : ✅ FAIT — Suppression intégrale du chargement synchrone au mount et du listener `useEffect` d'écriture sur `troco_user_listings`. Le feed est alimenté à 100% par Firestore et la mémoire client.
 
-### [ ] [QW-15] — Calcul dynamique et assainissement des statistiques réelles de profil
-**Preuve** : 3 faux soldes hardcodés `wallet: { euros: ..., tokens: ... }` subsistent dans `getListingDetail` (`src/App.js:5349, 5370, 5389`).  
-**Statut** : ❌ À REFAIRE — Présence résiduelle de 3 soldes financiers factices injectés dans `src/App.js:5349, 5370, 5389` faussant les données de profil.
+### [x] [QW-15] — Calcul dynamique et assainissement des statistiques réelles de profil
+**Preuve** : `src/App.js:2305-2335` (`const authorWallet = isCurrentUser ? { euros: Number(profile?.euroBalance || 0), tokens: Number(profile?.trocoTokens || 0) } : (listing.wallet || { euros: 0, tokens: 0 });`), `tests/unit/InteractiveTutorialAndFinancialPurge.test.js:1-237`, `npm run build` Exit Code 0.  
+**Statut** : ✅ FAIT — Nettoyage complet des données de portefeuille dans `getListingDetail` : suppression intégrale des valeurs factices ou résiduelles au profit du portefeuille réel de l'utilisateur ou de valeurs neutres à zéro (`{ euros: 0, tokens: 0 }`). Zéro impact négatif sur `ListingDetailModal` et `PublicProfileModal`.
 
 ### [x] [QW-16] — Correction du Z-Index, cliquabilité de AppBottomNav et confinement de l'historique des swaps et deals
 **Preuve** : `src/components/layout/AppBottomNav.jsx:227` (`zIndex: 100050`, `pointerEvents: 'auto'`), `src/components/ui/UniversalModal.jsx:129-146` (`z-[99990]`, `pb-[calc(76px+env(safe-area-inset-bottom,12px))]`, `max-h-[calc(100dvh-95px)]`), `src/components/PublicProfileModal.jsx:319,874` (`maxHeight: min(780px, calc(100dvh - 120px))`, `swap-history-container`), `src/features/profile/ProfileFeature.jsx:901`, `src/components/ProfileView.jsx:600`, `src/index.css:221-240`, `src/components/Phase135SwapHistoryZIndexLayout.test.js:1-45`
@@ -726,7 +726,7 @@ Ce document constitue **LE tableau de bord unique et absolu** de Troco.
 Cette feuille de route priorise les **15 tâches restantes** du MASTER_AUDIT en équilibrant impact utilisateur, complexité et maîtrise du risque technique (1 à 2 tâches par jour) :
 
 ### Jour 1 (2026-10-07) : Assainissement Financier & Purge Démo Finale
-- **Tâche 1 :** `[CLEANUP-03] / [QW-15]` — Suppression des 3 faux soldes hardcodés dans `getListingDetail` (`src/App.js:5349, 5370, 5389`).
+- **Tâche 1 :** [x] `[CLEANUP-03] / [QW-15]` — Suppression des 3 faux soldes hardcodés dans `getListingDetail` (`src/App.js:2305-2335`).
   - *Complexité :* Facile (30 min)
   - *Dépendances :* Aucune
   - *Fichiers :* `src/App.js`

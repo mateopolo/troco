@@ -1436,7 +1436,7 @@ function ProfileFeature({
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Sparkles size={16} color="var(--accent-primary)" /> {t('replayTutorial') || t('replayTutorialButton', 'Revoir le tutoriel')}
+              <Sparkles size={16} color="var(--accent-primary)" /> {t('replayTutorial', t('replayTutorialButton', 'Revoir le tutoriel'))}
             </span>
             <ChevronRight size={16} color="var(--accent-primary)" />
           </button>

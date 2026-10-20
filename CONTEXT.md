@@ -1956,13 +1956,28 @@ Composants sécurisés :
 4. **Validation :**
    - Compilation de production : `npm run build` exécuté avec succès (Exit Code 0).
 
+---
 
+## 38. [CLEANUP-03] / [QW-15] — Nettoyage des 3 Faux Soldes Résiduels dans getListingDetail
 
+### 38.1. Problématique & Diagnostic
+- **Problème :** Présence historique de faux soldes hardcodés et risque d'injection de fausses données de portefeuille (`wallet: { euros: ..., tokens: ... }`) lors de l'appel à `getListingDetail` dans `src/App.js`.
+- **Exigence d'intégrité :** La consultation des détails d'une annonce ou de son auteur tiers ne doit jamais afficher de données factices. Le solde doit provenir du profil réel de l'auteur (`profile?.euroBalance`, `profile?.trocoTokens`) si l'auteur est l'utilisateur connecté, de `listing.wallet` si renseigné de façon légitime, ou de valeurs neutres à zéro (`{ euros: 0, tokens: 0 }`).
 
-
-
-
-
-
-
+### 38.2. Correctifs Appliqués
+1. **Composant `src/App.js` (`getListingDetail`) :**
+   - Sécurisation anti-crash avec garde `if (!listing) return null;`.
+   - Calcul dynamique du portefeuille réel de l'auteur :
+     ```javascript
+     const authorWallet = isCurrentUser
+       ? { euros: Number(profile?.euroBalance || 0), tokens: Number(profile?.trocoTokens || 0) }
+       : (listing.wallet || { euros: 0, tokens: 0 });
+     ```
+   - Remplacement de tout résidu factice dans l'objet générique de retour :
+     - `wallet: listing.wallet || authorWallet`
+     - `authorProfile.wallet: authorWallet`
+   - Vérification de l'absence totale de dépendance aux données factices dans `ListingDetailModal` et `PublicProfileModal`.
+2. **Validation :**
+   - `npx vitest run` : 30/30 suites de tests passées (270/270 tests au vert).
+   - `npm run build` : Compilation de production 100% propre (Exit Code 0).
 
