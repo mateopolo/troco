@@ -1,6 +1,6 @@
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { onCall } from 'firebase-functions/v2/https';
+import { onCall, onRequest } from 'firebase-functions/v2/https';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 
 // Initialisation unique du SDK Firebase Admin
@@ -22,11 +22,15 @@ import { handleUpdateUserAsAdmin } from './admin/updateUserAsAdmin';
 import { handleUserWriteSyncPublic } from './users/onUserWriteSyncPublic';
 import { handleMigrateUsersPublic } from './users/migrateUsersPublic';
 
-// Handlers paiements & transferts
+// Handlers paiements & transferts (Stripe Connect & Mock Fallback)
 import { handleApplyPayment } from './payments/applyPayment';
 import { handleClaimBonus } from './payments/claimBonus';
 import { handleTransferAtomically } from './payments/transferAtomically';
 import { createCleanupIdempotency } from './payments/cleanupIdempotency';
+import { handleCreatePaymentIntent } from './payments/createPaymentIntent';
+import { handleCreateConnectedAccount } from './payments/createConnectedAccount';
+import { handleTransferFunds } from './payments/transferFunds';
+import { handleStripeWebhook } from './payments/stripeWebhook';
 
 // Handlers conformité RGPD (Suppression & Rétractation)
 import { handleDeleteUserCompletely } from './gdpr/deleteUserCompletely';
@@ -207,4 +211,61 @@ export const getCurrencyFromIP = onCall(
     return handleGetCurrencyFromIP(request, db);
   }
 );
+
+/**
+ * 💳 Cloud Function 21 : createPaymentIntent (Callable)
+ * Création d'intention de paiement ou session Stripe Checkout avec fallback mockProvider.
+ */
+export const createPaymentIntent = onCall(
+  {
+    region: 'europe-west1',
+    cors: true,
+  },
+  async (request) => {
+    return handleCreatePaymentIntent(request, db);
+  }
+);
+
+/**
+ * 🤝 Cloud Function 22 : createConnectedAccount (Callable)
+ * Onboarding vendeur Stripe Connect Express avec fallback mockProvider.
+ */
+export const createConnectedAccount = onCall(
+  {
+    region: 'europe-west1',
+    cors: true,
+  },
+  async (request) => {
+    return handleCreateConnectedAccount(request, db);
+  }
+);
+
+/**
+ * 💸 Cloud Function 23 : transferFunds (Callable)
+ * Virement direct Stripe Connect Express vers un compte connecté avec fallback mockProvider.
+ */
+export const transferFunds = onCall(
+  {
+    region: 'europe-west1',
+    cors: true,
+  },
+  async (request) => {
+    return handleTransferFunds(request, db);
+  }
+);
+
+/**
+ * 🪝 Cloud Function 24 : stripeWebhook (HTTP)
+ * Écoute et validation cryptographique des webhooks Stripe (checkout.session.completed, etc.).
+ */
+export const stripeWebhook = onRequest(
+  {
+    region: 'europe-west1',
+    cors: true,
+  },
+  async (req, res) => {
+    return handleStripeWebhook(req, res, db);
+  }
+);
+
 

@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 9.4/10 | **Progression :** 67 / 75 tâches validées avec preuves formelles (89.3%)
+> **Score global :** 9.4/10 | **Progression :** 68 / 75 tâches validées avec preuves formelles (90.7%)
 
 ---
 
@@ -24,9 +24,9 @@
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 30 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 20 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 15 | 0 | 100% |
-| 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 9 | 1 | 90.0% |
+| 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 10 | 0 | 100% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
-| **TOTAL** | **67** | **8** | **89.3%** |
+| **TOTAL** | **68** | **7** | **90.7%** |
 
 
 ### Score par axe vs cible Licorne
@@ -506,11 +506,11 @@
 
 ---
 
-### [ ] [DIF-01] — Intégration PSP réelle (Stripe Connect Express / Adyen for Platforms)
-**Statut** : ❌ À FAIRE  
-**Fichier** : `functions/src/payments/providers/stripeProvider.ts`, `src/services/paymentService.js`  
+### [x] [DIF-01] — Intégration PSP réelle (Stripe Connect Express / Adyen for Platforms)
+**Statut** : ✅ RÉALISÉ  
+**Fichier** : `functions/src/payments/providers/stripeProvider.ts`, `functions/src/payments/createPaymentIntent.ts`, `functions/src/payments/createConnectedAccount.ts`, `functions/src/payments/transferFunds.ts`, `functions/src/payments/stripeWebhook.ts`, `src/services/paymentService.js`, `CONTEXT.md` (Section 46)  
 **Estimation** : 3 jours  
-**Impact** : Remplacement du `mockProvider.ts` pour permettre des recharges et retraits bancaires réels et légaux (conformité DSP2).
+**Impact** : Remplacement du `mockProvider.ts` par le provider réel Stripe Connect Express (`stripeProvider.ts`) avec fallback automatique, routage dynamique si `STRIPE_SECRET_KEY` est présente, support des sessions Stripe Checkout avec redirection client, écoute temps réel des webhooks cryptographiques (`stripeWebhook`), 14 tests Cloud Functions et 6 tests client validés.
 
 ### [ ] [DIF-02] — Intégration d'un provider KYC certifié (Stripe Identity / Onfido)
 **Statut** : ❌ À FAIRE  

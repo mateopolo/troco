@@ -2337,6 +2337,55 @@ Pour basculer la protection App Check en mode bloquant strict ("Enforced") sans 
 - **`npx vitest run` :** 37/37 fichiers de tests passés, **332/332 tests validés avec succès (100% au vert)**.
 - **`npm run build` :** **Exit Code 0**, bundle de production optimisé généré sans avertissement ni régression.
 
+---
+
+## 46. PROMPT 10 / DIF-01 — Intégration PSP Réelle Stripe Connect Express
+
+### 46.1. Problématique & Spécification
+- **Tâche :** `[DIF-01]` — Intégration PSP réelle Stripe Connect Express (remplacement du `mockProvider`).
+- **Enjeu :** Éliminer la dépendance aux paiements factices/simulés en intégrant un Prestataire de Services de Paiement (PSP) régulé et certifié pour traiter les flux financiers réels (recharges de portefeuille, abonnements Troco Plus, boosts d'annonces, séquestre d'escrow et virements aux vendeurs) dans le respect strict de la directive européenne **DSP2** (authentification forte 3D-Secure 2, cantonnement des fonds de tiers).
+
+### 46.2. Architecture Serveur & Cloud Functions
+1. **Fournisseur `StripeProvider` (`functions/src/payments/providers/stripeProvider.ts`) :**
+   - Initialisation sécurisée via `process.env.STRIPE_SECRET_KEY`.
+   - Implémentation complète de l'interface `PaymentProvider` avec :
+     - `createConnectedAccount(params)` : Génération de comptes connectés Express (`type: 'express'`, pays France/Europe, `card_payments` et `transfers` activés) et génération de liens d'onboarding (`stripe.accountLinks.create`).
+     - `createPaymentIntent(params)` : Création de `PaymentIntent` direct ou de sessions Stripe Checkout hébergées (`stripe.checkout.sessions.create`) avec conversion centimes et support `transfer_data.destination` pour les vendeurs connectés.
+     - `transferFunds(params)` : Virement direct vers les comptes connectés (`stripe.transfers.create`) pour la libération d'escrow ou les retraits bancaires.
+     - `verifyPayment(paymentIntentId)` : Récupération et vérification en temps réel du statut auprès de l'API Stripe avec cartographie (`succeeded`, `failed`, `pending`).
+     - `constructWebhookEvent(rawBody, signature, secret)` : Validation cryptographique des signatures HMAC de webhooks.
+   - **Résilience & Fallback Mock :** Si aucune clé `STRIPE_SECRET_KEY` n'est configurée ou en environnement de développement local, bascule transparente sur des identifiants mock (`pi_mock_*`, `acct_mock_*`, `tr_mock_*`) pour préserver l'autonomie des développeurs et les suites de tests CI.
+2. **Routage Dynamique (`functions/src/payments/providers/index.ts`) :**
+   - Fonction `getProvider()` évaluant les variables `PAYMENT_PROVIDER` et `STRIPE_SECRET_KEY`. Si la clé secrète est présente et que `PAYMENT_PROVIDER !== 'mock'`, le provider `stripeProvider` est automatiquement sélectionné.
+3. **Cloud Functions Déployées (`functions/src/index.ts`) :**
+   - `createPaymentIntent` (Callable v2, région `europe-west1`, CORS) : Initialisation sécurisée de sessions de paiement avec enregistrement d'audit Cloud Logging.
+   - `createConnectedAccount` (Callable v2, région `europe-west1`, CORS) : Création et liaison d'un compte vendeur Stripe Connect avec mise à jour du profil Firestore `users/{uid}`.
+   - `transferFunds` (Callable v2, région `europe-west1`, CORS) : Déclenchement de virements vers comptes connectés.
+   - `stripeWebhook` (HTTP onRequest v2, région `europe-west1`) : Écouteur temps réel des événements Stripe (`checkout.session.completed`, `payment_intent.succeeded`, `account.updated`), validation de signature cryptographique et verrou d'idempotence 24h sur `idempotency_keys/webhook_{id}`.
+
+### 46.3. Architecture Client (`src/services/paymentService.js`)
+1. **Création de Session Checkout & Redirection :**
+   - Méthode `createCheckoutSession({ mode, amount, tokens, currency, listingId, boostDays, successUrl, cancelUrl, redirect })`.
+   - Invoque la Cloud Function `createPaymentIntent` avec les métadonnées de transaction.
+   - Gère la redirection automatique du navigateur vers `data.checkoutUrl` (Stripe Checkout) si `redirect !== false`.
+2. **Écoute Temps Réel du Webhook :**
+   - Méthode `listenToPaymentSuccess({ paymentIntentId, sessionId, timeoutMs, onUpdate })`.
+   - Place un écouteur `onSnapshot` Firestore sur la collection `/transactions` filtrée par identifiant de session ou de payment intent.
+   - Résout la promesse dès réception de l'événement validé par le webhook (`status: 'completed'`), avec désabonnement propre et temporisateur de timeout.
+3. **Onboarding Vendeur Connecté :**
+   - Méthode `createConnectedAccount({ email, country, returnUrl, refreshUrl, redirect })`.
+   - Redirige automatiquement le vendeur vers le portail d'onboarding Stripe Connect Express.
+4. **Intégrité Financière & Idempotence :**
+   - Maintien du verrou anti-rejeu en mémoire `processedTransactions` et de la persistance atomique Firestore (Option A).
+
+### 46.4. Validation Formelle
+- **Tests Cloud Functions (`functions/test/stripeProvider.test.ts`) :** **14/14 tests passés au vert**.
+- **Tests Client (`tests/unit/stripePaymentService.test.js`) :** **6/6 tests passés au vert**.
+- **Suite Complète (`npx vitest run`) :** **39/39 fichiers de tests passés, 352/352 tests validés avec succès (100% au vert)**.
+- **Compilation TypeScript Backend (`functions/`) :** `tsc` sans aucune erreur (Exit Code 0).
+- **Compilation Production Frontend :** `npm run build` → **Exit Code 0**, bundle prêt pour le déploiement.
+
+
 
 
 

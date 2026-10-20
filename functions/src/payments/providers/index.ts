@@ -1,18 +1,21 @@
 import { PaymentProvider, mockProvider } from './mockProvider';
+import { stripeProvider } from './stripeProvider';
 
 export * from './mockProvider';
+export * from './stripeProvider';
 
 /**
  * Retourne le fournisseur de paiement configuré.
- * Par défaut en dev : mockProvider.
+ * Si process.env.STRIPE_SECRET_KEY est présente ou si PAYMENT_PROVIDER === 'stripe',
+ * retourne stripeProvider. Fallback automatique sur mockProvider.
  */
 export function getProvider(): PaymentProvider {
-  const configured = process.env.PAYMENT_PROVIDER || 'mock';
+  const configured = (process.env.PAYMENT_PROVIDER || '').toLowerCase();
+  const hasStripeKey = Boolean(process.env.STRIPE_SECRET_KEY);
 
-  if (configured === 'mock') {
-    return mockProvider;
+  if (configured === 'stripe' || (hasStripeKey && configured !== 'mock')) {
+    return stripeProvider;
   }
 
-  // Support extensible pour les providers de production (ex: Stripe)
   return mockProvider;
 }
