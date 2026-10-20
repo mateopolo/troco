@@ -22,6 +22,7 @@ import AppOverlays from './components/AppOverlays';
 import FeedInteractions from './components/FeedInteractions';
 import ModalOrchestrator from './components/ModalOrchestrator';
 import { useDealActions } from './hooks/useDealActions';
+import { useTransactionNotifications } from './hooks/useTransactionNotifications';
 import { useUserReporting } from './hooks/useUserReporting';
 import { useFeedStore } from './stores/useFeedStore';
 import TrocoLogoNativeSvg from './components/common/TrocoLogoNativeSvg';
@@ -325,8 +326,6 @@ export default function App() {
     setIsCguViewerOpen,
     isBoostModalOpen,
     setIsBoostModalOpen,
-    topUpCelebration,
-    setTopUpCelebration,
   } = ui;
 
   // Extraction de la gestion des signalements utilisateurs et annonces (useUserReporting)
@@ -458,8 +457,6 @@ export default function App() {
       window.localStorage?.getItem('troco_cgu_dismissed') === 'true')
   );
 
-  const [userTransactions, setUserTransactions] = useState([]);
-
   // Nettoyage données démo au démarrage (RGPD / conformité)
   useEffect(() => {
     migrateLocalStorage();
@@ -491,97 +488,23 @@ export default function App() {
     } catch (_) { }
   }, []);
 
-  // Écoute temps réel des transactions de l'utilisateur sur Firestore
-  useEffect(() => {
-    const uid = profile?.uid || auth.currentUser?.uid;
-    if (!uid) return;
-    useFeedStore.getState().loadSavedFilters(uid);
-    try {
-      const qTx = query(
-        collection(db, 'transactions'),
-        where('userId', '==', uid),
-        orderBy('createdAt', 'desc')
-      );
-      const unsub = onSnapshot(qTx, (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-          setUserTransactions(list);
-          try {
-            storage.setDebounced('troco_user_transactions', list);
-          } catch (e) { }
-        }
-      }, (err) => logger.warn('[Firestore] Transactions listener:', err));
-      return () => unsub();
-    } catch (e) {
-      logger.warn('Transactions listener error:', e);
-    }
-  }, [profile?.uid]);
-
-  // ---- MODALE DE CONFIRMATION DE TRANSACTION FINTECH IMMERSIVE ----
-  const [transactionSuccessModalConfig, setTransactionSuccessModalConfig] = useState({
-    isOpen: false,
-    type: 'sent', // 'sent' | 'received'
-    amount: 1,
-    currency: 'tokens', // 'tokens' | 'fiat'
-    partnerName: '',
-    notificationId: null,
+  // ---- GESTION DES NOTIFICATIONS TRANSACTIONNELLES & CELEBRATIONS [MOY-04] ----
+  const {
+    userTransactions,
+    setUserTransactions,
+    transactionSuccessModalConfig,
+    setTransactionSuccessModalConfig,
+    handleCloseTransactionSuccessModal,
+    topUpCelebration,
+    setTopUpCelebration,
+    notifyTransactionSuccess,
+    triggerCelebrationToast,
+  } = useTransactionNotifications({
+    profile,
+    authInstance: auth,
+    dbInstance: db,
+    safeTimeout,
   });
-
-  const handleCloseTransactionSuccessModal = useCallback(async () => {
-    const notifId = transactionSuccessModalConfig.notificationId;
-    const currentUid = profile?.uid || profile?.id || auth.currentUser?.uid;
-    if (notifId && currentUid && db) {
-      try {
-        const notifRef = doc(db, 'users', currentUid, 'notifications', notifId);
-        await updateDoc(notifRef, {
-          read: true,
-          readAt: serverTimestamp(),
-        });
-      } catch (err) {
-        logger.warn('Erreur marquage notification lue:', err);
-      }
-    }
-    setTransactionSuccessModalConfig(prev => ({ ...prev, isOpen: false, notificationId: null }));
-  }, [transactionSuccessModalConfig.notificationId, profile?.uid, profile?.id]);
-
-  // ---- DÉCLENCHEMENT GLOBAL DES NOTIFICATIONS (POUR LE RECEVEUR) ----
-  useEffect(() => {
-    const currentUid = profile?.uid || profile?.id || auth.currentUser?.uid;
-    if (!currentUid || !db) return;
-
-    try {
-      const notifsCol = collection(db, 'users', currentUid, 'notifications');
-      const qNotifs = query(notifsCol, where('read', '==', false));
-
-      const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
-        if (!snapshot.empty) {
-          snapshot.docChanges().forEach((change) => {
-            if (change.type === 'added' || change.type === 'modified') {
-              const notifData = change.doc.data();
-              const TOKEN_NOTIF_TYPES = ['payment_received', 'tokens_received'];
-              if (notifData && TOKEN_NOTIF_TYPES.includes(notifData.type) && notifData.read === false) {
-                const partner = notifData.fromName || notifData.senderName || notifData.userName || '';
-                setTransactionSuccessModalConfig({
-                  isOpen: true,
-                  type: 'received',
-                  amount: notifData.amount || 1,
-                  currency: notifData.currency === 'fiat' || notifData.currency === 'EUR' ? 'fiat' : 'tokens',
-                  partnerName: partner,
-                  notificationId: change.doc.id,
-                });
-              }
-            }
-          });
-        }
-      }, (err) => {
-        logger.warn('[Notifications] Erreur écoute notifications temps réel:', err);
-      });
-
-      return () => unsubNotifs();
-    } catch (e) {
-      logger.warn('[Notifications] Listener setup error:', e);
-    }
-  }, [profile?.uid, profile?.id]);
 
   // Handler d'ouverture du module de paiement
   const handleOpenPayment = useCallback((mode = 'pack-tokens', payload = null) => {
@@ -601,16 +524,7 @@ export default function App() {
     setActiveTab,
     setSelectedListing,
     setSaveMessage,
-    onTransactionSuccess: (config) => {
-      setTransactionSuccessModalConfig({
-        isOpen: true,
-        type: config.type || 'sent',
-        amount: config.amount,
-        currency: config.currency || 'tokens',
-        partnerName: config.partnerName || '',
-        notificationId: null,
-      });
-    },
+    onTransactionSuccess: notifyTransactionSuccess,
   });
 
   const {
@@ -917,25 +831,23 @@ export default function App() {
               // Détection de réception temps réel de jetons Troco (+X jetons) & Alerte sonore
               if (prevTokensRef.current !== null && newTokens !== null && newTokens > prevTokensRef.current) {
                 const gained = newTokens - prevTokensRef.current;
-                haptics.success();
-                playBetclicBalanceSound(true);
-                setTopUpCelebration({
+                triggerCelebrationToast({
                   title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
                   subtitle: `Nouveau solde : ${newTokens} Jetons Troco`,
+                  currency: 'tokens',
+                  playSound: true,
                 });
-                safeTimeout(() => setTopUpCelebration(null), 4500);
               }
 
               // Détection de réception temps réel d'euros & Alerte sonore
               if (prevEurosRef.current !== null && newEuros !== null && newEuros > prevEurosRef.current) {
                 const gained = (newEuros - prevEurosRef.current).toFixed(2);
-                haptics.success();
-                playApplePaySound();
-                setTopUpCelebration({
+                triggerCelebrationToast({
                   title: `+${gained} € reçus sur votre solde ! 💳`,
                   subtitle: `Nouveau solde : ${Number(newEuros).toFixed(2)} €`,
+                  currency: 'fiat',
+                  playSound: true,
                 });
-                safeTimeout(() => setTopUpCelebration(null), 4500);
               }
             }
 
@@ -1114,7 +1026,7 @@ export default function App() {
       if (unsubDoc) unsubDoc();
       unsubscribeAuth();
     };
-  }, [safeTimeout, setBannedReason, setIsAuthResolved, setIsAuthenticated, setIsLoadingSession, setIsUserBanned, setProfile, setSelectedChat, setSelectedListing, setTopUpCelebration]);
+  }, [safeTimeout, setBannedReason, setIsAuthResolved, setIsAuthenticated, setIsLoadingSession, setIsUserBanned, setProfile, setSelectedChat, setSelectedListing, triggerCelebrationToast]);
 
   // ---- ÉCOUTE ET RÉACTUALISATION EN TEMPS RÉEL DES TRADUCTIONS DYNAMIQUES ----
   const [translationRevision, setTranslationRevision] = useState(0);

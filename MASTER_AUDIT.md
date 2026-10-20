@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 9.3/10 | **Progression :** 62 / 75 tâches validées avec preuves formelles (82.7%)
+> **Score global :** 9.4/10 | **Progression :** 63 / 75 tâches validées avec preuves formelles (84.0%)
 
 ---
 
@@ -23,10 +23,10 @@
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 30 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 20 | 0 | 100% |
-| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 11 | 4 | 73.3% |
+| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 12 | 3 | 80.0% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 8 | 2 | 80.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
-| **TOTAL** | **62** | **13** | **82.7%** |
+| **TOTAL** | **63** | **12** | **84.0%** |
 
 
 ### Score par axe vs cible Licorne
@@ -464,11 +464,11 @@
 **Estimation** : 4h  
 **Impact** : Encapsule la tarification à la minute et la modale de bilan visio dans un module indépendant.
 
-### [ ] [MOY-04] — Extraction des notifications transactionnelles vers `useTransactionNotifications.js`
-**Statut** : ❌ À FAIRE  
+### [x] [MOY-04] — Extraction des notifications transactionnelles vers `useTransactionNotifications.js`
+**Statut** : ✅ RÉALISÉ (`src/hooks/useTransactionNotifications.js`, `src/App.js:490-510,1029`, re-export dans `src/hooks/useNotifications.js`, suite unitaire: `tests/unit/useTransactionNotifications.test.js`)  
 **Fichier** : `src/hooks/useTransactionNotifications.js`, `src/App.js`  
 **Estimation** : 4h  
-**Impact** : Élimine la dette technique de gestion d'alertes sonores et de bannières dans le composant racine.
+**Impact** : Déplace toute la logique d'alerte sonore (`audioService`), retour haptique, toast de célébration (`topUpCelebration`) et modale de succès transactionnel (`transactionSuccessModalConfig`, `handleCloseTransactionSuccessModal`) vers un hook spécialisé. Allège `App.js` et connecte automatiquement les alertes aux réceptions de jetons/paiements Firestore.
 
 ### [ ] [MOY-05] — Widget réengagement "Mes deals en cours" en tête du Feed
 **Statut** : ❌ À FAIRE  

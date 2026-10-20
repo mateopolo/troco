@@ -2071,5 +2071,58 @@ Composants sécurisés :
 - **`npx vitest run` :** 32/32 fichiers de tests au vert, **288/288 tests passés avec succès** (0 échec).
 - **`npm run build` :** **Exit Code 0**, compilation de production réussie avec bundle optimisé.
 
+---
+
+## 41. [MOY-04] — Extraction des Notifications Transactionnelles vers `useTransactionNotifications.js`
+
+### 41.1. Problématique & Diagnostic
+- **Tâche :** `[MOY-04]` — Extraction de la logique d'alerte sonore (`audioService`), de bannière de succès / célébration (`topUpCelebration`) et de modale de confirmation transactionnelle (`TransactionSuccessModal`) depuis `App.js` vers le hook modulaire `src/hooks/useTransactionNotifications.js`.
+- **Diagnostic :**
+  1. `App.js` concentrait plus de 120 lignes de code d'écoute Firestore redondant (`userTransactions`, listener sur `collection(db, 'transactions')` avec filtres `userId`), de duplication de variables d'état (double déclaration de `userTransactions`), d'effets secondaires et de gestion de modale (`transactionSuccessModalConfig`, `handleCloseTransactionSuccessModal`).
+  2. La détection des paiements et jetons reçus (`users/{uid}/notifications`) était traitée par un `useEffect` encombrant `App.js`, mêlant sons audio Betclic / Apple Pay, haptique, toast et mise à jour Firestore `updateDoc` du document de notification.
+  3. Les callbacks de succès de paiement et de transfert (notamment dans `useChatManager`) créaient des fonctions inline ad-hoc au lieu de s'appuyer sur un dispatcher universel réutilisable.
+
+### 41.2. Implémentation & Architecture
+
+1. **Création du hook dédié `src/hooks/useTransactionNotifications.js` :**
+   - **États encapsulés :**
+     - `userTransactions` : tableau synchronisé en temps réel avec la collection Firestore `transactions` (`where('userId', '==', uid)`, limité aux 20 dernières entrées).
+     - `transactionSuccessModalConfig` : configuration de la modale fintech immersive (`isOpen`, `type: 'sent'|'received'`, `amount`, `currency: 'tokens'|'fiat'`, `partnerName`, `notificationId`).
+     - `topUpCelebration` : toast d'animation au format Dynamic Island avec synchronisation bidirectionnelle vers `useUIStore`.
+   - **Fonctions exposées :**
+     - `triggerCelebrationToast({ title, subtitle, currency, playSound, duration })` : déclenche la bannière de célébration avec vibration haptique, lecture audio adaptée (`playApplePaySound` pour devises fiat, `playBetclicBalanceSound(true)` pour Jetons Troco) et auto-dismiss nettoyé proprement par timer.
+     - `notifyTransactionSuccess({ type, amount, currency, partnerName, notificationId, playSound, showToast, showModal })` : orchestrateur universel complet déclenchant son, vibration haptique, toast de célébration et ouverture de la modale de succès.
+     - `handleCloseTransactionSuccessModal()` : fermeture sécurisée de la modale avec marquage asynchrone automatique en base Firestore (`read: true, readAt: serverTimestamp()`) du document de notification concerné si `notificationId` est présent.
+   - **Écouteurs temps réel Firestore découplés :**
+     - Listener transactions (`where('userId', '==', uid)`).
+     - Listener notifications entrantes (`payment_received`, `tokens_received` avec `read == false`), déclenchant automatiquement `notifyTransactionSuccess` en cas d'encaissement temps réel.
+   - **Gestion mémoire Zero-Leak :**
+     - `celebrationTimeoutRef` nettoyé systématiquement au démontage du composant ou avant toute nouvelle célébration.
+
+2. **Rétrocompatibilité et aliases :**
+   - Mise à jour de `src/hooks/useNotifications.js` pour réexporter `useTransactionNotifications` comme alias officiel.
+
+3. **Allègement et nettoyage d'`App.js` :**
+   - Élimination des états dupliqués `userTransactions`, `transactionSuccessModalConfig` et de la closure `handleCloseTransactionSuccessModal`.
+   - Remplacement de l'alerte transactionnelle inline de `useChatManager` par l'injection directe de `onTransactionSuccess: notifyTransactionSuccess`.
+   - Nettoyage du détecteur de delta de balance (recharges de solde) avec appel direct à `triggerCelebrationToast`.
+   - Transmission propre des états et setters aux composants enfants via `ModalOrchestrator` et `AppModalsOrchestrator`.
+
+4. **Suite de tests unitaires dédiée (`tests/unit/useTransactionNotifications.test.js`) :**
+   - 9/9 tests unitaires validant :
+     - L'initialisation conforme des états par défaut.
+     - Le déclenchement et l'auto-dismiss de `triggerCelebrationToast`.
+     - La sélection du son Apple Pay pour les devises fiat (EUR, euros).
+     - La gestion des transactions jetons avec sons Betclic et vibrations haptiques.
+     - L'ouverture et la fermeture de la modale de succès.
+     - L'abonnement et le désabonnement propre du listener Firestore sur `transactions`.
+     - L'écoute des notifications reçues et le marquage automatique `read: true` via `updateDoc`.
+
+### 41.3. Validation Formelle
+- **`npx vitest run tests/unit/useTransactionNotifications.test.js` :** 9/9 tests validés au vert (100% pass).
+- **`npx vitest run` :** 33/33 fichiers de tests au vert, **297/297 tests passés avec succès** (0 échec).
+- **`npm run build` :** **Exit Code 0**, compilation de production réussie avec bundle optimisé.
+
+
 
 
