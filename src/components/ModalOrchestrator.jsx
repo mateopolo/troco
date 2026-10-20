@@ -182,6 +182,7 @@ function ModalOrchestrator({
         attachLocalStream={restProps.attachLocalStream}
         attachRemoteStream={restProps.attachRemoteStream}
         callDuration={restProps.callDuration}
+        callCost={restProps.callCost}
         formatCallTimer={restProps.formatCallTimer}
         settlementCallDuration={restProps.settlementCallDuration}
         setSettlementCallDuration={restProps.setSettlementCallDuration}

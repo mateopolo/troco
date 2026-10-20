@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 9.2/10 | **Progression :** 60 / 75 tâches validées avec preuves formelles (80.0%)
+> **Score global :** 9.2/10 | **Progression :** 61 / 75 tâches validées avec preuves formelles (81.3%)
 
 ---
 
@@ -23,10 +23,10 @@
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 30 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 20 | 0 | 100% |
-| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 9 | 6 | 60.0% |
+| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 10 | 5 | 66.7% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 8 | 2 | 80.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
-| **TOTAL** | **60** | **15** | **80.0%** |
+| **TOTAL** | **61** | **14** | **81.3%** |
 
 
 ### Score par axe vs cible Licorne
@@ -458,8 +458,8 @@
 **Estimation** : 5h  
 **Impact** : Allège `App.js` d'environ 400 lignes et isole la logique de pagination et de filtres.
 
-### [ ] [MOY-03] — Extraction du chronomètre d'appel vers `useCallTimer.js`
-**Statut** : ❌ À FAIRE  
+### [x] [MOY-03] — Extraction du chronomètre d'appel vers `useCallTimer.js`
+**Statut** : ✅ RÉALISÉ (`src/hooks/useCallTimer.js`, `src/App.js:1675-1695`, suite unitaire: `tests/unit/useCallTimer.test.js`)  
 **Fichier** : `src/hooks/useCallTimer.js`, `src/App.js:1730-1860`  
 **Estimation** : 4h  
 **Impact** : Encapsule la tarification à la minute et la modale de bilan visio dans un module indépendant.
@@ -740,7 +740,7 @@ Cette feuille de route priorise les **15 tâches restantes** du MASTER_AUDIT en 
   - *Complexité :* Moyen (3h)
   - *Dépendances :* `src/services/firestoreService.js`
   - *Fichiers :* `src/App.js`, `src/hooks/useListingsFeed.js`, `src/routes/FeedRoute.jsx`
-- **Tâche 2 :** `[MOY-03]` — Extraction du chronomètre d'appel WebRTC vers le hook `src/hooks/useCallTimer.js`.
+- **Tâche 2 :** [x] `[MOY-03]` — Extraction du chronomètre d'appel WebRTC vers le hook `src/hooks/useCallTimer.js` (`src/hooks/useCallTimer.js`, `src/App.js`).
   - *Complexité :* Facile / Moyen (1h30)
   - *Dépendances :* `useWebRTC.js`
   - *Fichiers :* `src/App.js`, `src/hooks/useCallTimer.js`, `src/features/call/WebRTCCallOverlay.jsx`

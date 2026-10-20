@@ -70,6 +70,7 @@ import { useCheckout } from './hooks/useCheckout';
 import { useRateLimit } from './hooks/useRateLimit';
 import { useSafeTimeout } from './hooks/useSafeTimeout';
 import { useFirestoreHealth } from './hooks/useFirestoreHealth';
+import { useCallTimer } from './hooks/useCallTimer';
 import * as storage from './utils/storage';
 export { isIosOrTouchDevice, isLowEndDevice };
 
@@ -1656,7 +1657,6 @@ export default function App() {
 
   // ---- ÉTATS APPEL WEBRTC AVANCÉ (PIP) ----
   const [isCallPip, setIsCallPip] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
   const [pipPosition, setPipPosition] = useState({
     x: typeof window !== 'undefined' ? Math.max(10, window.innerWidth - 230) : 100,
     y: typeof window !== 'undefined' ? Math.max(10, window.innerHeight - 240) : 100
@@ -1672,44 +1672,20 @@ export default function App() {
     movedDistance: 0,
   });
 
-  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
-  const [settlementCallDuration, setSettlementCallDuration] = useState(0);
-  const prevActiveRef = useRef(false);
-
-  // Chronomètre de Deal en temps réel pendant l'appel (1h = 1 Jeton Troco)
-  useEffect(() => {
-    let timer = null;
-    if (callState.active && !callState.ringing) {
-      timer = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
-      prevActiveRef.current = true;
-    } else {
-      if (prevActiveRef.current && callDuration > 5) {
-        setSettlementCallDuration(callDuration);
-        setIsSettlementModalOpen(true);
-      }
-      prevActiveRef.current = false;
-      setCallDuration(0);
-      setIsCallPip(false);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [callState.active, callState.ringing]); // eslint-disable-line
-
-  // Rétribution en jetons & structure transparente de frais extraite dans useDealActions
-
-  // Formateur du chronomètre de deal (HH:MM:SS ou MM:SS)
-  const formatCallTimer = (totalSeconds) => {
-    const hrs = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
-    const secs = totalSeconds % 60;
-    if (hrs > 0) {
-      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  // ---- CHRONOMÈTRE D'APPEL & BILAN VISIO WEBRTC (HOOK MODULAIRE useCallTimer [MOY-03]) ----
+  const {
+    callDuration,
+    setCallDuration,
+    settlementCallDuration,
+    setSettlementCallDuration,
+    isSettlementModalOpen,
+    setIsSettlementModalOpen,
+    callCost,
+    formatCallTimer,
+  } = useCallTimer({
+    callState,
+    setIsCallPip,
+  });
 
   // Handlers Pointer Events (pointerdown, pointermove, pointerup, pointercancel)
   const handlePipPointerDown = (e) => {
@@ -3114,6 +3090,7 @@ export default function App() {
             attachLocalStream={attachLocalStream}
             attachRemoteStream={attachRemoteStream}
             callDuration={callDuration}
+            callCost={callCost}
             formatCallTimer={formatCallTimer}
             settlementCallDuration={settlementCallDuration}
             setSettlementCallDuration={setSettlementCallDuration}

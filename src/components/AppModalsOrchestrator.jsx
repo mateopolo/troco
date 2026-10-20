@@ -119,6 +119,7 @@ export default function AppModalsOrchestrator({
   attachLocalStream,
   attachRemoteStream,
   callDuration,
+  callCost = 1,
   formatCallTimer,
   settlementCallDuration,
   setSettlementCallDuration,
@@ -479,6 +480,7 @@ export default function AppModalsOrchestrator({
           attachRemoteStream={attachRemoteStream}
           handleAcceptIncomingCall={handleAcceptIncomingCall}
           callDuration={callDuration}
+          callCost={callCost}
           formatCallTimer={formatCallTimer}
           setSettlementCallDuration={setSettlementCallDuration}
           setIsSettlementModalOpen={setIsSettlementModalOpen}
@@ -653,6 +655,7 @@ export default function AppModalsOrchestrator({
             isOpen={isSettlementModalOpen}
             onClose={() => setIsSettlementModalOpen(false)}
             callDuration={settlementCallDuration || callDuration}
+            callCost={callCost}
             partnerName={selectedChat?.user || 'Interlocuteur'}
             onTransferTokens={handleTransferCallTokens}
             darkMode={darkMode}

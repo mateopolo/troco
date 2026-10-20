@@ -10,12 +10,14 @@ export default function VisioSettlementModal({
   isOpen,
   onClose,
   callDuration = 0, // En secondes
+  callCost = null,
   partnerName = 'Partenaire',
   onTransferTokens,
   currentUserTokens = 10,
   darkMode = false,
 }) {
   const [selectedTokens, setSelectedTokens] = useState(() => {
+    if (typeof callCost === 'number' && callCost > 0) return Math.min(5, Math.max(1, callCost));
     const minutes = Math.ceil(callDuration / 60);
     return Math.max(1, Math.min(5, Math.ceil(minutes / 30)));
   });

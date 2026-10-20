@@ -72,6 +72,7 @@ export default function WebRTCCallOverlay({
   attachRemoteStream,
   handleAcceptIncomingCall,
   callDuration = 0,
+  callCost = 1,
   formatCallTimer = defaultFormatCallTimer,
   setSettlementCallDuration,
   setIsSettlementModalOpen,

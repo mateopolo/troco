@@ -1981,3 +1981,44 @@ Composants sécurisés :
    - `npx vitest run` : 30/30 suites de tests passées (270/270 tests au vert).
    - `npm run build` : Compilation de production 100% propre (Exit Code 0).
 
+---
+
+## 39. [MOY-03] — Extraction du Chronomètre d'Appel vers useCallTimer.js
+
+### 39.1. Problématique & Diagnostic
+- **Tâche :** `[MOY-03]` — Allègement d'`App.js` via l'extraction du chronomètre WebRTC, de la tarification à la minute et de l'orchestration de la modale de bilan de séance visio vers le custom hook `src/hooks/useCallTimer.js`.
+- **Diagnostic :**
+  1. `src/App.js` gérait en direct plusieurs états locaux (`callDuration`, `settlementCallDuration`, `isSettlementModalOpen`, `prevActiveRef`), un intervalle d'une seconde non mémoïsé (`setInterval`), et la fonction de formatage `formatCallTimer`.
+  2. Risque de closure obsolète lors de la transition d'appel `callState.active: true -> false`, réinitialisant parfois la durée avant l'ouverture du bilan.
+  3. Absence de calcul centralisé du coût en jetons Troco (`callCost`).
+
+### 39.2. Correctifs Appliqués
+1. **Création du hook dédié `src/hooks/useCallTimer.js` :**
+   - Encapsulation complète du cycle de vie du chronomètre d'appel WebRTC.
+   - Gestion résiliente de la référence de durée `durationRef` synchronisée à chaque seconde pour éliminer tout risque de stale closure lors de la fin de l'appel.
+   - Déclenchement automatique et sécurisé du bilan de séance (`VisioSettlementModal`) si la durée dépasse le seuil minimum de 5 secondes (`minSettlementDuration = 5`).
+   - Calcul dynamique du coût d'appel `callCost` (règle standard Troco : 1 heure = 1 Jeton Troco, minimum 1 jeton dès session avérée) via la fonction pure `calculateCallCost`.
+   - Formatage universel du temps `formatCallTimer` (`MM:SS` ou `HH:MM:SS`).
+   - Réinitialisation automatique du Picture-in-Picture (`setIsCallPip(false)`) et notification via `onCallEnd`.
+2. **Refactorisation de `src/App.js` :**
+   - Remplacement des 50 lignes de logique de chronométrage inline par l'appel unifié :
+     ```javascript
+     const {
+       callDuration,
+       setCallDuration,
+       settlementCallDuration,
+       setSettlementCallDuration,
+       isSettlementModalOpen,
+       setIsSettlementModalOpen,
+       callCost,
+       formatCallTimer,
+     } = useCallTimer({ callState, setIsCallPip });
+     ```
+   - Transmission propre de `callCost` à `ModalOrchestrator`, `AppModalsOrchestrator`, `WebRTCCallOverlay` et `VisioSettlementModal`.
+3. **Tests unitaires dédiés (`tests/unit/useCallTimer.test.js`) :**
+   - 13/13 tests unitaires couvrant les formateurs, calculs de coût par heure/minute, incrémentation du timer, garde de sonnerie (`ringing`), seuil minimum de 5s et ouverture du bilan.
+4. **Validation globale :**
+   - `npx vitest run` : **31/31 fichiers de tests au vert, 283/283 tests passés**.
+   - `npm run build` : **Exit Code 0**, compilation de production réussie.
+
+
