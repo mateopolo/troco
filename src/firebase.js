@@ -22,18 +22,28 @@ export const storage = getStorage(app);
 export const functions = getFunctions(app, 'europe-west1');
 
 // Initialisation sécurisée d'App Check (Web: reCAPTCHA v3, Dev: Debug token)
+// DOIT impérativement précéder l'initialisation de Firestore pour attester les requêtes dès le premier handshake
+export let appCheck = null;
 const recaptchaSiteKey = process.env.REACT_APP_RECAPTCHA_SITE_KEY || process.env.VITE_RECAPTCHA_SITE_KEY;
+
 if (typeof window !== 'undefined') {
-  if (process.env.NODE_ENV !== 'production' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  const isDev = process.env.NODE_ENV !== 'production' ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1';
+
+  if (isDev) {
     // eslint-disable-next-line no-restricted-globals
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.REACT_APP_APPCHECK_DEBUG_TOKEN || true;
+    const globalContext = typeof self !== 'undefined' ? self : window;
+    globalContext.FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.REACT_APP_APPCHECK_DEBUG_TOKEN || true;
   }
+
   if (recaptchaSiteKey) {
     try {
-      initializeAppCheck(app, {
+      appCheck = initializeAppCheck(app, {
         provider: new ReCaptchaV3Provider(recaptchaSiteKey),
         isTokenAutoRefreshEnabled: true,
       });
+      logger.info('[AppCheck] Firebase App Check initialisé avec succès.');
     } catch (err) {
       logger.warn('[AppCheck] Initialization error:', err);
     }
@@ -85,6 +95,7 @@ if (typeof window !== 'undefined') {
   window.__firebaseDb = db;
   window.__firebaseStorage = storage;
   window.__firebaseFunctions = functions;
+  window.__firebaseAppCheck = appCheck;
   window.__firebaseSignInWithCustomToken = (token) => fbSignInWithCustomToken(auth, token);
 
   // Auto signin si un custom token est stocké dans le localStorage

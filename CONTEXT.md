@@ -2240,6 +2240,103 @@ Composants sécurisés :
 - **`npx vitest run` :** 36/36 fichiers de tests passés, **323/323 tests validés avec succès (100% au vert)**.
 - **`npm run build` :** **Exit Code 0**, bundle de production généré avec succès.
 
+---
+
+## 45. PROMPT 9 / DIF-04 — Déploiement et Enforcement de Firebase App Check (reCAPTCHA v3)
+
+### 45.1. Problématique & Spécification
+- **Tâche :** `[DIF-04]` — Déploiement et enforcement de Firebase App Check en production.
+- **Enjeu :** Bloquer les requêtes malveillantes, les scrapers automatiques d'annonces, les clients non autorisés et les attaques de déni de service économique visant Cloud Firestore, Cloud Storage et les Cloud Functions.
+- **Principe :** App Check atteste que chaque requête HTTP/SDK provient bien d'une instance légitime de l'application Web TROCO via l'attestation Google reCAPTCHA v3.
+
+### 45.2. Architecture & Réalisations
+1. **Initialisation dans `src/firebase.js` :**
+   - Importation officielle de `initializeAppCheck` et `ReCaptchaV3Provider` depuis `firebase/app-check`.
+   - Exportation de l'instance `export let appCheck = null;` et exposition globale sécurisée sur `window.__firebaseAppCheck` pour diagnostic runtime.
+   - **Garantie d'ordre d'exécution (Step 5) :** L'initialisation App Check est effectuée **strictement en amont** de `initializeFirestore(app)` pour assurer que le provider de jetons d'attestation est déjà greffé dans les intercepteurs du SDK Firestore dès la toute première connexion réseau ou handshake WebChannel/WebSocket.
+   - **Mode Développement & Debug Tokens (Step 4) :**
+     - Détection des environnements de dev (`process.env.NODE_ENV !== 'production'`, `localhost`, `127.0.0.1`).
+     - Injection de `self.FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.REACT_APP_APPCHECK_DEBUG_TOKEN || true;`.
+     - Si aucun token statique n'est spécifié, la valeur `true` ordonne au SDK Firebase de générer un UUID unique de debug dans la console du navigateur au premier démarrage, prêt à être enregistré dans la console Firebase.
+   - **Production (reCAPTCHA v3) (Step 3) :**
+     - Utilisation de `process.env.REACT_APP_RECAPTCHA_SITE_KEY`.
+     - Instanciation de `new ReCaptchaV3Provider(recaptchaSiteKey)` avec `isTokenAutoRefreshEnabled: true`.
+     - Résilience réseau : bloc try/catch entourant `initializeAppCheck` avec logging `logger.warn` afin qu'un blocage d'adblocker ou réseau sur `google.com/recaptcha` n'interrompe jamais l'initialisation de l'application.
+2. **Variables d'Environnement (`.env`) :**
+   - Ajout des clés documentées :
+     - `REACT_APP_RECAPTCHA_SITE_KEY=` (clé publique reCAPTCHA v3 Google Cloud)
+     - `# REACT_APP_APPCHECK_DEBUG_TOKEN=` (UUID debug pour tests locaux et CI)
+3. **Suite de Tests Unitaires Dédiée (`tests/unit/appCheck.test.js`) :**
+   - 9/9 tests automatisés validant :
+     - La présence et l'export de l'objet `appCheck`.
+     - L'ordre d'exécution strict : App Check initialisé avant Firestore.
+     - L'instanciation de `ReCaptchaV3Provider` avec la clé de site fournie.
+     - L'activation du debug token en environnement local / développement.
+     - L'absence de plantage quand la clé de site est absente en production.
+     - La gestion gracieuse des exceptions en cas d'erreur réseau reCAPTCHA.
+
+---
+
+### 45.3. Procédure Opérationnelle d'Enforcement dans la Console Firebase
+
+Pour basculer la protection App Check en mode bloquant strict ("Enforced") sans risquer d'interrompre les utilisateurs légitimes, suivre impérativement les étapes ci-dessous :
+
+#### Étape 1 : Enregistrement de reCAPTCHA v3
+1. Rendez-vous sur la console [Google Cloud / reCAPTCHA Enterprise](https://console.cloud.google.com/security/recaptcha) ou [Google reCAPTCHA Admin](https://www.google.com/recaptcha/admin).
+2. Créez une nouvelle clé de type **reCAPTCHA v3** pour le domaine de production (ex. `troco-app.web.app`, `troco.fr`, ainsi que les domaines de staging).
+3. Copiez la **Clé de site** (Site Key) et la **Clé secrète** (Secret Key).
+
+#### Étape 2 : Configuration d'App Check dans Firebase
+1. Ouvrez la [Console Firebase](https://console.firebase.google.com/) et sélectionnez le projet TROCO.
+2. Dans le menu de gauche, accédez à **Créer / Build** > **App Check**.
+3. Dans l'onglet **Applications (Apps)** :
+   - Sélectionnez l'application Web TROCO.
+   - Cliquez sur **Enregistrer** (Register) ou **Gérer le fournisseur** sous **reCAPTCHA v3**.
+   - Collez la **Clé secrète** reCAPTCHA v3 obtenue à l'Étape 1.
+   - Configurez la durée de vie du jeton (TTL) : valeur recommandée **1 heure** (défaut).
+   - Enregistrez.
+4. Renseignez la clé publique dans les variables d'environnement de production (ex. Vercel, Firebase Hosting ou `.env.production`) :
+   ```env
+   REACT_APP_RECAPTCHA_SITE_KEY=6Lxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   ```
+
+#### Étape 3 : Configuration des Développeurs (Debug Tokens)
+1. En local (`npm start`), ouvrez les DevTools du navigateur.
+2. Au chargement, le SDK Firebase affiche un message du type :
+   `Firebase App Check debug token: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+3. Dans la console Firebase > **App Check** > **Applications** > Menu `...` de l'app Web > **Gérer les jetons de débogage** (Manage debug tokens) :
+   - Cliquez sur **Ajouter un jeton de débogage**.
+   - Collez l'UUID et donnez-lui un nom descriptif (ex: `MacBook-Mateo-Dev`).
+   - Alternativement, définissez une valeur fixe dans votre `.env.local` :
+     ```env
+     REACT_APP_APPCHECK_DEBUG_TOKEN=votre-uuid-fixe-enregistre-en-console
+     ```
+
+#### Étape 4 : Phase d'Audit & Métriques (Sans Blocage)
+1. Déployez l'application en production avec la clé de site configurée.
+2. Dans la console Firebase > **App Check** > onglet **API** :
+   - Observez les graphiques de requêtes pour **Cloud Firestore**, **Cloud Storage** et **Cloud Functions**.
+   - Analysez les trois métriques affichées :
+     - 🟢 **Vérifiées (Verified requests)** : Requêtes portant un jeton App Check valide.
+     - 🟠 **Non vérifiées (Unverified requests)** : Requêtes sans jeton valide (anciens clients non rafraîchis, scripts externes, requêtes bloquées par adblocker).
+     - 🔵 **Jetons expirés (Outdated requests)**.
+3. Laissez tourner en mode audit pendant **24 à 48 heures** jusqu'à ce que le taux de requêtes vérifiées atteigne **> 98%** du trafic légitime.
+
+#### Étape 5 : Bascule en Mode Bloquant ("Enforced")
+1. Une fois les métriques stabilisées, retournez sur Firebase Console > **App Check** > onglet **API**.
+2. Pour chaque service :
+   - Cliquez sur **Cloud Firestore** > Cliquez sur le bouton **Appliquer (Enforce)**.
+   - Confirmez la boîte de dialogue d'avertissement.
+   - Répétez pour **Cloud Storage** et **Cloud Functions** (si applicable).
+3. **Effet immédiat :** Toute requête ne présentant pas un jeton `X-Firebase-AppCheck` validé par Google reCAPTCHA v3 est immédiatement rejetée avec le code d'erreur HTTP 401 / Firestore `PERMISSION_DENIED`.
+
+---
+
+### 45.4. Validation Formelle
+- **`npx vitest run tests/unit/appCheck.test.js` :** **9/9 tests passés au vert (100%)**.
+- **`npx vitest run` :** 37/37 fichiers de tests passés, **332/332 tests validés avec succès (100% au vert)**.
+- **`npm run build` :** **Exit Code 0**, bundle de production optimisé généré sans avertissement ni régression.
+
 
 
 

@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 9.4/10 | **Progression :** 66 / 75 tâches validées avec preuves formelles (88.0%)
+> **Score global :** 9.4/10 | **Progression :** 67 / 75 tâches validées avec preuves formelles (89.3%)
 
 ---
 
@@ -24,9 +24,9 @@
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 30 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 20 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 15 | 0 | 100% |
-| 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 8 | 2 | 80.0% |
+| 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 9 | 1 | 90.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
-| **TOTAL** | **66** | **9** | **88.0%** |
+| **TOTAL** | **67** | **8** | **89.3%** |
 
 
 ### Score par axe vs cible Licorne
@@ -524,11 +524,11 @@
 **Estimation** : 2 jours  
 **Impact** : Obligation légale européenne pour les plateformes d'économie collaborative.
 
-### [ ] [DIF-04] — Déploiement et enforcement de Firebase App Check en production
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/firebase.js:38`, Console Firebase / Cloud Armor  
+### [x] [DIF-04] — Déploiement et enforcement de Firebase App Check en production
+**Statut** : ✅ RÉALISÉ  
+**Fichier** : `src/firebase.js`, `.env`, `tests/unit/appCheck.test.js`, `CONTEXT.md` (Section 45)  
 **Estimation** : 1 jour  
-**Impact** : Protection contre les bots, le scraping d'annonces et les attaques par déni de service économique sur Firestore.
+**Impact** : Protection contre les bots, le scraping d'annonces et les attaques par déni de service économique sur Firestore. Initialisation reCAPTCHA v3 Provider, support debug token en dev/localhost, initialisation garantie en amont de Firestore (`initializeFirestore`), 9/9 tests unitaires passés.
 
 ### [ ] [DIF-05] — Suite de tests End-to-End Playwright sur les parcours critiques
 **Statut** : ❌ À FAIRE  
