@@ -117,7 +117,6 @@ export const useChatStore = create(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         readChats: state.readChats,
-        chatThreads: state.chatThreads,
       }),
     }
   )

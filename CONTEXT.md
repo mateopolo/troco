@@ -2021,4 +2021,55 @@ Composants sécurisés :
    - `npx vitest run` : **31/31 fichiers de tests au vert, 283/283 tests passés**.
    - `npm run build` : **Exit Code 0**, compilation de production réussie.
 
+---
+
+## 40. [MOY-01] — Remplacement de localStorage par IndexedDB pour le Cache des Messages & Outbox
+
+### 40.1. Problématique & Diagnostic
+- **Tâche :** `[MOY-01]` — Remplacement des appels synchrones `localStorage.setItem` / `getItem` pour le cache des conversations et des fils de messages par un stockage asynchrone non-bloquant `IndexedDB` via la librairie `idb`. Mise en place d'une Outbox résiliente pour les messages hors-ligne avec synchronisation automatique au rétablissement du réseau.
+- **Diagnostic :**
+  1. `src/hooks/useChatManager.js` sérialisait de volumineux tableaux de conversations (`merged`, `res`) directement via `localStorage.setItem('troco_cached_chats', ...)` dans les flux Firestore `handleSnapshot` et les refetchs, provoquant des micro-saccades et bloquant le thread principal (Core Web Vitals INP dégradé).
+  2. `src/stores/useChatStore.js` persistait les fils de messages complets (`chatThreads`) dans `localStorage` via Zustand middleware, risquant de heurter le quota limite de 5 Mo de `localStorage` et causant des freezes UI lors de l'envoi/réception de notes audio et pièces jointes.
+  3. Lors de coupures réseau ou en mode hors-ligne, les envois de messages échouaient brutalement avec statut `'error'`, sans mise en file d'attente ni réconciliation automatique au retour de la connexion.
+
+### 40.2. Implémentation & Architecture
+
+1. **Modernisation de `src/services/outboxService.js` avec `idb` :**
+   - Évolution de la base locale vers la version 2 (`troco_fintech_outbox_db`) avec 4 magasins d'objets :
+     - `outbox_messages` (clé primaire `id`, index `status`, `chatId`, `createdAt`) : file d'attente résiliente des messages envoyés hors-ligne.
+     - `chat_cache` (clé primaire `key`) : cache asynchrone haute performance des listes de conversations (`chats_list`) et des fils de discussion (`thread_{chatId}`).
+     - `outbox_transactions` & `outbox_mutations` : préservation intégrale de la compatibilité avec le moteur de résilience financière.
+   - Méthodes asynchrones non-bloquantes ajoutées :
+     - `queueMessage(messagePayload)` : enregistre le message avec `status: 'pending'` et déclenche une synchronisation silencieuse si en ligne.
+     - `getPendingMessages(chatId)` & `removePendingMessage(id)` : interrogation et purge locale de l'Outbox.
+     - `syncSingleMessage(record)` : synchronise le document parent `chats/{chatId}` (mise à jour du dernier message, expéditeur, unreadCount) et écrit dans `chats/{chatId}/messages`, puis émet l'événement custom `troco:outbox_message_synced`.
+     - `flushMessagesOutbox()` : dépile et synchronise tous les messages en attente dès le retour du réseau (`window.addEventListener('online')` et boucle de garde).
+     - `getCachedChats()` / `setCachedChats(chats)` : lecture/écriture asynchrones de la liste des conversations.
+     - `getCachedMessages(chatId)` / `setCachedMessages(chatId, messages)` : lecture/écriture asynchrones des messages d'un fil.
+   - Mécanisme de fallback en mémoire transparent (`memFallback`) pour garantir l'immunité totale lors des exécutions SSR ou environnements sans IndexedDB (Node / tests).
+
+2. **Refactorisation de `src/hooks/useChatManager.js` :**
+   - Remplacement de tous les appels `localStorage.setItem('troco_cached_chats', ...)` par `outboxService.setCachedChats(...)`.
+   - Hydratation asynchrone au montage du hook sans aucun gel de l'UI (`outboxService.getCachedChats().then(...)`).
+   - Hydratation asynchrone à la sélection d'une conversation (`outboxService.getCachedMessages(selectedChat.id).then(...)`) permettant l'affichage immédiat des messages même sans connexion réseau.
+   - Sécurisation de l'envoi de messages (`handleSendMessage` et `handleRetryMessage`) :
+     - Si hors-ligne (`!navigator.onLine`) ou échec réseau Firestore : enfilement immédiat dans `outboxService.queueMessage(...)` en conservant l'état optimiste `pending`.
+     - Écoute de l'événement `troco:outbox_message_synced` pour convertir de façon fluide les IDs temporaires (`temp_*`) en IDs Firestore réels et actualiser le statut à `'sent'` sans recharger.
+
+3. **Découplage de `src/stores/useChatStore.js` :**
+   - Retrait de `chatThreads` de la sérialisation synchrone Zustand `localStorage` dans `partialize` (seul `readChats` reste en stockage clé-valeur léger). La persistance des messages est désormais entièrement confiée à IndexedDB.
+
+4. **Suite de tests unitaires dédiée (`tests/unit/outboxService.test.js`) :**
+   - 5/5 tests unitaires validant :
+     - La persistance et la restitution asynchrone des conversations.
+     - La persistance et la restitution asynchrone des fils de messages par `chatId`.
+     - L'enfilement hors-ligne avec statut `pending`.
+     - La synchronisation unitaire vers Firestore et l'émission de l'événement `troco:outbox_message_synced`.
+     - Le vidage complet de la file d'attente lors de la transition hors-ligne -> en-ligne.
+
+### 40.3. Validation Formelle
+- **`npx vitest run` :** 32/32 fichiers de tests au vert, **288/288 tests passés avec succès** (0 échec).
+- **`npm run build` :** **Exit Code 0**, compilation de production réussie avec bundle optimisé.
+
+
 

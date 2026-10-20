@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 9.2/10 | **Progression :** 61 / 75 tâches validées avec preuves formelles (81.3%)
+> **Score global :** 9.3/10 | **Progression :** 62 / 75 tâches validées avec preuves formelles (82.7%)
 
 ---
 
@@ -23,10 +23,10 @@
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 30 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 20 | 0 | 100% |
-| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 10 | 5 | 66.7% |
+| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 11 | 4 | 73.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 8 | 2 | 80.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
-| **TOTAL** | **61** | **14** | **81.3%** |
+| **TOTAL** | **62** | **13** | **82.7%** |
 
 
 ### Score par axe vs cible Licorne
@@ -446,11 +446,11 @@
 
 ---
 
-### [ ] [MOY-01] — Remplacement de `localStorage` synchrone dans les listeners par IndexedDB
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/hooks/useChatManager.js`, `src/hooks/useAppAuth.js`  
+### [x] [MOY-01] — Remplacement de `localStorage` synchrone dans les listeners par IndexedDB
+**Statut** : ✅ RÉALISÉ (`src/services/outboxService.js`, `src/hooks/useChatManager.js`, `src/stores/useChatStore.js`, suite: `tests/unit/outboxService.test.js`)  
+**Fichier** : `src/services/outboxService.js`, `src/hooks/useChatManager.js`, `src/stores/useChatStore.js`  
 **Estimation** : 4h  
-**Impact** : Élimine les micro-saccades du thread principal lors des grosses réceptions de messages ou de profils.
+**Impact** : Élimine les micro-saccades du thread principal lors des réceptions de messages ou de profils grâce au cache asynchrone IndexedDB (`idb`) et synchronisation Outbox résiliente hors-ligne.
 
 ### [ ] [MOY-02] — Extraction du feed d'annonces hors de `App.js` vers `useListingsFeed.js`
 **Statut** : ❌ À FAIRE  
@@ -746,7 +746,7 @@ Cette feuille de route priorise les **15 tâches restantes** du MASTER_AUDIT en 
   - *Fichiers :* `src/App.js`, `src/hooks/useCallTimer.js`, `src/features/call/WebRTCCallOverlay.jsx`
 
 ### Jour 3 (2026-10-09) : Découplage Notifications & Cache IndexedDB
-- **Tâche 1 :** `[MOY-01]` — Remplacement de `localStorage` synchrone dans les listeners Firestore par le cache asynchrone `IndexedDB` (`idb`).
+- **Tâche 1 :** [x] `[MOY-01]` — Remplacement de `localStorage` synchrone dans les listeners Firestore par le cache asynchrone `IndexedDB` (`idb`) (`src/services/outboxService.js`, `src/hooks/useChatManager.js`, `src/stores/useChatStore.js`).
   - *Complexité :* Moyen (3h)
   - *Dépendances :* `idb`
   - *Fichiers :* `src/services/outboxService.js`, `src/utils/storage.js`, `src/App.js`

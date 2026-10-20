@@ -26,6 +26,7 @@ import { hapticLight, hapticSuccess, hapticError, safeVibrate } from '../utils/h
 import { playPop } from '../services/audioService';
 import { registerAudioContext } from '../utils/audioUnlocker';
 import { notificationService } from '../services/notificationService';
+import { outboxService } from '../services/outboxService';
 import {
   resolveUserProfile,
   getCachedUserProfile,
@@ -94,6 +95,64 @@ export const useChatManager = ({
   const messageDraftRef = useRef('');
   const [chatThreads, setChatThreads] = useState({});
   const [chatsList, setChatsList] = useState([]);
+
+  // ---- CHARGEMENT ASYNCHRONE DES CONVERSATIONS VIA INDEXEDDB AU DÉMARRAGE (NON-BLOQUANT) ----
+  useEffect(() => {
+    let isMounted = true;
+    outboxService.getCachedChats().then((cached) => {
+      if (!isMounted) return;
+      if (Array.isArray(cached) && cached.length > 0) {
+        setChatsList((prev) => (prev.length === 0 ? cached : prev));
+        useChatStore.getState().setChatsList(cached);
+      }
+    }).catch(() => { });
+    return () => { isMounted = false; };
+  }, []);
+
+  // ---- CHARGEMENT ASYNCHRONE DU FIL DE MESSAGES VIA INDEXEDDB SANS BLOQUER L'UI ----
+  useEffect(() => {
+    if (!selectedChat?.id) return;
+    const cid = String(selectedChat.id);
+    let isMounted = true;
+    outboxService.getCachedMessages(cid).then((cached) => {
+      if (!isMounted || !Array.isArray(cached) || cached.length === 0) return;
+      setChatThreads((prev) => {
+        if (!prev[cid] || prev[cid].length === 0) {
+          return { ...prev, [cid]: cached };
+        }
+        return prev;
+      });
+    }).catch(() => { });
+    return () => { isMounted = false; };
+  }, [selectedChat?.id]);
+
+  // ---- RÉCONCILIATION AUTOMATIQUE DES MESSAGES SYNCHRONISÉS VIA L'OUTBOX ----
+  useEffect(() => {
+    const handleSynced = (e) => {
+      const { tempId, realId, chatId } = e.detail || {};
+      if (!tempId || !realId) return;
+
+      setChatThreads((prev) => {
+        const thread = prev[chatId] || [];
+        const updated = thread.map((m) =>
+          (m.id === tempId || m.temporaryId === tempId)
+            ? { ...m, id: realId, temporaryId: tempId, status: 'sent' }
+            : m
+        );
+        outboxService.setCachedMessages(chatId, updated);
+        return { ...prev, [chatId]: updated };
+      });
+
+      if (typeof useChatStore.getState().replaceTempId === 'function') {
+        useChatStore.getState().replaceTempId(chatId, tempId, realId);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('troco:outbox_message_synced', handleSynced);
+      return () => window.removeEventListener('troco:outbox_message_synced', handleSynced);
+    }
+  }, []);
   const [chatStatusOverrides, setChatStatusOverrides] = useState({});
   const [editingDealId, setEditingDealId] = useState(null);
   const [isCounterOfferOpen, setIsCounterOfferOpen] = useState(false);
@@ -332,10 +391,8 @@ export const useChatManager = ({
         });
 
         setChatsList(merged);
-        try {
-          localStorage.setItem('troco_cached_chats', JSON.stringify(merged));
-          useChatStore.getState().setChatsList(merged);
-        } catch (_) { }
+        outboxService.setCachedChats(merged);
+        useChatStore.getState().setChatsList(merged);
       };
 
       const handleSnapshot = (snapshot) => {
@@ -522,7 +579,7 @@ export const useChatManager = ({
                 const map = new Map(prev.map(c => [c.id, c]));
                 fetched.forEach(f => map.set(f.id, f));
                 const res = Array.from(map.values());
-                try { localStorage.setItem('troco_cached_chats', JSON.stringify(res)); } catch (_) { }
+                outboxService.setCachedChats(res);
                 return res;
               });
             }
@@ -751,6 +808,8 @@ export const useChatManager = ({
           return tA - tB;
         });
 
+        outboxService.setCachedMessages(chatId, unique);
+
         return {
           ...prev,
           [selectedChat.id]: unique,
@@ -898,7 +957,23 @@ export const useChatManager = ({
           lastSenderName: myName
         } : c));
 
-        if (db) {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          outboxService.queueMessage({
+            id: tempId,
+            temporaryId: tempId,
+            chatId,
+            senderUid: myUid,
+            senderName: myName,
+            senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || '',
+            text: preview,
+            ...customPayload,
+          });
+          setChatThreads(prev => {
+            const thread = prev[chatId] || [];
+            outboxService.setCachedMessages(chatId, thread);
+            return prev;
+          });
+        } else if (db) {
           try {
             const safeParticipants = Array.isArray(selectedChat.participants) && selectedChat.participants.length > 0
               ? (selectedChat.participants.includes(myUid) ? selectedChat.participants : [...selectedChat.participants, myUid])
@@ -942,9 +1017,11 @@ export const useChatManager = ({
                   map.set(String(m.id || m._id), m);
                 }
               });
+              const updated = Array.from(map.values());
+              outboxService.setCachedMessages(chatId, updated);
               return {
                 ...prev,
-                [chatId]: Array.from(map.values())
+                [chatId]: updated
               };
             });
 
@@ -952,15 +1029,26 @@ export const useChatManager = ({
               useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
             }
           } catch (e) {
-            logger.warn('[Firestore] custom message write failed:', e);
+            logger.warn('[Firestore] custom message write failed, queueing in IndexedDB Outbox:', e);
+            outboxService.queueMessage({
+              id: tempId,
+              temporaryId: tempId,
+              chatId,
+              senderUid: myUid,
+              senderName: myName,
+              senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || '',
+              text: preview,
+              ...customPayload,
+            });
             setChatThreads(prev => {
               const thread = prev[chatId] || [];
+              const updated = thread.map(m => (m.id === tempId || m.temporaryId === tempId) ? { ...m, status: 'pending' } : m);
+              outboxService.setCachedMessages(chatId, updated);
               return {
                 ...prev,
-                [chatId]: thread.map(m => (m.id === tempId || m.temporaryId === tempId) ? { ...m, status: 'error' } : m),
+                [chatId]: updated,
               };
             });
-            throw e;
           }
         }
         return;
@@ -1020,7 +1108,27 @@ export const useChatManager = ({
 
       setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? { ...c, lastMessage: text, lastSenderName: profile?.name || 'Moi' } : c));
 
-      if (db) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        // Mode hors-ligne direct : mise en file d'attente Outbox IndexedDB
+        outboxService.queueMessage({
+          id: tempId,
+          temporaryId: tempId,
+          chatId,
+          senderId: auth?.currentUser?.uid || (profile?.uid && !profile.uid.includes('@') ? profile.uid : 'me'),
+          senderUid: profile?.uid || auth?.currentUser?.uid || 'me',
+          sender: profile?.uid || 'me',
+          senderName: profile?.name || 'Moi',
+          senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || '',
+          text,
+          status: 'pending',
+          createdAt: Date.now(),
+        });
+        setChatThreads(prev => {
+          const thread = prev[chatId] || [];
+          outboxService.setCachedMessages(chatId, thread);
+          return prev;
+        });
+      } else if (db) {
         try {
           const myUid = auth?.currentUser?.uid || (profile?.uid && !profile.uid.includes('@') ? profile.uid : null);
           const myName = profile?.name || auth?.currentUser?.displayName || 'Moi';
@@ -1065,9 +1173,11 @@ export const useChatManager = ({
                 map.set(String(m.id || m._id), m);
               }
             });
+            const updated = Array.from(map.values());
+            outboxService.setCachedMessages(chatId, updated);
             return {
               ...prev,
-              [chatId]: Array.from(map.values())
+              [chatId]: updated
             };
           });
 
@@ -1075,12 +1185,27 @@ export const useChatManager = ({
             useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
           }
         } catch (e) {
-          logger.warn('[Firestore] message write failed, marked as error:', e);
+          logger.warn('[Firestore] message write failed, queueing in IndexedDB Outbox:', e);
+          outboxService.queueMessage({
+            id: tempId,
+            temporaryId: tempId,
+            chatId,
+            senderId: auth?.currentUser?.uid || (profile?.uid && !profile.uid.includes('@') ? profile.uid : 'me'),
+            senderUid: profile?.uid || auth?.currentUser?.uid || 'me',
+            sender: profile?.uid || 'me',
+            senderName: profile?.name || 'Moi',
+            senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || '',
+            text,
+            status: 'pending',
+            createdAt: Date.now(),
+          });
           setChatThreads(prev => {
             const thread = prev[chatId] || [];
+            const updated = thread.map(m => (m.id === tempId || m.temporaryId === tempId) ? { ...m, status: 'pending' } : m);
+            outboxService.setCachedMessages(chatId, updated);
             return {
               ...prev,
-              [chatId]: thread.map(m => (m.id === tempId || m.temporaryId === tempId) ? { ...m, status: 'error' } : m)
+              [chatId]: updated
             };
           });
         }
@@ -1104,6 +1229,20 @@ export const useChatManager = ({
         [chatId]: thread.map(m => m.id === msg.id ? { ...m, status: 'pending' } : m)
       };
     });
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      outboxService.queueMessage({
+        ...msg,
+        chatId,
+        status: 'pending',
+      });
+      setChatThreads(prev => {
+        const thread = prev[chatId] || [];
+        outboxService.setCachedMessages(chatId, thread);
+        return prev;
+      });
+      return;
+    }
 
     if (db) {
       try {
@@ -1132,18 +1271,27 @@ export const useChatManager = ({
 
         setChatThreads(prev => {
           const thread = prev[chatId] || [];
+          const updated = thread.map(m => m.id === msg.id ? { ...m, id: docRef.id || msg.id, status: 'sent' } : m);
+          outboxService.setCachedMessages(chatId, updated);
           return {
             ...prev,
-            [chatId]: thread.map(m => m.id === msg.id ? { ...m, id: docRef.id || msg.id, status: 'sent' } : m)
+            [chatId]: updated
           };
         });
       } catch (e) {
-        logger.warn('[Firestore] retry failed:', e);
+        logger.warn('[Firestore] retry failed, queueing in IndexedDB Outbox:', e);
+        outboxService.queueMessage({
+          ...msg,
+          chatId,
+          status: 'pending',
+        });
         setChatThreads(prev => {
           const thread = prev[chatId] || [];
+          const updated = thread.map(m => m.id === msg.id ? { ...m, status: 'pending' } : m);
+          outboxService.setCachedMessages(chatId, updated);
           return {
             ...prev,
-            [chatId]: thread.map(m => m.id === msg.id ? { ...m, status: 'error' } : m)
+            [chatId]: updated
           };
         });
       }
