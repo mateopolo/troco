@@ -9,7 +9,7 @@ import {
   Palette, Briefcase, Plus, FileText, Calendar, Table,
   MessageSquareDashed, RefreshCw, MessageSquare, Search, Pin
 } from 'lucide-react';
-import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs, arrayUnion, onSnapshot } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, collection, updateDoc, setDoc, serverTimestamp, query, where, getDocs, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { executeDirectTokenTransfer } from '../services/firestoreService';
 import { subscribeTranslations } from '../utils/translator';
@@ -36,7 +36,7 @@ const ProjectWorkspaceToolsModal = lazy(() => import('./ProjectWorkspaceToolsMod
 const CloudOfficeSuiteModal = lazy(() => import('./CloudOfficeSuiteModal'));
 
 function ChatView({
-  activeTab,
+  activeTab = 'chat',
   mockChats,
   selectedChat,
   setSelectedChat,
@@ -59,6 +59,8 @@ function ChatView({
   isCallActive = false,
   handleAcceptDeal,
   onAcceptDeal,
+  handleConfirmSwapCompletion,
+  handleConfirmTrocCompletion,
   handleDeclineDeal,
   handleSendToken: handleSendTokenProp,
   handleReleaseEscrow,
@@ -180,6 +182,7 @@ function ChatView({
   }, [selectedChat, setSelectedChat, profile?.uid]);
 
   const [confirmDeleteChat, setConfirmDeleteChat] = useState(null);
+  const [localConfirmations, setLocalConfirmations] = useState({});
 
   const [isDirectTransferOpen, setIsDirectTransferOpen] = useState(false);
   const [directTokensCount, setDirectTokensCount] = useState(1);
@@ -191,6 +194,7 @@ function ChatView({
 
   const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
   const activeChatObj = effectiveSelectedChat;
+  const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : null;
   const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
 
   const currentMyUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
@@ -282,6 +286,94 @@ function ChatView({
     setLocalTargetUser(partnerUserObj);
     setIsPublicProfileOpen(true);
   }, [activeChatObj, currentMyUid, partnerProfileDoc, activePartnerAvatar, activePartnerName, onOpenProfile]);
+
+  // Action de confirmation bilatérale pour le troc pur sans monnaie [MOY-07]
+  const handleConfirmSwapCompletionAction = useCallback(async (chatId, dealId, dealData = {}) => {
+    try {
+      hapticSuccess();
+      playSuccessChime();
+    } catch (_) {}
+
+    const cid = String(chatId || currentChatId || '');
+    const mid = dealId ? String(dealId) : '';
+    const currentUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
+
+    if (!currentUid) {
+      alert(typeof t === 'function' ? t('loginToConfirmSwap', 'Veuillez vous connecter pour valider le troc.') : 'Veuillez vous connecter pour valider le troc.');
+      return;
+    }
+
+    // Optimistic local state update in ChatView
+    if (mid || cid) {
+      setLocalConfirmations(prev => {
+        const key = mid || cid;
+        const existing = Array.isArray(prev[key]) ? prev[key] : [];
+        return {
+          ...prev,
+          [key]: Array.from(new Set([...existing, currentUid])),
+          ...(cid ? { [cid]: Array.from(new Set([...(prev[cid] || []), currentUid])) } : {})
+        };
+      });
+    }
+
+    const swapFn = handleConfirmSwapCompletion || handleConfirmTrocCompletion;
+    if (typeof swapFn === 'function') {
+      try {
+        const res = await swapFn(cid, mid, {
+          ...dealData,
+          chatId: cid,
+          dealId: mid,
+          partnerUid: dealData?.partnerUid || activeChatObj?.partnerUid,
+        });
+        return res;
+      } catch (err) {
+        logger.warn('[ChatView] handleConfirmSwapCompletion error:', err);
+      }
+    }
+
+    // Fallback direct Firestore update if prop is missing
+    if (db && cid) {
+      try {
+        const timestamp = serverTimestamp();
+        const basePayload = {
+          swapConfirmedBy: arrayUnion(currentUid),
+          updatedAt: timestamp,
+        };
+
+        const existingConfirmedBy = Array.isArray(dealData?.msg?.swapConfirmedBy)
+          ? dealData.msg.swapConfirmedBy
+          : (Array.isArray(activeChatObj?.swapConfirmedBy) ? activeChatObj.swapConfirmedBy : []);
+        const nextConfirmedBy = Array.from(new Set([...existingConfirmedBy, currentUid]));
+        const isFullyConfirmed = nextConfirmedBy.length >= 2;
+
+        if (mid) {
+          const msgRef = doc(db, 'chats', cid, 'messages', mid);
+          const msgPayload = isFullyConfirmed
+            ? { ...basePayload, status: 'confirmed', dealStatus: 'confirmed', swapCompleted: true, isClosed: true }
+            : { ...basePayload, swapStatus: 'partial_confirmation' };
+          await updateDoc(msgRef, msgPayload).catch(async () => {
+            await setDoc(msgRef, msgPayload, { merge: true }).catch(() => {});
+          });
+        }
+
+        const chatRef = doc(db, 'chats', cid);
+        const chatPayload = isFullyConfirmed
+          ? { ...basePayload, lastDealStatus: 'confirmed', dealStatus: 'confirmed', isClosed: true, lastMessage: '🤝 Troc terminé et validé par les deux participants !' }
+          : { ...basePayload, swapStatus: 'partial_confirmation' };
+        await updateDoc(chatRef, chatPayload).catch(async () => {
+          await setDoc(chatRef, chatPayload, { merge: true }).catch(() => {});
+        });
+
+        if (isFullyConfirmed) {
+          try {
+            playPop();
+          } catch (_) {}
+        }
+      } catch (firestoreErr) {
+        logger.error('[ChatView] Fallback Firestore swap confirmation error:', firestoreErr);
+      }
+    }
+  }, [handleConfirmSwapCompletion, handleConfirmTrocCompletion, currentChatId, activeChatObj, profile?.uid, t]);
 
   const openWhiteboard = useCallback((boardId = null, version = null, initialView = null) => {
     setActiveWhiteboardBoardId(boardId);
@@ -674,7 +766,6 @@ function ChatView({
     });
   }, [mockChats, deletedChatIds, pinnedChatIds, getChatLatestTimestamp]);
 
-  const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : null;
   const messages = useMemo(() => {
     if (!currentChatId || !chatThreads) return [];
     const thread = chatThreads[currentChatId] || chatThreads[String(currentChatId)] || [];
@@ -907,7 +998,7 @@ function ChatView({
     setIsProjectRewardsModalOpen(true);
   }, []);
 
-  if (activeTab !== 'chat') return null;
+  if (activeTab && activeTab !== 'chat') return null;
 
   // Helper de statut en ligne réel basé sur le heartbeat Firestore (< 30s)
   const isUserOnline = (userIdentifier, userUid = null) => {
@@ -1922,6 +2013,16 @@ function ChatView({
                     ? getChatMessageDisplayContent({ text: rawDescription }, currentLang, isMsgOriginal)
                     : rawDescription;
 
+                  // Double validation bilatérale pour le troc pur sans monnaie [MOY-07]
+                  const isPureSwap = (expectedTokens === 0) && (fiatAmount === 0);
+                  const rawConfirmedBy = Array.isArray(msg?.swapConfirmedBy)
+                    ? msg.swapConfirmedBy
+                    : (Array.isArray(activeChatObj?.swapConfirmedBy) ? activeChatObj.swapConfirmedBy : []);
+                  const localConfirmedList = localConfirmations[msg?.id] || localConfirmations[currentChatId] || [];
+                  const swapConfirmedBy = Array.from(new Set([...rawConfirmedBy, ...localConfirmedList]));
+                  const hasCurrentConfirmed = Boolean(currentUid && swapConfirmedBy.includes(currentUid));
+                  const isSwapFullyConfirmed = swapConfirmedBy.length >= 2 || Boolean(msg?.swapCompleted && isAccepted);
+
                   return (
                     <div
                       key={msg?.id || `deal-${msgIdx}`}
@@ -2213,8 +2314,8 @@ function ChatView({
                           </div>
                         )}
 
-                        {/* BADGE STATUT CONFIRMÉ / ACCEPTÉ (NON-CLIQUABLE) */}
-                        {isAccepted && currentDealStatus !== 'escrow_locked' && (
+                        {/* BADGE STATUT CONFIRMÉ / ACCEPTÉ (NON-CLIQUABLE SI NON TROC PUR) */}
+                        {isAccepted && currentDealStatus !== 'escrow_locked' && !isPureSwap && (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#10B981', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '8px' }}>
                             <Check size={14} strokeWidth={2.5} />
                             <span>✓ Deal accepté et validé</span>
@@ -2230,7 +2331,7 @@ function ChatView({
                         )}
 
                         {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR AVEC RAPPEL DU STATUT */}
-                        {isDealPending && isMine && (
+                        {isDealPending && isMine && !isPureSwap && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '7px 10px', fontSize: '11px', fontWeight: '700', marginTop: '8px' }}>
                             <Clock size={12} color="var(--accent-primary)" />
                             <span>Offre en attente : vous pouvez valider, modifier ou annuler à tout moment.</span>
@@ -2296,7 +2397,138 @@ function ChatView({
                         </div>
                       )}
 
-                      {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
+                        {/* BLOC DOUBLE VALIDATION BILATÉRALE POUR LE TROC PUR SANS MONNAIE (MOY-07) */}
+                        {isPureSwap && !isRejected && (
+                          <div
+                            data-testid="pure-swap-bilateral-container"
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '8px',
+                              backgroundColor: 'var(--bg-subtle)',
+                              border: isSwapFullyConfirmed
+                                ? '1.5px solid var(--accent-success, #10B981)'
+                                : '1.5px solid var(--accent-primary)',
+                              borderRadius: '14px',
+                              padding: '12px 14px',
+                              boxShadow: 'var(--shadow-card)',
+                              marginTop: '8px',
+                              animation: 'fadeSlideUp 0.3s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: isSwapFullyConfirmed ? 'var(--accent-success, #10B981)' : 'var(--accent-primary)' }}>
+                                <ShieldCheck size={16} color={isSwapFullyConfirmed ? 'var(--accent-success, #10B981)' : 'var(--accent-primary)'} />
+                                <span>{typeof t === 'function' ? t('doubleValidationPureSwap', 'Double validation du troc pur') : 'Double validation du troc pur'}</span>
+                              </div>
+                              <span
+                                data-testid="swap-confirmation-count"
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  backgroundColor: isSwapFullyConfirmed
+                                    ? 'rgba(16, 185, 129, 0.15)'
+                                    : swapConfirmedBy.length === 1
+                                      ? 'rgba(245, 158, 11, 0.15)'
+                                      : 'var(--bg-card)',
+                                  color: isSwapFullyConfirmed
+                                    ? '#10B981'
+                                    : swapConfirmedBy.length === 1
+                                      ? 'var(--accent-warning, #F59E0B)'
+                                      : 'var(--text-secondary)',
+                                  padding: '2px 8px',
+                                  borderRadius: '999px',
+                                  border: '1px solid var(--border-color)'
+                                }}
+                              >
+                                {Math.min(swapConfirmedBy.length, 2)}/2 confirmation{swapConfirmedBy.length > 1 ? 's' : ''}
+                              </span>
+                            </div>
+
+                            <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                              {isSwapFullyConfirmed
+                                ? (typeof t === 'function' ? t('swapBilateralCompleteSuccess', `🤝 Les deux participants ont validé la fin de la prestation. Le troc est clôturé avec succès !`) : `🤝 Les deux participants ont validé la fin de la prestation. Le troc est clôturé avec succès !`)
+                                : hasCurrentConfirmed
+                                  ? (typeof t === 'function' ? t('swapWaitingPartner', `✓ Votre confirmation a été enregistrée. En attente de la validation de ${partnerName} pour clôturer le deal.`) : `✓ Votre confirmation a été enregistrée. En attente de la validation de ${partnerName} pour clôturer le deal.`)
+                                  : swapConfirmedBy.length === 1
+                                    ? `🔔 ${partnerName} a déjà confirmé la fin du troc. Cliquez ci-dessous pour confirmer à votre tour et clôturer le deal !`
+                                    : (typeof t === 'function' ? t('swapPureInstructions', `Troc direct en cours sans monnaie. Cliquez ci-dessous pour confirmer la réalisation de la prestation dès qu'elle est terminée.`) : `Troc direct en cours sans monnaie. Cliquez ci-dessous pour confirmer la réalisation de la prestation dès qu'elle est terminée.`)
+                              }
+                            </div>
+
+                            {isSwapFullyConfirmed ? (
+                              <div
+                                data-testid="swap-completed-bilateral-badge"
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                                  color: '#10B981',
+                                  borderRadius: '12px',
+                                  padding: '10px 14px',
+                                  fontSize: '12px',
+                                  fontWeight: '800',
+                                  marginTop: '4px'
+                                }}
+                              >
+                                <CheckCircle size={15} />
+                                <span>{typeof t === 'function' ? t('swapBilateralValidated', 'Prestation terminée — Troc clôturé avec succès ✓') : 'Prestation terminée — Troc clôturé avec succès ✓'}</span>
+                              </div>
+                            ) : !hasCurrentConfirmed ? (
+                              <button
+                                type="button"
+                                data-testid="confirm-swap-completion-btn"
+                                onClick={() => handleConfirmSwapCompletionAction(currentChatId, msg?.id, { terms, msg })}
+                                className="premium-button"
+                                style={{
+                                  border: 'none',
+                                  borderRadius: '12px',
+                                  padding: '10px 14px',
+                                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                                  color: '#FFFFFF',
+                                  fontSize: '12px',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  boxShadow: 'var(--shadow-accent)',
+                                  marginTop: '4px'
+                                }}
+                              >
+                                <CheckCircle size={15} />
+                                <span>{typeof t === 'function' ? t('confirmSwapCompletion', 'Confirmer la fin du troc') : 'Confirmer la fin du troc'}</span>
+                              </button>
+                            ) : (
+                              <div
+                                data-testid="swap-waiting-partner-badge"
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  backgroundColor: 'var(--bg-card)',
+                                  border: '1px dashed var(--border-color)',
+                                  color: 'var(--text-secondary)',
+                                  borderRadius: '12px',
+                                  padding: '9px 12px',
+                                  fontSize: '11.5px',
+                                  fontWeight: '700',
+                                  marginTop: '4px'
+                                }}
+                              >
+                                <Clock size={14} color="var(--accent-primary)" />
+                                <span>{typeof t === 'function' && t('swapWaitingPartner') ? t('swapWaitingPartner') : `En attente de la confirmation de ${partnerName} (1/2)`}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                      {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && !isPureSwap && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
                           <CheckCircle size={14} color="var(--accent-primary)" /> <span>Deal validé et scellé avec {partnerName} ✓</span>
                         </div>

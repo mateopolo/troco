@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 9.4/10 | **Progression :** 65 / 75 tâches validées avec preuves formelles (86.7%)
+> **Score global :** 9.4/10 | **Progression :** 66 / 75 tâches validées avec preuves formelles (88.0%)
 
 ---
 
@@ -23,10 +23,10 @@
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 30 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 20 | 0 | 100% |
-| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 14 | 1 | 93.3% |
+| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 15 | 0 | 100% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 8 | 2 | 80.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
-| **TOTAL** | **65** | **10** | **86.7%** |
+| **TOTAL** | **66** | **9** | **88.0%** |
 
 
 ### Score par axe vs cible Licorne
@@ -482,9 +482,9 @@
 **Estimation** : 6h  
 **Impact** : Transformation de la suite bureautique en un véritable outil de productivité professionnelle avec export PDF vectoriel pour Docs, tableur Excel (.xlsx) pour Sheets et PDF Paysage pour Slides, propulsés par jsPDF, xlsx et file-saver.
 
-### [ ] [MOY-07] — Double validation bilatérale pour le troc pur sans monnaie
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/components/ChatView.jsx`, `src/services/dealService.js`  
+### [x] [MOY-07] — Double validation bilatérale pour le troc pur sans monnaie
+**Statut** : ✅ RÉALISÉ (`src/components/ChatView.jsx`, `src/hooks/useDealActions.js`, `firestore.rules`, test unitaire: `tests/unit/BilateralSwapValidation.test.js`)  
+**Fichier** : `src/components/ChatView.jsx`, `src/hooks/useDealActions.js`, `firestore.rules`  
 **Estimation** : 5h  
 **Impact** : Sécurise les échanges physiques en exigeant la confirmation mutuelle de fin de prestation.
 

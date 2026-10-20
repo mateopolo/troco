@@ -27,6 +27,8 @@ function ChatSection({
   callState,
   isCallActive,
   handleAcceptDeal,
+  handleConfirmSwapCompletion,
+  handleConfirmTrocCompletion,
   handleDeclineDeal,
   handleSendToken,
   handleReleaseEscrow,
@@ -98,6 +100,8 @@ function ChatSection({
                 callState={callState}
                 isCallActive={isCallActive}
                 handleAcceptDeal={handleAcceptDeal}
+                handleConfirmSwapCompletion={handleConfirmSwapCompletion || handleConfirmTrocCompletion}
+                handleConfirmTrocCompletion={handleConfirmTrocCompletion || handleConfirmSwapCompletion}
                 handleDeclineDeal={handleDeclineDeal}
                 handleSendToken={handleSendToken}
                 handleReleaseEscrow={handleReleaseEscrow}

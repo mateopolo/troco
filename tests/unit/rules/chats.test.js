@@ -73,6 +73,16 @@ describe('🔒 Firestore Rules — Isolation Stricte Chats & Messages [VERIF-03]
         return inParticipants || inUids;
       }
 
+      if (operation === 'update') {
+        const currentMsg = simulatedStore[path];
+        if (!isAuthenticated || isBanned) return false;
+        if (isAdmin) return true;
+        const isAuthor = currentMsg && currentMsg.senderUid === auth.uid;
+        const inParticipants = (Array.isArray(parentChat?.participants) && parentChat.participants.includes(auth.uid))
+          || (Array.isArray(parentChat?.participantUids) && parentChat.participantUids.includes(auth.uid));
+        return isAuthor || inParticipants;
+      }
+
       if (operation === 'delete') {
         const currentMsg = simulatedStore[path];
         if (!isAuthenticated) return false;
@@ -150,5 +160,19 @@ describe('🔒 Firestore Rules — Isolation Stricte Chats & Messages [VERIF-03]
     expect(evaluateRule({ uid: 'uid_alice' }, 'chats/chat_alice_bob/messages/msg_1', 'delete')).toBe(true);
     expect(evaluateRule({ uid: 'uid_bob' }, 'chats/chat_alice_bob/messages/msg_1', 'delete')).toBe(false);
     expect(evaluateRule({ uid: 'admin_mod', token: { admin: true } }, 'chats/chat_alice_bob/messages/msg_1', 'delete')).toBe(true);
+  });
+
+  it('9. Autorise un participant légitime au chat à mettre à jour un message de deal pour double validation [MOY-07]', () => {
+    // Bob est participant au chat parent de msg_1 émis par Alice
+    expect(evaluateRule({ uid: 'uid_bob' }, 'chats/chat_alice_bob/messages/msg_1', 'update', {
+      swapConfirmedBy: ['uid_alice', 'uid_bob'],
+      status: 'confirmed',
+    })).toBe(true);
+  });
+
+  it('10. Bloque un tiers non participant de mettre à jour le message d un deal', () => {
+    expect(evaluateRule({ uid: 'uid_charlie_spy' }, 'chats/chat_alice_bob/messages/msg_1', 'update', {
+      swapConfirmedBy: ['uid_charlie_spy'],
+    })).toBe(false);
   });
 });

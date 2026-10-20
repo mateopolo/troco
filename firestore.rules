@@ -294,8 +294,18 @@ service cloud.firestore {
             || isAdmin()
           );
 
-        // Modification & Suppression : auteur du message ou admin
-        allow update: if isAuthenticated() && isNotBanned() && resource.data.senderUid == request.auth.uid;
+        // Modification : auteur du message, ou participant au chat parent (double validation swapConfirmedBy, acceptation de deal), ou admin
+        allow update: if isAuthenticated() && isNotBanned() && (
+          resource.data.senderUid == request.auth.uid
+          || (
+            exists(/databases/$(database)/documents/chats/$(chatId))
+            && (
+              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('participants', [])
+              || request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.get('participantUids', [])
+            )
+          )
+          || isAdmin()
+        );
         allow delete: if isAuthenticated() && (resource.data.senderUid == request.auth.uid || isAdmin());
       }
     }

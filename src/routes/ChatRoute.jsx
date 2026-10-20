@@ -26,6 +26,7 @@ function ChatRoute({
   callState,
   isCallPip,
   handleAcceptDeal,
+  handleConfirmSwapCompletion,
   handleConfirmTrocCompletion,
   handleDeclineDeal,
   handleSendToken,
@@ -91,7 +92,8 @@ function ChatRoute({
             callState={callState}
             isCallActive={Boolean(callState?.active && !isCallPip)}
             handleAcceptDeal={handleAcceptDeal}
-            handleConfirmTrocCompletion={handleConfirmTrocCompletion}
+            handleConfirmSwapCompletion={handleConfirmSwapCompletion || handleConfirmTrocCompletion}
+            handleConfirmTrocCompletion={handleConfirmTrocCompletion || handleConfirmSwapCompletion}
             handleDeclineDeal={handleDeclineDeal}
             handleSendToken={handleSendToken}
             handleReleaseEscrow={handleReleaseEscrow}

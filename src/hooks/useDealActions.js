@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { auth, db } from '../firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, setDoc, getDoc, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
 import logger from '../utils/logger';
 import storage from '../utils/storage';
 import { dealService } from '../services/dealService';
@@ -416,9 +416,198 @@ export const useDealActions = ({
     selectedChat,
   ]);
 
+  // Double validation bilatérale pour le troc pur sans monnaie [MOY-07]
+  const handleConfirmSwapCompletion = useCallback(async (chatIdOrPayload, maybeDealId, maybeOptions = {}) => {
+    let chatId;
+    let dealId;
+    let options = {};
+
+    if (typeof chatIdOrPayload === 'object' && chatIdOrPayload !== null && !maybeDealId) {
+      chatId = chatIdOrPayload.chatId || chatIdOrPayload.chat?.id || selectedChat?.id;
+      dealId = chatIdOrPayload.dealId || chatIdOrPayload.msg?.id || chatIdOrPayload.id;
+      options = chatIdOrPayload;
+    } else {
+      chatId = chatIdOrPayload || selectedChat?.id;
+      dealId = maybeDealId;
+      options = maybeOptions || {};
+    }
+
+    const currentUid = profile?.uid || auth.currentUser?.uid;
+    if (!currentUid) {
+      const loginMsg = typeof t === 'function'
+        ? t('loginToConfirmSwap', 'Veuillez vous connecter pour valider le troc.')
+        : 'Veuillez vous connecter pour valider le troc.';
+      alert(loginMsg);
+      return { success: false, error: new Error('User not authenticated') };
+    }
+
+    if (!chatId) {
+      logger.error('🚨 [handleConfirmSwapCompletion] chatId manquant.', { chatIdOrPayload, maybeDealId });
+      return { success: false, error: new Error('Chat ID missing') };
+    }
+
+    const cid = String(chatId);
+    const mid = dealId ? String(dealId) : null;
+
+    let existingConfirmedBy = [];
+    if (Array.isArray(options.swapConfirmedBy)) {
+      existingConfirmedBy = [...options.swapConfirmedBy];
+    } else if (Array.isArray(options.msg?.swapConfirmedBy)) {
+      existingConfirmedBy = [...options.msg.swapConfirmedBy];
+    } else if (Array.isArray(options.chat?.swapConfirmedBy)) {
+      existingConfirmedBy = [...options.chat.swapConfirmedBy];
+    }
+
+    const dealMsgRef = mid && db ? doc(db, 'chats', cid, 'messages', mid) : null;
+    const chatRef = db ? doc(db, 'chats', cid) : null;
+
+    if (db) {
+      try {
+        if (dealMsgRef) {
+          const dealSnap = await getDoc(dealMsgRef);
+          if (dealSnap.exists() && Array.isArray(dealSnap.data()?.swapConfirmedBy)) {
+            existingConfirmedBy = dealSnap.data().swapConfirmedBy;
+          }
+        }
+        if ((!existingConfirmedBy || existingConfirmedBy.length === 0) && chatRef) {
+          const chatSnap = await getDoc(chatRef);
+          if (chatSnap.exists() && Array.isArray(chatSnap.data()?.swapConfirmedBy)) {
+            existingConfirmedBy = chatSnap.data().swapConfirmedBy;
+          }
+        }
+      } catch (readErr) {
+        logger.warn('[handleConfirmSwapCompletion] Erreur lecture document Firestore:', readErr);
+      }
+    }
+
+    const nextConfirmedBy = Array.from(new Set([...existingConfirmedBy, currentUid]));
+    const isFullyConfirmed = nextConfirmedBy.length >= 2;
+
+    if (db) {
+      try {
+        const timestamp = serverTimestamp();
+        const basePayload = {
+          swapConfirmedBy: arrayUnion(currentUid),
+          updatedAt: timestamp,
+        };
+
+        if (isFullyConfirmed) {
+          const completedPayload = {
+            ...basePayload,
+            status: 'confirmed',
+            dealStatus: 'confirmed',
+            swapCompleted: true,
+            isClosed: true,
+            completedAt: timestamp,
+          };
+
+          if (dealMsgRef) {
+            await updateDoc(dealMsgRef, completedPayload).catch(async (e) => {
+              logger.warn('[Firestore] updateDoc dealMsgRef failed, trying setDoc merge:', e);
+              await setDoc(dealMsgRef, completedPayload, { merge: true }).catch(() => {});
+            });
+          }
+
+          if (chatRef) {
+            const chatPayload = {
+              ...basePayload,
+              lastDealStatus: 'confirmed',
+              dealStatus: 'confirmed',
+              isClosed: true,
+              lastMessage: '🤝 Troc terminé et validé par les deux participants !',
+              updatedAt: timestamp,
+            };
+            await updateDoc(chatRef, chatPayload).catch(async (e) => {
+              logger.warn('[Firestore] updateDoc chatRef failed, trying setDoc merge:', e);
+              await setDoc(chatRef, chatPayload, { merge: true }).catch(() => {});
+            });
+          }
+
+          if (currentUid) {
+            updateDoc(doc(db, 'users', currentUid), {
+              dealsCompleted: increment(1),
+              updatedAt: timestamp,
+            }).catch(() => {});
+          }
+
+          const partnerUid = options.partnerUid || options.chat?.partnerUid || selectedChat?.partnerUid;
+          if (partnerUid && partnerUid !== currentUid) {
+            updateDoc(doc(db, 'users', partnerUid), {
+              dealsCompleted: increment(1),
+              updatedAt: timestamp,
+            }).catch(() => {});
+          }
+        } else {
+          const partialPayload = {
+            ...basePayload,
+            swapStatus: 'partial_confirmation',
+          };
+          if (dealMsgRef) {
+            await updateDoc(dealMsgRef, partialPayload).catch(async () => {
+              await setDoc(dealMsgRef, partialPayload, { merge: true }).catch(() => {});
+            });
+          }
+          if (chatRef) {
+            await updateDoc(chatRef, partialPayload).catch(async () => {
+              await setDoc(chatRef, partialPayload, { merge: true }).catch(() => {});
+            });
+          }
+        }
+      } catch (writeErr) {
+        logger.error('🚨 [handleConfirmSwapCompletion] Erreur écriture Firestore:', writeErr);
+      }
+    }
+
+    if (isFullyConfirmed) {
+      if (typeof playApplePaySound === 'function') playApplePaySound();
+      if (typeof playBetclicBalanceSound === 'function') playBetclicBalanceSound(true);
+
+      if (typeof setProfile === 'function') {
+        setProfile(prev => ({
+          ...prev,
+          dealsCompleted: (prev?.dealsCompleted || 0) + 1,
+        }));
+      }
+
+      if (typeof setSaveMessage === 'function') {
+        const successMsg = typeof t === 'function'
+          ? t('swapBilateralCompleteSuccess', '🎉 Troc validé par les deux participants ! Le deal est clôturé avec succès.')
+          : '🎉 Troc validé par les deux participants ! Le deal est clôturé avec succès.';
+        setSaveMessage(successMsg);
+        safeTimeout(() => setSaveMessage(''), 6000);
+      }
+    } else {
+      if (typeof playBetclicBalanceSound === 'function') playBetclicBalanceSound(false);
+
+      if (typeof setSaveMessage === 'function') {
+        const partialMsg = typeof t === 'function'
+          ? t('swapPartialConfirmation', '✓ Fin du troc confirmée (1/2). En attente de la confirmation de votre partenaire pour clôturer le deal.')
+          : '✓ Fin du troc confirmée (1/2). En attente de la confirmation de votre partenaire pour clôturer le deal.';
+        setSaveMessage(partialMsg);
+        safeTimeout(() => setSaveMessage(''), 5000);
+      }
+    }
+
+    return {
+      success: true,
+      isFullyConfirmed,
+      swapConfirmedBy: nextConfirmedBy,
+    };
+  }, [
+    profile?.uid,
+    selectedChat,
+    setProfile,
+    setSaveMessage,
+    playApplePaySound,
+    playBetclicBalanceSound,
+    safeTimeout,
+    t,
+  ]);
+
   return {
     handleTransferCallTokens,
     handlePaymentSuccess,
+    handleConfirmSwapCompletion,
   };
 };
 

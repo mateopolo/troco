@@ -586,6 +586,7 @@ export default function App() {
   const {
     handleTransferCallTokens,
     handlePaymentSuccess,
+    handleConfirmSwapCompletion,
   } = useDealActions({
     profile,
     setProfile,
@@ -2764,7 +2765,8 @@ export default function App() {
                   callState={callState}
                   isCallPip={isCallPip}
                   handleAcceptDeal={handleAcceptDeal}
-                  handleConfirmTrocCompletion={handleConfirmTrocCompletion}
+                  handleConfirmSwapCompletion={handleConfirmSwapCompletion}
+                  handleConfirmTrocCompletion={handleConfirmSwapCompletion}
                   handleDeclineDeal={handleDeclineDeal}
                   handleSendToken={handleSendToken}
                   handleReleaseEscrow={handleReleaseEscrow}

@@ -17,6 +17,15 @@ export const secondaryTranslations = {
     "dealsWidget.directTroc": "Direct service exchange",
     "dealsWidget.badgeActive": "IN PROGRESS",
 
+    // ---- VALIDATION BILATERALE DU TROC PUR (EN) [MOY-07] ----
+    "confirmSwapCompletion": "Confirm swap completion",
+    "doubleValidationPureSwap": "Bilateral validation for pure swap",
+    "swapBilateralCompleteSuccess": "🎉 Swap validated by both participants! Deal successfully completed.",
+    "swapPartialConfirmation": "✓ Swap completion confirmed (1/2). Waiting for partner confirmation to close deal.",
+    "swapWaitingPartner": "Waiting for partner confirmation (1/2)",
+    "swapBilateralValidated": "Service completed — Swap closed successfully ✓",
+    "swapPureInstructions": "Direct cashless swap in progress. Click below to confirm completion once done.",
+
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
     "workspace.slides_badge": "SLIDES",
@@ -1050,6 +1059,15 @@ export const secondaryTranslations = {
     "dealsWidget.tokens": "Tokens",
     "dealsWidget.directTroc": "Trueque directo de servicio",
     "dealsWidget.badgeActive": "EN CURSO",
+
+    // ---- VALIDATION BILATERALE DU TROC PUR (ES) [MOY-07] ----
+    "confirmSwapCompletion": "Confirmar finalización del trueque",
+    "doubleValidationPureSwap": "Doble validación del trueque puro",
+    "swapBilateralCompleteSuccess": "🎉 ¡Trueque validado por ambos participantes! Trato completado con éxito.",
+    "swapPartialConfirmation": "✓ Finalización del trueque confirmada (1/2). Esperando confirmación de la otra parte.",
+    "swapWaitingPartner": "Esperando confirmación del compañero (1/2)",
+    "swapBilateralValidated": "Servicio completado — Trueque cerrado con éxito ✓",
+    "swapPureInstructions": "Trueque directo sin dinero en curso. Haz clic abajo para confirmar cuando termine.",
 
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
@@ -2085,6 +2103,15 @@ export const secondaryTranslations = {
     "dealsWidget.directTroc": "Baratto diretto di servizio",
     "dealsWidget.badgeActive": "IN CORSO",
 
+    // ---- VALIDATION BILATERALE DU TROC PUR (IT) [MOY-07] ----
+    "confirmSwapCompletion": "Conferma completamento del baratto",
+    "doubleValidationPureSwap": "Doppia convalida del baratto puro",
+    "swapBilateralCompleteSuccess": "🎉 Baratto convalidato da entrambi i partecipanti! Affare concluso con successo.",
+    "swapPartialConfirmation": "✓ Completamento del baratto confermato (1/2). In attesa della conferma del partner.",
+    "swapWaitingPartner": "In attesa della conferma del partner (1/2)",
+    "swapBilateralValidated": "Prestazione completata — Baratto concluso con successo ✓",
+    "swapPureInstructions": "Baratto diretto senza denaro in corso. Clicca sotto per confermare al termine.",
+
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
     "workspace.slides_badge": "SLIDES",
@@ -3118,6 +3145,15 @@ export const secondaryTranslations = {
     "dealsWidget.tokens": "Token",
     "dealsWidget.directTroc": "Direkter Dienstleistungstausch",
     "dealsWidget.badgeActive": "IN BEARBEITUNG",
+
+    // ---- VALIDATION BILATERALE DU TROC PUR (DE) [MOY-07] ----
+    "confirmSwapCompletion": "Abschluss des Tauschs bestätigen",
+    "doubleValidationPureSwap": "Beidseitige Bestätigung für reinen Tausch",
+    "swapBilateralCompleteSuccess": "🎉 Tausch von beiden Teilnehmern bestätigt! Deal erfolgreich abgeschlossen.",
+    "swapPartialConfirmation": "✓ Tauschabschluss bestätigt (1/2). Warten auf Bestätigung des Partners.",
+    "swapWaitingPartner": "Warten auf Partnerbestätigung (1/2)",
+    "swapBilateralValidated": "Dienstleistung erbracht — Tausch erfolgreich beendet ✓",
+    "swapPureInstructions": "Laufender direkter Tausch ohne Geld. Klicke unten, um den Abschluss zu bestätigen.",
 
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
@@ -4155,6 +4191,15 @@ export const secondaryTranslations = {
     "dealsWidget.directTroc": "直接サービス交換",
     "dealsWidget.badgeActive": "進行中",
 
+    // ---- VALIDATION BILATERALE DU TROC PUR (JA) [MOY-07] ----
+    "confirmSwapCompletion": "交換の完了を確認する",
+    "doubleValidationPureSwap": "純粋物々交換の相互二重認証",
+    "swapBilateralCompleteSuccess": "🎉 両参加者によって交換が承認されました！ディールが正常に完了しました。",
+    "swapPartialConfirmation": "✓ 交換の完了を確認しました (1/2)。相手の確認待ちです。",
+    "swapWaitingPartner": "相手の完了確認待ち (1/2)",
+    "swapBilateralValidated": "サービス提供完了 — 交換完了 ✓",
+    "swapPureInstructions": "金銭を伴わない直接交換が進行中です。完了後、下のボタンを押してください。",
+
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
     "workspace.slides_badge": "SLIDES",
@@ -5188,6 +5233,15 @@ export const secondaryTranslations = {
     "dealsWidget.tokens": "代币",
     "dealsWidget.directTroc": "直接服务交换",
     "dealsWidget.badgeActive": "进行中",
+
+    // ---- VALIDATION BILATERALE DU TROC PUR (ZH) [MOY-07] ----
+    "confirmSwapCompletion": "确认物物交换完成",
+    "doubleValidationPureSwap": "纯交换双向确认",
+    "swapBilateralCompleteSuccess": "🎉 双方均已确认！交易圆满结束。",
+    "swapPartialConfirmation": "✓ 已确认交换完成 (1/2)。等待对方确认以关闭交易。",
+    "swapWaitingPartner": "等待对方确认完成 (1/2)",
+    "swapBilateralValidated": "服务完成 — 交换成功关闭 ✓",
+    "swapPureInstructions": "正在进行无现金直接交换。完成后请点击下方按钮确认。",
 
     "workspace.slides_title": "Troco 演示文稿",
     "workspace.badge_slides": "SLIDES",

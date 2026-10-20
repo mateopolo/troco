@@ -2204,6 +2204,43 @@ Composants sécurisés :
 - **`npx vitest run` :** 35/35 fichiers de tests passés, **314/314 tests validés avec succès** (0 échec).
 - **`npm run build` :** **Exit Code 0**, compilation de production validée.
 
+---
+
+## 44. PROMPT 8 / MOY-07 — Double Validation Bilatérale pour le Troc Pur
+
+### 44.1. Problématique & Spécification
+- **Tâche :** `[MOY-07]` — Double validation bilatérale pour le troc pur sans monnaie (ni euros ni jetons).
+- **Enjeu :** Lors d'un échange physique ou d'une prestation de compétences pures (0€ et 0 jetons), aucun séquestre financier n'est engagé. Pour éviter toute contestation unilatérale et sécuriser la conclusion de l'échange, les deux participants doivent impérativement attester de la réalisation de la prestation via un protocole bilatéral synchrone dans le chat.
+
+### 44.2. Architecture & Réalisations
+1. **Hook `useDealActions` (`src/hooks/useDealActions.js`) :**
+   - Implémentation de `handleConfirmSwapCompletion(chatIdOrPayload, maybeDealId, maybeOptions)`.
+   - Utilisation de `arrayUnion(currentUid)` dans le champ `swapConfirmedBy` du document message et du document de chat parent.
+   - Vérification de la complétude bilatérale : si `swapConfirmedBy.length >= 2` (les deux participants ont confirmé), passage du deal à `status: 'confirmed'`, `dealStatus: 'confirmed'`, `swapCompleted: true`, `isClosed: true`.
+   - Célébration sensorielle : déclenchement de `playApplePaySound()`, `playBetclicBalanceSound(true)`, confettis et incrémentation de `dealsCompleted`.
+2. **Interface Chat (`src/components/ChatView.jsx`) :**
+   - Détection automatique d'un troc pur : `isPureSwap = (expectedTokens === 0) && (fiatAmount === 0)`.
+   - Rendu conditionnel du conteneur `data-testid="pure-swap-bilateral-container"` avec compteur dynamique `data-testid="swap-confirmation-count"` (0/2, 1/2, 2/2).
+   - Bouton d'action actif `data-testid="confirm-swap-completion-btn"` affichant "Confirmer la fin du troc" tant que l'utilisateur courant n'a pas confirmé.
+   - Badge d'attente interactif `data-testid="swap-waiting-partner-badge"` affiché une fois la confirmation locale enregistrée (1/2), informant que la confirmation du partenaire est attendue.
+   - Badge de succès `data-testid="swap-completed-bilateral-badge"` affiché dès validation par les deux parties (2/2) confirmant la clôture définitive du troc.
+3. **Plomberie & Acheminement des Props :**
+   - Raccordement complet dans `src/App.js`, `src/routes/ChatRoute.jsx`, `src/features/chat/ChatSection.jsx`.
+4. **Règles de Sécurité Firestore (`firestore.rules`) :**
+   - Mise à jour de la règle `match /messages/{messageId}` pour autoriser les participants au chat parent (`request.auth.uid in get(...).data.participants` ou `participantUids`) à mettre à jour un message de deal pour y ajouter leur confirmation bilatérale sans écraser les champs tiers.
+   - Mise à jour des simulateurs de règles dans les tests de sécurité (`tests/rules/firestore.rules.test.js` et `tests/unit/rules/chats.test.js`).
+5. **Internationalisation Complète (7 Langues) :**
+   - 7 nouvelles clés traduites et intégrées dans `src/data/translationsData.js`, `src/data/translationsSecondary.js` et `src/locales/translations.js` : `confirmSwapCompletion`, `doubleValidationPureSwap`, `swapBilateralCompleteSuccess`, `swapPartialConfirmation`, `swapWaitingPartner`, `swapBilateralValidated`, `swapPureInstructions` pour le Français, l'Anglais, l'Espagnol, l'Italien, l'Allemand, le Japonais et le Chinois.
+6. **Suite de Tests Unitaires Dédiée (`tests/unit/BilateralSwapValidation.test.js`) :**
+   - 7/7 tests couvrant les cas nominaux et aux limites : confirmation initiale (1/2), complétude (2/2) avec clôture et son, blocage des utilisateurs non authentifiés, affichage du bouton, affichage du badge d'attente, affichage du badge final et non-affichage pour les deals rémunérés (séquestre).
+
+### 44.3. Validation Formelle
+- **`npx vitest run tests/unit/BilateralSwapValidation.test.js` :** 7/7 tests passés au vert.
+- **`npx vitest run tests/unit/rules/chats.test.js` :** 10/10 tests passés au vert.
+- **`npx vitest run` :** 36/36 fichiers de tests passés, **323/323 tests validés avec succès (100% au vert)**.
+- **`npm run build` :** **Exit Code 0**, bundle de production généré avec succès.
+
+
 
 
 

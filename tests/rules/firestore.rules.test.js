@@ -176,7 +176,9 @@ class RuleSimulator {
       }
       if (operation === 'update') {
         const msg = currentData || simulatedDb[path] || {};
-        return isAuthenticated && isNotBanned() && msg.senderUid === auth.uid;
+        const isParticipant = (Array.isArray(parentChat.participants) && parentChat.participants.includes(auth.uid))
+          || (Array.isArray(parentChat.participantUids) && parentChat.participantUids.includes(auth.uid));
+        return isAuthenticated && isNotBanned() && (msg.senderUid === auth.uid || isParticipant || isAdmin);
       }
       if (operation === 'delete') {
         const msg = currentData || simulatedDb[path] || {};

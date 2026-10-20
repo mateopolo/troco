@@ -23,6 +23,15 @@ export const translations = {
     "dealsWidget.directTroc": "Troc direct de service",
     "dealsWidget.badgeActive": "EN COURS",
 
+    // ---- VALIDATION BILATERALE DU TROC PUR (FR) [MOY-07] ----
+    "confirmSwapCompletion": "Confirmer la fin du troc",
+    "doubleValidationPureSwap": "Double validation du troc pur",
+    "swapBilateralCompleteSuccess": "🎉 Troc validé par les deux participants ! Le deal est clôturé avec succès.",
+    "swapPartialConfirmation": "✓ Fin du troc confirmée (1/2). En attente de la confirmation de votre partenaire pour clôturer le deal.",
+    "swapWaitingPartner": "En attente de la confirmation du partenaire (1/2)",
+    "swapBilateralValidated": "Prestation terminée — Troc clôturé avec succès ✓",
+    "swapPureInstructions": "Troc direct en cours sans monnaie. Cliquez ci-dessous pour confirmer la réalisation de la prestation dès qu'elle est terminée.",
+
     "footer.aria_label": "Informations légales et navigation secondaire",
     "footer.tagline": "L'économie collaborative fondée sur le partage de temps, de savoir-faire et l'entraide de proximité. 1 heure partagée = 1 Jeton Troco.",
     "footer.edited_by": "Édité par Mateo",
