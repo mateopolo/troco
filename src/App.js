@@ -2719,6 +2719,12 @@ export default function App() {
                   loadMoreSentinelRef={loadMoreSentinelRef}
                   handleLoadMoreListings={handleLoadMoreListings}
                   isLoadingMoreListings={isLoadingMoreListings}
+                  setSelectedChat={setSelectedChat}
+                  setActiveTab={switchTab}
+                  onOpenChat={(chat) => {
+                    setSelectedChat(chat);
+                    switchTab('chat');
+                  }}
                 />
               )}
 

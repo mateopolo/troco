@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 9.4/10 | **Progression :** 63 / 75 tâches validées avec preuves formelles (84.0%)
+> **Score global :** 9.4/10 | **Progression :** 64 / 75 tâches validées avec preuves formelles (85.3%)
 
 ---
 
@@ -23,10 +23,10 @@
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 30 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 20 | 0 | 100% |
-| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 12 | 3 | 80.0% |
+| 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 13 | 2 | 86.7% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 8 | 2 | 80.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
-| **TOTAL** | **63** | **12** | **84.0%** |
+| **TOTAL** | **64** | **11** | **85.3%** |
 
 
 ### Score par axe vs cible Licorne
@@ -470,11 +470,11 @@
 **Estimation** : 4h  
 **Impact** : Déplace toute la logique d'alerte sonore (`audioService`), retour haptique, toast de célébration (`topUpCelebration`) et modale de succès transactionnel (`transactionSuccessModalConfig`, `handleCloseTransactionSuccessModal`) vers un hook spécialisé. Allège `App.js` et connecte automatiquement les alertes aux réceptions de jetons/paiements Firestore.
 
-### [ ] [MOY-05] — Widget réengagement "Mes deals en cours" en tête du Feed
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/features/feed/FeedSection.jsx`, `src/components/ActiveDealsWidget.jsx`  
+### [x] [MOY-05] — Widget réengagement "Mes deals en cours" en tête du Feed
+**Statut** : ✅ RÉALISÉ (`src/components/ActiveDealsWidget.jsx`, `src/routes/FeedRoute.jsx:254-266`, `src/App.js:1894-1897`, suite unitaire: `tests/unit/ActiveDealsWidget.test.js`)  
+**Fichier** : `src/components/ActiveDealsWidget.jsx`, `src/routes/FeedRoute.jsx`  
 **Estimation** : 5h  
-**Impact** : Augmente de 25% la réactivité des utilisateurs sur les propositions en attente.
+**Impact** : Augmente de 25% la réactivité des utilisateurs sur les propositions en attente en affichant une carte compacte glassmorphism en tête du Feed avec bouton de reprise directe de discussion.
 
 ### [ ] [MOY-06] — Exportation native des documents Troco Office Suite (.pdf, .docx, .xlsx)
 **Statut** : ❌ À FAIRE  

@@ -17,6 +17,7 @@ import PullToRefresh from '../components/ui/PullToRefresh';
 import { EmptyState } from '../components/ui/EmptyState';
 import TranslatedText from '../components/common/TranslatedText';
 import CRTOverlay from '../components/onboarding/CRTOverlay';
+import ActiveDealsWidget from '../components/ActiveDealsWidget';
 import { pageTransitionVariants, pageTransitionConfig } from './pageTransitions';
 
 const MapSection = React.lazy(() => import('../features/map/MapSection'));
@@ -31,6 +32,10 @@ function FeedRoute({
   isMobile,
   currentLang,
   t,
+  onOpenChat,
+  setSelectedChat,
+  setActiveTab,
+  activeDeals,
 
   // Search & Filters
   searchQuery,
@@ -469,6 +474,16 @@ function FeedRoute({
               </button>
             </div>
           </div>
+
+          {/* WIDGET DE RÉENGAGEMENT "MES DEALS EN COURS" [MOY-05] */}
+          <ActiveDealsWidget
+            deals={activeDeals}
+            onOpenChat={onOpenChat}
+            onSelectChat={setSelectedChat}
+            darkMode={darkMode}
+            t={t}
+            currentLang={currentLang}
+          />
 
           {filteredListings.length === 0 ? (
             <div style={{ width: '100%', padding: '40px 0', display: 'flex', justifyContent: 'center' }}>

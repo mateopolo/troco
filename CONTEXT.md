@@ -2123,6 +2123,45 @@ Composants sécurisés :
 - **`npx vitest run` :** 33/33 fichiers de tests au vert, **297/297 tests passés avec succès** (0 échec).
 - **`npm run build` :** **Exit Code 0**, compilation de production réussie avec bundle optimisé.
 
+---
+
+## 42. [MOY-05] — Widget de Réengagement "Mes deals en cours" en Tête du Feed
+
+### 42.1. Contexte & Objectif
+- **Objectif :** Accélérer les cycles de conversion et de clôture de troc/vente en affichant un widget de réengagement compact en haut du Feed d'accueil lorsque l'utilisateur a des transactions ou négociations actives en cours.
+- **Besoins :**
+  1. Affichage dynamique en tête de `FeedRoute.jsx` (directement au-dessus de la grille d'annonces).
+  2. Disparition automatique du DOM si aucun deal actif n'est présent (aucun espace résiduel ni layout shift parasite).
+  3. Extraction automatique des deals en cours depuis `useChatStore` (`chatsList` et `chatThreads`) ou via props injectées.
+  4. Prise en charge des statuts actifs : `pending`, `proposed`, `en_attente`, `sent`, `in_progress`, `troc_in_progress`, `escrow_locked`, `countered`, `confirmed`, `accepted`, `validated`.
+  5. Carte au design soigné (glassmorphism premium, avatar du partenaire, badge montant/jetons, pill de statut coloré avec pulsation, et bouton d'action directe).
+  6. Bouton d'action "Reprendre la discussion" avec triple déclencheur : callback direct `onOpenChat`, synchronisation Zustand `useChatStore.setSelectedChat`, et émission de l'événement global `troco:open_chat`.
+  7. Attributs de test `data-testid="active-deals-widget"` et `data-testid="resume-deal-btn"`.
+  8. Internationalisation complète dans les 7 langues supportées par Troco (FR, EN, ES, IT, DE, JA, ZH).
+
+### 42.2. Implémentation & Architecture
+1. **Création de `src/components/ActiveDealsWidget.jsx` :**
+   - Fonction d'extraction robuste `getActiveDealsFromChats(chatsList, chatThreads, currentUserId)` analysant les métadonnées de chats (`lastDealStatus`, `dealStatus`, `tokensAmount`, `euroAmount`, `listingTitle`) ainsi que les propositions structurées (`deal_proposal`, `deal`).
+   - Formatage réactif des statuts et devises (Tokens Troco avec icône éclair, devises fiat en euros).
+   - Bouton de reprise directe de discussion `handleResumeChat(deal)` déclenchant la redirection immédiate vers l'onglet chat et la conversation ciblée.
+   - Rendu conditionnel strict : retourne `null` dès que `deals.length === 0`.
+2. **Intégration dans `src/routes/FeedRoute.jsx` & `src/App.js` :**
+   - Positionnement stratégique dans `FeedRoute.jsx` juste avant la grille d'annonces `feed-listings-grid`.
+   - Câblage dans `App.js` avec passage de `setSelectedChat`, `setActiveTab={switchTab}` et `onOpenChat`.
+3. **Traductions 7 Langues :**
+   - Ajout des clés `feed_active_deals_title`, `feed_active_deals_resume`, `deal_status_pending`, `deal_status_in_progress`, `deal_status_escrow_locked` dans :
+     - `src/data/translationsData.js` (FR)
+     - `src/data/translationsSecondary.js` (EN, ES, IT, DE, JA, ZH)
+     - `src/locales/translations.js` (FR, EN, ES, IT, DE, JA, ZH)
+4. **Suite de tests unitaires dédiée (`tests/unit/ActiveDealsWidget.test.js`) :**
+   - 9/9 tests validés couvrant la détection des deals, l'état null, l'injection de props, le dispatch d'événements, le changement d'onglet et l'i18n.
+
+### 42.3. Validation Formelle
+- **`npx vitest run tests/unit/ActiveDealsWidget.test.js` :** 9/9 tests validés au vert (100% pass).
+- **`npx vitest run` :** 34/34 fichiers de tests au vert, **306/306 tests passés avec succès** (0 échec).
+- **`npm run build` :** **Exit Code 0**, compilation de production validée sans warning bloquant.
+
+
 
 
 

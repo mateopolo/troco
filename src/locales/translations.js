@@ -4,6 +4,17 @@ export const translations = {
     "theme.dark_mode": "Passer en mode sombre",
     "theme.light_mode": "Passer en mode clair",
 
+    // ---- DEALS WIDGET (FR) [MOY-05] ----
+    "dealsWidget.title": "Mes deals en cours",
+    "dealsWidget.subtitle": "Échanges et négociations nécessitant votre attention",
+    "dealsWidget.resumeChat": "Reprendre la discussion",
+    "dealsWidget.statusPending": "Proposition en attente",
+    "dealsWidget.statusInProgress": "Troc en cours",
+    "dealsWidget.statusEscrow": "Escrow sécurisé",
+    "dealsWidget.tokens": "Jetons",
+    "dealsWidget.directTroc": "Troc direct de service",
+    "dealsWidget.badgeActive": "EN COURS",
+
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
     "workspace.slides_badge": "SLIDES",
@@ -771,6 +782,17 @@ export const translations = {
   EN: {
     "theme.dark_mode": "Toggle dark mode",
     "theme.light_mode": "Toggle light mode",
+
+    // ---- DEALS WIDGET (EN) [MOY-05] ----
+    "dealsWidget.title": "My active deals",
+    "dealsWidget.subtitle": "Exchanges and negotiations requiring your attention",
+    "dealsWidget.resumeChat": "Resume discussion",
+    "dealsWidget.statusPending": "Pending proposal",
+    "dealsWidget.statusInProgress": "Exchange in progress",
+    "dealsWidget.statusEscrow": "Secured escrow",
+    "dealsWidget.tokens": "Tokens",
+    "dealsWidget.directTroc": "Direct service exchange",
+    "dealsWidget.badgeActive": "IN PROGRESS",
 
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
@@ -1540,6 +1562,17 @@ export const translations = {
     "theme.dark_mode": "Cambiar a modo oscuro",
     "theme.light_mode": "Cambiar a modo claro",
 
+    // ---- DEALS WIDGET (ES) [MOY-05] ----
+    "dealsWidget.title": "Mis tratos en curso",
+    "dealsWidget.subtitle": "Intercambios y negociaciones que requieren tu atención",
+    "dealsWidget.resumeChat": "Reanudar conversación",
+    "dealsWidget.statusPending": "Propuesta pendiente",
+    "dealsWidget.statusInProgress": "Trueque en curso",
+    "dealsWidget.statusEscrow": "Depósito seguro",
+    "dealsWidget.tokens": "Tokens",
+    "dealsWidget.directTroc": "Trueque directo de servicio",
+    "dealsWidget.badgeActive": "EN CURSO",
+
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
     "workspace.slides_badge": "SLIDES",
@@ -2308,6 +2341,17 @@ export const translations = {
     "theme.dark_mode": "Attiva modalità scura",
     "theme.light_mode": "Attiva modalità chiara",
 
+    // ---- DEALS WIDGET (IT) [MOY-05] ----
+    "dealsWidget.title": "I miei accordi in corso",
+    "dealsWidget.subtitle": "Scambi e trattative che richiedono la tua attenzione",
+    "dealsWidget.resumeChat": "Riprendi discussione",
+    "dealsWidget.statusPending": "Proposta in attesa",
+    "dealsWidget.statusInProgress": "Baratto in corso",
+    "dealsWidget.statusEscrow": "Deposito sicuro",
+    "dealsWidget.tokens": "Token",
+    "dealsWidget.directTroc": "Baratto diretto di servizio",
+    "dealsWidget.badgeActive": "IN CORSO",
+
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
     "workspace.slides_badge": "SLIDES",
@@ -3075,6 +3119,17 @@ export const translations = {
   DE: {
     "theme.dark_mode": "Dunkelmodus umschalten",
     "theme.light_mode": "Hellmodus umschalten",
+
+    // ---- DEALS WIDGET (DE) [MOY-05] ----
+    "dealsWidget.title": "Meine laufenden Deals",
+    "dealsWidget.subtitle": "Austausche und Verhandlungen, die Ihre Aufmerksamkeit erfordern",
+    "dealsWidget.resumeChat": "Gespräch fortsetzen",
+    "dealsWidget.statusPending": "Ausstehender Vorschlag",
+    "dealsWidget.statusInProgress": "Tausch läuft",
+    "dealsWidget.statusEscrow": "Treuhand gesichert",
+    "dealsWidget.tokens": "Token",
+    "dealsWidget.directTroc": "Direkter Dienstleistungstausch",
+    "dealsWidget.badgeActive": "IN BEARBEITUNG",
 
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
@@ -3846,6 +3901,17 @@ export const translations = {
     "theme.dark_mode": "ダークモード切替",
     "theme.light_mode": "ライトモード切替",
 
+    // ---- DEALS WIDGET (JA) [MOY-05] ----
+    "dealsWidget.title": "進行中のディール",
+    "dealsWidget.subtitle": "注意が必要な交換と交渉",
+    "dealsWidget.resumeChat": "チャットを再開",
+    "dealsWidget.statusPending": "承認待ちの提案",
+    "dealsWidget.statusInProgress": "交換進行中",
+    "dealsWidget.statusEscrow": "エスクロー保護中",
+    "dealsWidget.tokens": "トークン",
+    "dealsWidget.directTroc": "直接サービス交換",
+    "dealsWidget.badgeActive": "進行中",
+
     "workspace.slides_title": "Troco Slides",
     "workspace.badge_slides": "SLIDES",
     "workspace.slides_badge": "SLIDES",
@@ -4613,6 +4679,17 @@ export const translations = {
   ZH: {
     "theme.dark_mode": "切换深色模式",
     "theme.light_mode": "切换浅色模式",
+
+    // ---- DEALS WIDGET (ZH) [MOY-05] ----
+    "dealsWidget.title": "进行中的交易",
+    "dealsWidget.subtitle": "需要您关注的交换与协商",
+    "dealsWidget.resumeChat": "继续交谈",
+    "dealsWidget.statusPending": "待确认的提议",
+    "dealsWidget.statusInProgress": "交换进行中",
+    "dealsWidget.statusEscrow": "托管保护中",
+    "dealsWidget.tokens": "代币",
+    "dealsWidget.directTroc": "直接服务交换",
+    "dealsWidget.badgeActive": "进行中",
 
     "workspace.slides_title": "Troco 演示文稿",
     "workspace.badge_slides": "SLIDES",

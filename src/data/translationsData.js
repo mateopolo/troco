@@ -12,6 +12,17 @@ export const translations = {
     "theme.dark_mode": "Passer en mode sombre",
     "theme.light_mode": "Passer en mode clair",
 
+    // ---- DEALS WIDGET (FR) [MOY-05] ----
+    "dealsWidget.title": "Mes deals en cours",
+    "dealsWidget.subtitle": "Échanges et négociations nécessitant votre attention",
+    "dealsWidget.resumeChat": "Reprendre la discussion",
+    "dealsWidget.statusPending": "Proposition en attente",
+    "dealsWidget.statusInProgress": "Troc en cours",
+    "dealsWidget.statusEscrow": "Escrow sécurisé",
+    "dealsWidget.tokens": "Jetons",
+    "dealsWidget.directTroc": "Troc direct de service",
+    "dealsWidget.badgeActive": "EN COURS",
+
     "footer.aria_label": "Informations légales et navigation secondaire",
     "footer.tagline": "L'économie collaborative fondée sur le partage de temps, de savoir-faire et l'entraide de proximité. 1 heure partagée = 1 Jeton Troco.",
     "footer.edited_by": "Édité par Mateo",
